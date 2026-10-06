@@ -107,3 +107,28 @@ Necesita: la app de Claude abierta. Tarda unos 5 minutos.
 Si falla: si el panel se ve igual que antes (oscuro), la sesión no tomó el mod nuevo; cerrá la app del todo y volvé a abrirla. Si aparece un aviso con «tablero-oficina» en gris en la conversación, copiáselo a Claude.
 
 Después: Claude ajusta lo que se vea mal y, **con tu permiso**, sube la rama a GitHub (`bigburrit0/office-agent-mod`).
+
+## 6. Segunda revisión (captura de Nimai, 06/10/2026 tarde)
+
+Evidencia: `docs/capturas/2026-10-06-subagentes-claro-v1.png` (Subagentes en la app, tema claro).
+
+**Push:** `master` local quedó adelantado con todo (commit `983ecbe`), pero GitHub rechazó el push: la cuenta conectada en esta compu (`nimodaboss`) no tiene permiso de escritura en `bigburrit0/office-agent-mod` (error 403). Lo sube Nimai con su cuenta (pasos en el chat).
+
+### Por qué pasaron los errores
+
+| # | Qué se ve | Por qué pasó (causa raíz) |
+|---|---|---|
+| R1 | El uso aparece dos veces: el tablero dibujado y debajo las filas de texto de 5 horas y semanal. | Error del orquestador en la tarjeta T-6: pidió mantener las filas de texto también en el escritorio «porque las pruebas las usan». Se cuidó la prueba en vez del resultado. |
+| R2 | Franjas en blanco a la derecha de la cabecera y del tablero de uso. | Supuesto no verificado del orquestador en T-5: estimó 6 px por celda midiendo letras de ancho variable. La captura muestra ~7,9 px por celda (el panel mide ~378 px con 48 celdas): el `× 8` original estaba bien. El arte quedó un 25 % más angosto que el panel. |
+| R3 | La oficina de los agentes se ve chica y suelta. | El patio es una tira de 54 px (escala 2) al lado del robot, con fondo celeste, y el escritorio libre es una tarjeta aparte con borde, más abajo. Cada pieza se diseñó en una tarjeta distinta, sin una vista de conjunto. |
+| R4 | El pasillo de abajo parece un catálogo. | T-3b pidió «que no quede pared lisa» y el resultado repite objetos en grilla. |
+
+### Plan de mejora (tarjetas E)
+
+| # | Qué | Archivos |
+|---|---|---|
+| E-1 | **Escena única** de oficina en un solo SVG a todo el ancho: cielorraso con luces, pared, el robot como monitor colgado a la izquierda y el piso con los escritorios de los agentes a escala 3 (o el escritorio libre si no hay nadie), más plantas y ventana para que no sobre pared. | `hooks/arte-escena.ts` (nuevo), su prueba |
+| E-3 | El tablero de uso suma el contexto y el costo, para que sea **el único lugar** con el uso. | `hooks/arte-uso.ts`, su prueba |
+| E-2 | Panel: la escena reemplaza cabecera + patio + tarjeta de escritorio libre en Subagentes; en el escritorio, el uso se ve solo en el tablero (las filas de texto quedan para la terminal), con «Uso de la sesión» y «Compactar» en una sola fila; ancho del arte con `× 7,8`; pasillo de hasta 140 px (una sola fila de objetos). | `hooks/register.tsx`, `hooks/tablero-nucleo.ts`, pruebas del tablero |
+
+**Lección para próximas tarjetas:** una tarjeta de interfaz no termina con las pruebas en verde; el orquestador pide una captura del panel real antes de dar la oleada por cerrada, y las medidas de pantalla se sacan de una captura, no se estiman.
