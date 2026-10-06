@@ -12,6 +12,7 @@ import {
   glifoSvg,
   tipoDeAgente,
 } from '../hooks/arte-iconos'
+import { EQUIPOS_EMBLEMA } from '../hooks/pixel'
 
 const EQUIPOS = ['base', 'direccion', 'research', 'librarian', 'datos', 'seguridad', 'mantenimiento', 'limpieza', 'facilities', 'arquitectura', 'dev-a1', 'dev-tablero']
 const VALIDAS = new Set('OWKGgYyRBCcMAaSs.'.split(''))
@@ -86,5 +87,13 @@ test('SVG estático sin script ni href, con el acento del equipo', () => {
     expect(s).toContain('width="48"')
     expect(s).toContain('#112233')
     expect(/<script|href=/i.test(s)).toBe(false)
+  }
+})
+
+test('el color de cada equipo en el emblema coincide con el acento del glifo', () => {
+  expect(Object.keys(EQUIPOS_EMBLEMA).sort()).toEqual(Object.keys(EQUIPO_ACENTO).sort())
+  expect(Object.keys(EQUIPO_ACENTO).length).toBe(12)
+  for (const equipo of Object.keys(EQUIPO_ACENTO)) {
+    expect(EQUIPOS_EMBLEMA[equipo].color.toLowerCase()).toBe(EQUIPO_ACENTO[equipo][0])
   }
 })

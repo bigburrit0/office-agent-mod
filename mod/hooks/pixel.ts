@@ -11,19 +11,19 @@
 // ---------------------------------------------------------------------------
 
 export const PALETTE = {
-  negro: '#1A1208', // contorno
-  oro: '#FFC107',
-  oroPalido: '#FFDD77',
-  crema: '#FFF4BF',
-  ocre: '#B87300',
-  madera: '#A86B2E',
-  maderaOscura: '#5A3416',
-  turquesa: '#2CA6A4',
-  jade: '#4CAF2F',
-  selva: '#0E4A22',
-  lima: '#3DF000',
-  rojo: '#D9363E',
-  gris: '#8C8279', // gris cálido (piedra)
+  negro: '#2B2118', // contorno
+  oro: '#F28C28', // naranja: acento secundario
+  oroPalido: '#E8DCC0', // beige: plástico de los 80
+  crema: '#FFF4DF', // crema: texto claro
+  ocre: '#B85C12', // naranja oscuro: sombra del naranja
+  madera: '#C2AE86', // beige oscuro: sombras del beige
+  maderaOscura: '#8F8A80', // gris: alfombra y metal
+  turquesa: '#6FA8DC', // azul claro: brillos y pantallas
+  jade: '#3FAE6A', // verde: terminado
+  selva: '#1F5FA8', // azul: acento principal y fondos
+  lima: '#9FE3C8', // pantalla: monitores
+  rojo: '#D9363E', // rojo: error
+  gris: '#8F8A80', // gris: alfombra y metal
 }
 
 // Color de acento por rol: legible sobre fondo oscuro y sobre fondo claro.
@@ -114,16 +114,17 @@ function svgVacio(mensaje: string, ancho: number): string {
 // Greca azteca (xicalcoliuhqui, espiral escalonada)
 // ---------------------------------------------------------------------------
 
-// Baldosa de 8x8: O = oro, T = turquesa, el resto es el fondo verde selva.
+// Baldosa de 8x8 de una tecla de teclado: G = borde (contorno), T = centro de la tecla, '.' = beige.
+// El centro es beige en 2 de cada 3 teclas, y azul o naranja en la tercera (ver grecaElementos).
 const GRECA_BALDOSA: string[] = [
-  'GGGGGGGG',
-  'G.......',
-  'G.TTTTT.',
-  'G.T...T.',
-  'G.T.G.T.',
-  'G.T.GGT.',
-  'G.T.....',
-  'GGGGGGGG',
+  'GGGGGGG.',
+  'G.....G.',
+  'G.TTT.G.',
+  'G.TTT.G.',
+  'G.TTT.G.',
+  'G.....G.',
+  'GGGGGGG.',
+  '........',
 ]
 
 // Elementos de la banda (sin la etiqueta <svg>) en la posición dada. Usa un <path> por color.
@@ -131,31 +132,34 @@ function grecaElementos(ancho: number, alto: number, x0: number, y0: number): st
   const u = Math.max(1, Math.floor(alto / 8)) // tamaño de pixel
   const columnas = Math.ceil(ancho / u)
   const yBase = y0 + Math.floor((alto - 8 * u) / 2)
-  let oro = ''
-  let turquesa = ''
+  // Un trazo por clase: G contorno, A tecla azul, N tecla naranja (la tecla beige es el fondo).
+  const trazos: Record<string, string> = { G: '', A: '', N: '' }
+  const clase = (fila: string, c: number): string => {
+    const ch = fila[c % 8]
+    if (ch !== 'T') return ch
+    const tecla = Math.floor(c / 8) % 3
+    return tecla === 1 ? 'A' : tecla === 2 ? 'N' : '.'
+  }
   for (let f = 0; f < 8; f++) {
     const fila = GRECA_BALDOSA[f]
     let c = 0
     while (c < columnas) {
-      const ch = fila[c % 8]
+      const ch = clase(fila, c)
       let fin = c + 1
-      while (fin < columnas && fila[fin % 8] === ch) fin++
-      if (ch === 'G' || ch === 'T') {
+      while (fin < columnas && clase(fila, fin) === ch) fin++
+      if (ch in trazos) {
         const x = c * u
         const w = Math.min(fin * u, ancho) - x
-        if (w > 0) {
-          const trazo = `M${x0 + x} ${yBase + f * u}h${w}v${u}h${-w}z`
-          if (ch === 'G') oro += trazo
-          else turquesa += trazo
-        }
+        if (w > 0) trazos[ch] += `M${x0 + x} ${yBase + f * u}h${w}v${u}h${-w}z`
       }
       c = fin
     }
   }
   return (
-    `<rect x="${x0}" y="${y0}" width="${ancho}" height="${alto}" fill="${PALETTE.selva}"/>` +
-    `<path d="${oro}" fill="${PALETTE.oro}"/>` +
-    `<path d="${turquesa}" fill="${PALETTE.turquesa}"/>`
+    `<rect x="${x0}" y="${y0}" width="${ancho}" height="${alto}" fill="${PALETTE.oroPalido}"/>` +
+    `<path d="${trazos.G}" fill="${PALETTE.negro}"/>` +
+    `<path d="${trazos.A}" fill="${PALETTE.selva}"/>` +
+    `<path d="${trazos.N}" fill="${PALETTE.oro}"/>`
   )
 }
 
@@ -610,13 +614,18 @@ export function palabraEstadoSvg(estado: string, escala: number, opts?: { fondo?
 // ---------------------------------------------------------------------------
 
 export const EQUIPOS_EMBLEMA: Record<string, { emblema: string; color: string }> = {
-  base: { emblema: 'greca', color: '#3fae6a' },
-  direccion: { emblema: 'piramide', color: '#e6bf2e' },
+  base: { emblema: 'greca', color: '#8a93a0' },
+  direccion: { emblema: 'piramide', color: '#b08d57' },
   'dev-a1': { emblema: 'cruz', color: '#f08a24' },
-  'dev-tablero': { emblema: 'jaguar', color: '#3a7bd5' },
+  'dev-tablero': { emblema: 'jaguar', color: '#2f4fbf' },
   datos: { emblema: 'barras', color: '#2cc6d0' },
-  research: { emblema: 'puntos', color: '#a06ad0' },
-  librarian: { emblema: 'libros', color: '#e070a8' },
+  research: { emblema: 'puntos', color: '#5aa9e6' },
+  librarian: { emblema: 'libros', color: '#8a6fb0' },
+  seguridad: { emblema: 'casco', color: '#d04a3c' },
+  mantenimiento: { emblema: 'llave', color: '#e6bf2e' },
+  limpieza: { emblema: 'balde', color: '#9ac83a' },
+  facilities: { emblema: 'llavero', color: '#e070a8' },
+  arquitectura: { emblema: 'escuadra', color: '#8b5e3c' },
 }
 
 const EMBLEMA_MATRICES: Record<string, string[]> = {
@@ -689,6 +698,56 @@ const EMBLEMA_MATRICES: Record<string, string[]> = {
     '.KKKKKKK',
     'KKKKKKK.',
     'KXXXXXK.',
+  ],
+  casco: [
+    '..KKKK..',
+    '.KXXXXK.',
+    'KXXXXXXK',
+    'KXXKKXXK',
+    'KXXKKXXK',
+    'KKKKKKKK',
+    'KXXXXXXK',
+    'KKKKKKKK',
+  ],
+  llave: [
+    '.KKK....',
+    'KXXXK...',
+    'KXKXK...',
+    'KXXXKK..',
+    '.KKXXXK.',
+    '...KXXXK',
+    '....KXXK',
+    '.....KK.',
+  ],
+  balde: [
+    '.KKKKKK.',
+    'K......K',
+    'KKKKKKKK',
+    'KXXXXXXK',
+    '.KXXXXK.',
+    '.KXXXXK.',
+    '.KXXXXK.',
+    '..KKKK..',
+  ],
+  llavero: [
+    '..KKKK..',
+    '.K....K.',
+    '.K....K.',
+    '..KKKK..',
+    '..KXXK..',
+    '.KXXXXK.',
+    '.KXKKXK.',
+    '..KKKK..',
+  ],
+  escuadra: [
+    'KKKKKKKK',
+    'KXXXXXXK',
+    'KXKKKKKK',
+    'KXKXXXK.',
+    'KXKXXK..',
+    'KXKXK...',
+    'KXKK....',
+    'KKK.....',
   ],
 }
 

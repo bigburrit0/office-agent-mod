@@ -115,13 +115,13 @@ test('Roles: con panel angosto «Editar» también va dentro del detalle, bajo e
   expect(await disposicion($, on, 50)).toBe('column')
 })
 
-test('emblemaSvg: los 7 equipos y uno desconocido dan un SVG seguro', async () => {
+test('emblemaSvg: los 12 equipos y uno desconocido dan un SVG seguro', async () => {
   for (const equipo of [...Object.keys(EQUIPOS_EMBLEMA), 'desconocido']) {
     const svg = emblemaSvg(equipo, 4)
     expect(svg !== '').toBe(true)
     expect(svg.includes('<script')).toBe(false)
   }
-  expect(Object.keys(EQUIPOS_EMBLEMA).length).toBe(7)
+  expect(Object.keys(EQUIPOS_EMBLEMA).length).toBe(12)
 })
 
 test('Equipos: primera carga con catálogo vacío migra los 4 roles a base (con lo guardado)', async ($, on) => {

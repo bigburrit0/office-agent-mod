@@ -329,7 +329,7 @@ export async function migrarRoles(
   return { escritos, existentes }
 }
 
-// ---------- Esquema de agentes (D:\New\equipos\ESQUEMA-AGENTES.md) ----------
+// ---------- Esquema de agentes (ESQUEMA-AGENTES.md del kit) ----------
 
 export const EQUIPOS_ESQUEMA: Record<string, { color: string; emblema: string }> = {
   base: { color: 'green', emblema: 'greca' },
@@ -339,6 +339,11 @@ export const EQUIPOS_ESQUEMA: Record<string, { color: string; emblema: string }>
   datos: { color: 'cyan', emblema: 'barras' },
   research: { color: 'purple', emblema: 'puntos' },
   librarian: { color: 'pink', emblema: 'libros' },
+  seguridad: { color: 'red', emblema: 'casco' },
+  mantenimiento: { color: 'yellow', emblema: 'llave' },
+  limpieza: { color: 'green', emblema: 'balde' },
+  facilities: { color: 'pink', emblema: 'llavero' },
+  arquitectura: { color: 'gray', emblema: 'escuadra' },
 }
 
 export const JUEGOS_HERRAMIENTAS: Record<string, string[]> = {

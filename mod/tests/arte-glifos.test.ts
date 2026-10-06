@@ -1,7 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
 import { EQUIPO_ACENTO, TIPOS_GLIFO, glifoMatriz, glifoSvg, tipoDeAgente } from '../hooks/arte-glifos'
-import { EQUIPOS_EMBLEMA } from '../hooks/pixel'
 
 const W = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash']
 const R = ['Read', 'Glob', 'Grep']
@@ -60,12 +59,4 @@ test('tipo o equipo desconocidos caen en escriba y base; escala acotada', () => 
   expect(glifoSvg('nada', 'nadie', 1)).toBe(glifoSvg('escriba', 'base', 1))
   expect(glifoSvg('escriba', 'base', 99)).toContain('width="128"')
   expect(glifoSvg('escriba', 'base', Number('x'))).toContain('width="16"')
-})
-
-test('el color de cada equipo en el emblema coincide con el acento del glifo', () => {
-  expect(Object.keys(EQUIPOS_EMBLEMA).sort()).toEqual(Object.keys(EQUIPO_ACENTO).sort())
-  expect(Object.keys(EQUIPO_ACENTO).length).toBe(7)
-  for (const equipo of Object.keys(EQUIPO_ACENTO)) {
-    expect(EQUIPOS_EMBLEMA[equipo].color.toLowerCase()).toBe(EQUIPO_ACENTO[equipo][0])
-  }
 })
