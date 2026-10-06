@@ -154,3 +154,7 @@ Evidencia: `docs/capturas/2026-10-06-subagentes-claro-v1.png` (Subagentes en la 
 | F-1 | ✅ | Lo que mostró la maqueta: burbuja pegada a la escena (antes quedaba debajo del uso), sin «Resumen visual» cuando no hay agentes, y el almanaque sin texto pisado. |
 
 **Verificación (orquestador):** `plugin test mod` 281 pass, 0 fail; validate OK; vista previa OK; maqueta revisada en el navegador en las cuatro vistas.
+
+### Cierre (06/10/2026)
+
+Nimai revisó las tres vistas en la app («Quedó casi perfecto, me gusta mucho el resultado»; capturas `docs/capturas/2026-10-06-*-pieza-unica.png`). Falta completar Editar: plan en `docs/plan-editar-agente-2026-10-06.md`, sin código todavía.
