@@ -2,7 +2,7 @@
 
 **Fecha:** 06/10/2026. **Pedido de Nimai** (con las capturas de la versión «pieza única»): «Quedó casi perfecto, me gusta mucho el resultado. Solo falta completar la sección de "editar" agente. Pero quiero que solo creemos las instrucciones».
 
-Este documento es solo el plan: **no se escribió código**. Antes de implementar, Nimai responde las preguntas de la sección 4 y aprueba el plan.
+Este documento es solo el plan: **no se escribió código**. Nimai respondió las preguntas de la sección 4 el 06/10/2026 (ver «Decisiones de Nimai»). Falta su aprobación para empezar a implementar.
 
 **Evidencia:** `docs/capturas/2026-10-06-editar-pieza-unica.png` (Editar `apps-script`), con `docs/capturas/2026-10-06-subagentes-pieza-unica.png` y `docs/capturas/2026-10-06-equipos-pieza-unica.png` como referencia del estilo que ya le gusta a Nimai. Código: `mod/hooks/register.tsx` (vista `roles` con `draft`, ~líneas 1060-1290), `mod/hooks/catalogo.ts` (`AgenteCatalogo`, `validarAgente`), `mod/types/index.d.ts` (`RolBorrador`).
 
@@ -42,13 +42,14 @@ Mismo método que las oleadas anteriores: cada tarjeta nombra su agente, archivo
 |---|---|---|---|
 | G-1 | **Encabezado sin repetir:** la escena ya muestra ícono y placa, así que debajo queda solo la ruta «← Equipos / base / apps-script» y una línea con el nombre en negrita y color legible (`legibleSobre`, contraste ≥ 4,5), equipo y tarea. Arregla P1 y P2. | `hooks/register.tsx`, `tests/tablero-editar.test.ts` | implementador |
 | G-2 | **Tarjetas como en Equipos:** tres tarjetas con borde del color del equipo: «Cómo trabaja» (modelo, esfuerzo, herramientas), «Cuándo usarlo» (descripción, con contador de caracteres sobre 200) y «Instrucciones» (prompt). Arregla P3. | `hooks/register.tsx`, `tests/tablero-editar.test.ts` | implementador |
-| G-3 | **Avisos del esquema en el editor:** arriba de las tarjetas, una caja «Para revisar» con los avisos de `validarAgente` **del borrador** (se recalculan al cambiar algo); cuando no queda ninguno, «✓ Cumple el esquema». Arregla P5. | `hooks/register.tsx`, `tests/tablero-editar.test.ts` | implementador |
+| G-3 | **Avisos del esquema en el editor:** arriba de las tarjetas, una caja «Para revisar» con los avisos de `validarAgente` **del borrador** (se recalculan al cambiar algo); cuando no queda ninguno, «✓ Cumple el esquema». Al tocar Guardar con avisos pendientes, se guarda igual y el aviso dice «Guardado con N avisos para revisar» (no bloquea). Arregla P5. | `hooks/register.tsx`, `tests/tablero-editar.test.ts` | implementador |
 | G-4 | **Qué cambia al guardar:** con cambios, una lista corta «Vas a cambiar: modelo sonnet → haiku · descripción (+12 caracteres)…» arriba de Guardar. Arregla P7. | `hooks/tablero-nucleo.ts` (función pura), `hooks/register.tsx`, pruebas | implementador |
-| G-5 | **Prompt editable de verdad**, según lo que elija Nimai en la pregunta 1. Arregla P4. | depende de la opción | implementador |
-| G-6 | **Ficha completa en solo lectura:** equipo, etiquetas y extras (`maxTurns`, `skills`) en una línea chica al pie de «Cómo trabaja». Arregla P6. | `hooks/register.tsx`, pruebas | implementador |
-| G-7 | **Restaurar para cualquier agente** (si Nimai dice que sí, pregunta 3): guardar una copia del archivo antes de cada Guardar y ofrecer «Volver a la versión anterior». Arregla P8. | `hooks/register.tsx`, `hooks/catalogo.ts`, pruebas | implementador |
+| G-5a | **Abrir en el editor:** botón «Abrir en el editor» que abre el archivo del agente; al volver, el panel lo relee. Primero verificar en los tipos del motor que se pueda abrir un archivo desde el panel; si no se puede, mostrar la ruta con un botón «Copiar ruta» y avisarle a Nimai. Arregla P4. | `hooks/register.tsx`, pruebas | implementador |
+| G-5b | **Editar por secciones:** el prompt se parte por sus títulos (`## Rol`, `## Antes de empezar`, `## Cómo trabajás`, `## Límites`, `## Entrega`); cada sección se despliega y se cambia por separado; al guardar se vuelve a armar en el mismo orden (función pura en `tablero-nucleo.ts`, probada ida y vuelta sin perder texto). Arregla P4. | `hooks/tablero-nucleo.ts`, `hooks/register.tsx`, pruebas | implementador |
+| G-6 | **Ficha completa en solo lectura (equipo y etiquetas no se editan):** equipo, etiquetas y extras (`maxTurns`, `skills`) en una línea chica al pie de «Cómo trabaja». Arregla P6. | `hooks/register.tsx`, pruebas | implementador |
+| G-7 | **Volver a la versión anterior, para cualquier agente:** guardar una copia del archivo antes de cada Guardar y ofrecer «Volver a la versión anterior». Arregla P8. | `hooks/register.tsx`, `hooks/catalogo.ts`, pruebas | implementador |
 
-Orden sugerido: G-1 y G-3 primero (son chicas y se ven enseguida), después G-2 y G-4, y al final G-5, G-6 y G-7. Todas tocan `register.tsx`, así que van **en serie**, una por vez.
+Orden sugerido: G-1 y G-3 primero (son chicas y se ven enseguida), después G-2 y G-4, y al final G-5a, G-5b, G-6 y G-7. Todas tocan `register.tsx`, así que van **en serie**, una por vez.
 
 ## 4. Preguntas para Nimai (antes de implementar)
 
@@ -59,6 +60,13 @@ Orden sugerido: G-1 y G-3 primero (son chicas y se ven enseguida), después G-2 
 2. **Equipo y etiquetas (G-6).** ¿Solo mostrarlos, o también poder cambiarlos? Cambiar el equipo mueve el archivo a otra carpeta y cambia color y emblema: es un cambio de reglas del esquema.
 3. **Volver atrás (G-7).** ¿Querés «Volver a la versión anterior» para todos los agentes, guardando una copia antes de cada Guardar?
 4. **Avisos (G-3).** ¿Además de mostrarlos, querés que el botón Guardar avise (sin bloquear) si quedan avisos?
+
+### Decisiones de Nimai (06/10/2026, en el chat)
+
+1. Prompt largo: **c) las dos** → G-5a (abrir en el editor) y G-5b (editar por secciones).
+2. Equipo y etiquetas: **solo mostrarlos** → G-6 en solo lectura; el equipo no se cambia desde el panel.
+3. Volver a la versión anterior para todos los agentes: **sí** → G-7.
+4. Guardar avisa si quedan avisos, sin bloquear: **sí** → incluido en G-3.
 
 ## 5. Cómo se verifica
 
