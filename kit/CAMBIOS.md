@@ -1,6 +1,18 @@
 # Cambios
 
-primera exportación (no había MANIFIESTO.md)
+## 06/10/2026: preparación para la compu del trabajo
+
+Cambios hechos en el repo, no en una exportación desde casa. **Hay que llevarlos a las fuentes de casa** (columna «Fuente»), o la próxima exportación los pisa.
+
+| Archivo del kit | Fuente en casa | Qué cambió |
+|---|---|---|
+| `LEEME.md` | `{{EQUIPOS}}\kit\LEEME.md` | Instrucciones paso a paso para la sesión de Claude del trabajo: entorno, método, mod, prueba e informe. |
+| `ADAPTAR.md` | `{{EQUIPOS}}\kit\ADAPTAR.md` | Paso 7: verificar agentes con `/agents` en una sesión nueva (`claude agents` lista sesiones en segundo plano). Paso 7b: cargar el mod después de los agentes. |
+| `metodo/ESQUEMA-AGENTES.md` | `{{EQUIPOS}}\ESQUEMA-AGENTES.md` | Juego de herramientas nuevo **documentos** (arquitecto y disenador ya lo usan). Filas de los 5 equipos del edificio. El panel se llama `/oficina`. |
+
+Para la sesión del trabajo: en una instalación nueva no hay nada que repetir por estos cambios; en una ya instalada, repetí el paso 7 de `ADAPTAR.md` y la sección 3 de `LEEME.md`.
+
+## 06/10/2026: primera exportación (no había MANIFIESTO.md)
 
 ## Nuevos
 

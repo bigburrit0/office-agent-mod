@@ -13,7 +13,7 @@ import {
   type AgenteCatalogo,
   type FsMin,
 } from '../hooks/catalogo'
-import { DEFAULT_ROLES, PREAMBLE } from '../hooks/roles'
+import { DEFAULT_ROLES, PREAMBLE, presetTools, toolsKind, toolsLabel } from '../hooks/roles'
 
 const RAIZ = 'C:\\x\\agents'
 
@@ -303,4 +303,18 @@ test('rolesBaseEsquema: los 4 roles base cumplen el esquema y van a base', async
     const r = parseAgente(serializeAgente(a), a.ruta)
     expect(r.ok && validarAgente(r.agente).length).toBe(0)
   }
+})
+
+test('juego «documentos» (arquitecto y disenador del kit): lectura y web, más Write y Edit, sin aviso', async () => {
+  const a = { ...plantilla(), tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Skill', 'Write', 'Edit'] }
+  expect(validarAgente(a).some(v => v.includes('juego'))).toBe(false)
+  const b = { ...plantilla(), tools: ['Read', 'Glob', 'Grep', 'Write', 'Skill'] }
+  expect(validarAgente(b).some(v => v.includes('documentos o escritura'))).toBe(true)
+})
+
+test('el editor reconoce los juegos pruebas y documentos', async () => {
+  expect(toolsKind(['Read', 'Glob', 'Grep', 'Bash', 'PowerShell', 'Skill'])).toBe('pruebas')
+  expect(toolsKind(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'Skill'])).toBe('documentos')
+  expect(toolsLabel(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'Skill'])).toBe('documentos (lectura, web y escritura)')
+  expect(presetTools('documentos')).toEqual(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'Skill'])
 })

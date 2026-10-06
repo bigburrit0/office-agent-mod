@@ -1448,6 +1448,8 @@ export const register: Register = on => {
         const toolOptions = [
           { value: 'lectura', label: 'solo lectura' },
           { value: 'lectura-web', label: 'lectura y web' },
+          { value: 'pruebas', label: 'pruebas (corre comandos)' },
+          { value: 'documentos', label: 'documentos (lectura, web y escritura)' },
           { value: 'escritura', label: 'lectura y escritura' },
           { value: 'todas', label: 'todas' },
         ]

@@ -1,6 +1,6 @@
 # Esquema para crear agentes (v1.1 · 05/10/2026: `Skill` en todos, sin haiku; ver `REGLAS-TARJETAS.md`)
 
-Todo agente nuevo sigue este esquema. Lo usan el orquestador al escribir tarjetas, los subagentes que crean agentes y el panel `/tablero` para marcar los que no cumplen.
+Todo agente nuevo sigue este esquema. Lo usan el orquestador al escribir tarjetas, los subagentes que crean agentes y el panel `/oficina` para marcar los que no cumplen.
 
 ## 1. Dónde va y cómo se llama
 
@@ -16,7 +16,7 @@ Todo agente nuevo sigue este esquema. Lo usan el orquestador al escribir tarjeta
 | `description` | sí | Máximo 200 caracteres. Forma: «Qué hace. Usalo para … No lo uses para …». Es lo que lee el orquestador para elegirlo. |
 | `model` | sí | `sonnet` (desde el 05/10/2026 no se usa `haiku`: no admite `effort`). `opus` no se fija acá: se pide en la llamada para lo grande. |
 | `effort` | sí | `low` (lo mecánico y Research), `medium` (criterio; por defecto), `high` (Dirección). El esfuerzo no se cambia al despachar: para subir de esfuerzo se cambia de agente (`mecanico` → `corrector`). |
-| `tools` | sí | El mínimo que necesita, de uno de estos juegos, **siempre con `Skill` al final**: **lectura** `Read, Glob, Grep` · **lectura-web** `Read, Glob, Grep, WebFetch, WebSearch` · **pruebas** `Read, Glob, Grep, Bash, PowerShell` (corre comandos, no edita) · **escritura** `Read, Write, Edit, Glob, Grep, Bash, PowerShell`. Sin `Skill` el agente no puede cargar skills (documentación oficial). |
+| `tools` | sí | El mínimo que necesita, de uno de estos juegos, **siempre con `Skill` al final**: **lectura** `Read, Glob, Grep` · **lectura-web** `Read, Glob, Grep, WebFetch, WebSearch` · **pruebas** `Read, Glob, Grep, Bash, PowerShell` (corre comandos, no edita) · **documentos** `Read, Glob, Grep, WebFetch, WebSearch, Write, Edit` (lee, busca en la web y escribe documentos, sin terminal: arquitecto, disenador) · **escritura** `Read, Write, Edit, Glob, Grep, Bash, PowerShell`. Sin `Skill` el agente no puede cargar skills (documentación oficial). |
 | `color` | sí | El color de su equipo (tabla de la sección 3). |
 | `maxTurns` | no | Tope de turnos. Research: 15. |
 | `omitClaudeMd` | no | `true` en los trabajadores y en Research: no cargan el CLAUDE.md del proyecto (ahorra tokens). El estratega y el arquitecto/disenador lo pueden necesitar; queda a criterio de la tarjeta. |
@@ -38,7 +38,14 @@ Los tres últimos los ignora Claude Code y los lee el panel.
 | `datos` | cyan | barras | Analista (SQL, Python) y dataviz (SVG sin dependencias) |
 | `research` | purple | puntos | Investigadores con personalidad, esfuerzo bajo |
 | `librarian` | pink | libros | Mantiene la wiki de `{{BIBLIOTECA}}` |
-| `dev-tablero` | blue | jaguar | El mod `/tablero` (`{{RAIZ}}\tablero-subagentes\mod`). Alta el 05/10/2026; el emblema en el panel llega con TAB-103 |
+| `dev-tablero` | blue | jaguar | El mod `/oficina` (`{{RAIZ}}\tablero-subagentes\mod`). Alta el 05/10/2026 |
+| `seguridad` | red | casco | Seguridad del edificio: cámaras, accesos, rondas |
+| `mantenimiento` | yellow | llave | Arreglos y mantenimiento preventivo |
+| `limpieza` | green | balde | Limpieza y su planificación |
+| `facilities` | pink | llavero | Servicios del edificio: llaves, proveedores, espacios |
+| `arquitectura` | gray | escuadra | Planos y reformas de los espacios |
+
+Los cinco equipos del edificio ya tienen color, emblema y actividad en el panel; todavía no tienen agentes ni skill: se crean cuando hagan falta (regla de 3 de `ESQUEMA-SISTEMA.md`).
 
 Equipo nuevo: se agrega una fila acá, un emblema en el panel (`pixel.ts`), su actividad en el patio (`arte-actividades.ts`: qué hace el oficinista en su escritorio, pensada para ese equipo) y una skill `skills\equipo-<nombre>\SKILL.md`.
 

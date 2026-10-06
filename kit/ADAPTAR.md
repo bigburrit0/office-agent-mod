@@ -35,8 +35,16 @@ Proponé, sin crear nada, si conviene un especialista por área del edificio. Ap
 Listo cuando hay una propuesta por área, con su justificación.
 
 ## 7. Verificar
-Comprobá que Claude Code ve los agentes y skills nuevos (`claude agents`, `claude plugin list` o `/agents`). Escribí un resumen de lo instalado: qué, dónde, qué quedó con `.bak`.
+Comprobá que Claude Code ve los agentes y skills nuevos:
+- Agentes: con `/agents` **dentro de una sesión nueva** (los agentes en subcarpetas se ven recién en una sesión nueva). Ojo: `claude agents` en la terminal **no** sirve para esto: lista sesiones en segundo plano y da vacío aunque haya agentes.
+- Skills y el mod: `claude plugin list` (el mod tiene que figurar `loaded`).
+
+Escribí un resumen de lo instalado: qué, dónde, qué quedó con `.bak`.
 Listo cuando cada agente y skill instalado aparece en la lista o está marcado como no visible.
+
+## 7b. Cargar el mod `/oficina`
+Recién con los agentes instalados (paso 5) y verificados (paso 7), seguí «Instrucciones para Claude» de `LEEME.md`, sección 3. Si el mod se carga antes, el panel muestra «No hay agentes» y ofrece crear 4 roles base: **no los crees** si vas a instalar los del kit.
+Listo cuando `/oficina` abre y la pestaña Equipos muestra los equipos instalados.
 
 ## 8. Actualizaciones
 Cuando llegue un kit nuevo, leé `CAMBIOS.md` y repetí solo los pasos 2, 4 y 5 para los archivos que cambiaron.

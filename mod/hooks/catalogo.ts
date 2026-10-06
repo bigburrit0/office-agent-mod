@@ -350,6 +350,7 @@ export const JUEGOS_HERRAMIENTAS: Record<string, string[]> = {
   lectura: ['Read', 'Glob', 'Grep'],
   'lectura-web': ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
   pruebas: ['Read', 'Glob', 'Grep', 'Bash', 'PowerShell'],
+  documentos: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit'],
   escritura: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'PowerShell'],
 }
 
@@ -403,9 +404,9 @@ export function validarAgente(a: AgenteCatalogo): string[] {
   }
   if (a.model === 'opus') avisos.push('El model no puede fijarse en opus: opus se pide en la llamada.')
   if (a.tools === null) {
-    avisos.push('Tiene todas las herramientas: elegí un juego (lectura, lectura-web, pruebas o escritura).')
+    avisos.push('Tiene todas las herramientas: elegí un juego (lectura, lectura-web, pruebas, documentos o escritura).')
   } else if (!Object.values(JUEGOS_HERRAMIENTAS).some(j => mismoConjunto(a.tools as string[], j))) {
-    avisos.push('Las herramientas no coinciden con ningún juego (lectura, lectura-web, pruebas o escritura).')
+    avisos.push('Las herramientas no coinciden con ningún juego (lectura, lectura-web, pruebas, documentos o escritura).')
   }
   if (a.tools !== null && !a.tools.includes('Skill')) {
     avisos.push('No tiene la herramienta Skill: no puede cargar skills.')

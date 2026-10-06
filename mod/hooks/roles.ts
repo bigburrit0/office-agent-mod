@@ -11,6 +11,10 @@ export const EFFORTS: string[] = ['low', 'medium', 'high', 'xhigh', 'max']
 export const TOOLS_READ: string[] = ['Read', 'Glob', 'Grep', 'Skill']
 export const TOOLS_READ_WEB: string[] = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Skill']
 export const TOOLS_WRITE: string[] = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'PowerShell', 'Skill']
+// Corre comandos pero no edita (juego «pruebas» del esquema).
+export const TOOLS_TESTS: string[] = ['Read', 'Glob', 'Grep', 'Bash', 'PowerShell', 'Skill']
+// Lee, busca en la web y escribe documentos, sin terminal (juego «documentos»: arquitecto, disenador).
+export const TOOLS_DOCS: string[] = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'Skill']
 
 export const PREAMBLE =
   'Sos un subagente de la usuaria. El mensaje inicial que recibís es tu tarjeta de trabajo, ' +
@@ -53,7 +57,7 @@ export const DEFAULT_ROLES: Record<string, RolSpec> = {
   },
 }
 
-export type ToolsKind = 'lectura' | 'lectura-web' | 'escritura' | 'todas' | 'personalizado'
+export type ToolsKind = 'lectura' | 'lectura-web' | 'pruebas' | 'documentos' | 'escritura' | 'todas' | 'personalizado'
 
 function sinSkill(list: string[]): string[] {
   return list.filter(item => item !== 'Skill')
@@ -71,6 +75,8 @@ export function toolsKind(tools: string[] | null): ToolsKind {
   if (tools === null) return 'todas'
   if (sameSet(tools, TOOLS_READ)) return 'lectura'
   if (sameSet(tools, TOOLS_READ_WEB)) return 'lectura-web'
+  if (sameSet(tools, TOOLS_TESTS)) return 'pruebas'
+  if (sameSet(tools, TOOLS_DOCS)) return 'documentos'
   if (sameSet(tools, TOOLS_WRITE)) return 'escritura'
 
   return 'personalizado'
@@ -80,6 +86,8 @@ export function toolsLabel(tools: string[] | null): string {
   const kind = toolsKind(tools)
   if (kind === 'lectura') return 'solo lectura'
   if (kind === 'lectura-web') return 'lectura y web'
+  if (kind === 'pruebas') return 'pruebas (corre comandos)'
+  if (kind === 'documentos') return 'documentos (lectura, web y escritura)'
   if (kind === 'escritura') return 'lectura y escritura'
   if (kind === 'todas') return 'todas'
 
@@ -90,6 +98,8 @@ export function toolsLabel(tools: string[] | null): string {
 export function presetTools(kind: string): string[] | null | undefined {
   if (kind === 'lectura') return [...TOOLS_READ]
   if (kind === 'lectura-web') return [...TOOLS_READ_WEB]
+  if (kind === 'pruebas') return [...TOOLS_TESTS]
+  if (kind === 'documentos') return [...TOOLS_DOCS]
   if (kind === 'escritura') return [...TOOLS_WRITE]
   if (kind === 'todas') return null
 
