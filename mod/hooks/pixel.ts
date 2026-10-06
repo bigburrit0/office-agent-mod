@@ -304,13 +304,28 @@ export function timelineSvg(rows: FilaTiempo[], nowMs: number, width: number): s
 
     let cuerpo = `<rect width="${w}" height="${alto}" fill="${PALETTE.selva}"/>`
 
-    // Eje: 4 divisiones con el tiempo transcurrido desde el primer inicio.
+    // Eje: 4 divisiones con el tiempo transcurrido desde el primer inicio. Una marca que se
+    // pisaría con otra (poco ancho) no se escribe; la línea de la división sí.
+    // Ancho estimado de un carácter monospace de 9 px: 5,5 px.
+    // Acotada al ancho: con un panel muy angosto la barra mínima (40 px) se pasaría del dibujo.
+    const xMarca = (i: number): number => Math.min(w - 2, Math.round(xBarra + (anchoBarra * i) / 4))
+    const marcas = [0, 1, 2, 3, 4].map(i => duracionCorta((span * i) / 4))
+    // La última (el total) siempre se ve; las otras, de izquierda a derecha, si no pisan nada.
+    const inicioUltima = xMarca(4) - marcas[4].length * 5.5
+    let finAnterior = -Infinity
     for (let i = 0; i <= 4; i++) {
-      const x = Math.round(xBarra + (anchoBarra * i) / 4)
-      cuerpo += `<rect x="${x}" y="${ARRIBA - 2}" width="1" height="${alto - ARRIBA + 2}" fill="${PALETTE.turquesa}" opacity="0.35"/>`
-      const ancla = i === 4 ? 'end' : 'start'
-      cuerpo += `<text x="${x}" y="10" text-anchor="${ancla}" font-family="monospace" font-size="9" fill="${PALETTE.oroPalido}">${esc(duracionCorta((span * i) / 4))}</text>`
+      cuerpo += `<rect x="${xMarca(i)}" y="${ARRIBA - 2}" width="1" height="${alto - ARRIBA + 2}" fill="${PALETTE.turquesa}" opacity="0.35"/>`
+      if (i === 4) continue
+      const fin = xMarca(i) + marcas[i].length * 5.5
+      if (xMarca(i) < finAnterior + 4 || fin + 4 > inicioUltima) marcas[i] = ''
+      else finAnterior = fin
     }
+    marcas.forEach((texto, i) => {
+      if (texto === '') return
+      const x = xMarca(i)
+      const ancla = i === 4 ? 'end' : 'start'
+      cuerpo += `<text x="${x}" y="10" text-anchor="${ancla}" font-family="monospace" font-size="9" fill="${PALETTE.oroPalido}">${esc(texto)}</text>`
+    })
 
     filas.forEach((f, idx) => {
       const y = ARRIBA + idx * ALTO_FILA

@@ -319,6 +319,35 @@ function glifoDe(base: string, role: string, agentes: AgenteTablero[]): { tipo: 
   return { tipo, equipo }
 }
 
+// Luminancia relativa de un color #rrggbb (WCAG); 0 si no se entiende.
+function luminancia(hex: string): number {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
+  if (!m) return 0
+  const [r, g, b] = [m[1], m[2], m[3]].map(c => {
+    const v = parseInt(c, 16) / 255
+
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  })
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function contraste(a: string, b: string): number {
+  const la = luminancia(a)
+  const lb = luminancia(b)
+
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+
+// Colores del chip de un equipo en la leyenda: el tono oscuro con letra crema si contrasta 4,5:1
+// o más; si no, el tono claro con letra oscura (mantenimiento y limpieza).
+function chipEquipo(equipo: string): { fondo: string; letra: string } {
+  const [claro, oscuro] = EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base
+  if (contraste(oscuro, PALETTE.crema) >= 4.5) return { fondo: oscuro, letra: PALETTE.crema }
+
+  return { fondo: claro, letra: PALETTE.negro }
+}
+
 // Entero estable sacado de un texto (suma de códigos de caracteres).
 function semillaDe(id: string): number {
   let n = 0
@@ -2309,8 +2338,8 @@ export const register: Register = on => {
             {equiposPatio.map(equipo => (
               <Text
                 key={`leyenda-${equipo}`}
-                backgroundColor={(EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base)[1]}
-                color={PALETTE.crema}
+                backgroundColor={chipEquipo(equipo).fondo}
+                color={chipEquipo(equipo).letra}
               >{` ■ ${equipo} `}</Text>
             ))}
           </Box>

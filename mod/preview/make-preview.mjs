@@ -91,12 +91,19 @@ function seccionPatio() {
   return h
 }
 
-// Sección «Leyenda de colores»: los 12 equipos como los muestra el panel (fondo oscuro del equipo, letra crema).
+// Sección «Leyenda de colores»: los 12 equipos como los muestra el panel. Misma regla que
+// chipEquipo en register.tsx: tono oscuro con letra crema si contrasta 4,5:1; si no, tono claro con letra oscura.
+const lum = hex => {
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+}
+const contraste = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05)
 function seccionLeyenda() {
   let h = '<h2>Leyenda de colores del patio</h2><div class="fila">'
   for (const [equipo, [claro, oscuro]] of Object.entries(glifos.EQUIPO_ACENTO)) {
-    h += `<div class="muestra" style="background:${oscuro};color:#FFF4DF;text-shadow:none">■ ${equipo}</div>` +
-      `<div class="muestra" style="background:${claro}">camisa</div>`
+    const usaOscuro = contraste(oscuro, '#FFF4DF') >= 4.5
+    const [fondo, letra] = usaOscuro ? [oscuro, '#FFF4DF'] : [claro, '#2B2118']
+    h += `<div class="muestra" style="background:${fondo};color:${letra};text-shadow:none">■ ${equipo} (${contraste(fondo, letra).toFixed(1)}:1)</div>`
   }
   return h + '</div>'
 }

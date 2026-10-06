@@ -145,3 +145,15 @@ test('patio por color: la celda lleva el equipo en el título y la leyenda lo no
   expect((await ui.findAll({ type: 'Text', text: /■ research/ })).length).toBe(1)
   expect((await ui.findAll({ type: 'Text', text: /■ datos/ })).length).toBe(1)
 })
+
+test('leyenda: cada chip tiene contraste de 4,5:1 o más (mantenimiento usa el tono claro con letra oscura)', async ($, on) => {
+  const { ui, paso } = await montar($, on, () => [DE('r1', 'running', 'mantenimiento/plomero'), DE('r2', 'running', 'seguridad/guardia')])
+  await paso(2000)
+  const chip = async (eq: string) => (await ui.findAll({ type: 'Text', text: new RegExp(`■ ${eq}`) }))[0]
+  const m = await chip('mantenimiento')
+  expect(m.props.backgroundColor).toBe('#e6bf2e')
+  expect(m.props.color).toBe('#2B2118')
+  const s = await chip('seguridad')
+  expect(s.props.backgroundColor).toBe('#8a2a20')
+  expect(s.props.color).toBe('#FFF4DF')
+})
