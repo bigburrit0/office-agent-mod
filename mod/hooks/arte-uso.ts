@@ -6,6 +6,8 @@ export type DatosUso = {
   tokens?: { total: number; nuevos: number; cache: number }
   cincoHoras?: { pct: number; renueva: string }
   semana?: { pct: number; renueva: string; hoy: number }
+  contexto?: number
+  costo?: number
 }
 
 const C = {
@@ -63,6 +65,16 @@ export function quedaPct(pctUsado: number): number {
   return Math.round(100 - Math.max(0, Math.min(100, num(pctUsado))))
 }
 
+function contextoPct(d: DatosUso): number | null {
+  if (d.contexto == null || !Number.isFinite(Number(d.contexto))) return null
+  return Math.round(Math.max(0, Math.min(100, Number(d.contexto))))
+}
+
+function costoUs(d: DatosUso): string | null {
+  if (d.costo == null || !Number.isFinite(Number(d.costo)) || Number(d.costo) < 0) return null
+  return `US$ ${Number(d.costo).toFixed(2).replace('.', ',')}`
+}
+
 export function altUso(d: DatosUso): string {
   const p: string[] = []
   if (d.tokens) {
@@ -82,6 +94,10 @@ export function altUso(d: DatosUso): string {
   } else {
     p.push('Semana: esperando la primera respuesta.')
   }
+  const cx = contextoPct(d)
+  if (cx != null) p.push(`Ventana de contexto: contexto ${cx} % usado.`)
+  const co = costoUs(d)
+  if (co) p.push(`Gasto: costo ${co}.`)
   return p.join(' ')
 }
 
@@ -100,7 +116,16 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
   const apilado = w < 320
   const pw = apilado ? w : Math.floor(w / 2)
   const altoPanel = 84
-  const y0 = 76
+  const cxPct = contextoPct(d)
+  const costoTxt = costoUs(d)
+  const hayExtra = cxPct != null || costoTxt != null
+  const cxTxt = cxPct != null ? `contexto ${cxPct} %` : ''
+  const subTxt = d.tokens ? `nuevos ${abreviarTokens(d.tokens.nuevos)} · caché ${abreviarTokens(d.tokens.cache)}` : ''
+  const barW = 49
+  const derW = Math.ceil((cxTxt.length + (costoTxt ? costoTxt.length : 0)) * 10 * 0.62) + (cxPct != null ? barW + 8 : 0) + (cxTxt && costoTxt ? 10 : 0)
+  const izqW = Math.ceil(subTxt.length * 10 * 0.62)
+  const dosLineas = hayExtra && (w < 360 || izqW + derW + 12 > w - 2 * pad)
+  const y0 = dosLineas ? 90 : 76
   const H = apilado ? y0 + altoPanel * 2 + 6 : y0 + altoPanel + 6
 
   const rect = (x: number, y: number, ww: number, hh: number, fill: string, extra = '') =>
@@ -125,9 +150,28 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
   s += texto(Math.round(w / 2), 24 + 14 + Math.round(fs * 0.35), digitos, fs, C.lcdDigito, ' text-anchor="middle" monospace')
   if (hayTokens) {
     const sub = `nuevos ${abreviarTokens(d.tokens!.nuevos)} · caché ${abreviarTokens(d.tokens!.cache)}`
-    s += texto(pad, 66, sub, ajustar(sub, lcdW, 11), C.contorno)
+    const compacto = hayExtra && !dosLineas
+    s += texto(pad, 66, sub, compacto ? 10 : ajustar(sub, lcdW, 11), C.contorno)
   }
-  s += rect(b, 74, w - 2 * b, 2, C.beigeOscuro)
+  if (hayExtra) {
+    const yl = dosLineas ? 80 : 66
+    let xd = w - pad
+    if (costoTxt) {
+      s += texto(xd, yl, costoTxt, 10, C.contorno, ' text-anchor="end" font-weight="bold"')
+      xd -= Math.ceil(costoTxt.length * 10 * 0.62) + 10
+    }
+    if (cxPct != null) {
+      const colorCx = cxPct >= 90 ? C.rojo : cxPct >= 70 ? C.naranja : C.verde
+      const llenosCx = Math.round(cxPct / 10)
+      const xb = dosLineas ? pad + Math.ceil(cxTxt.length * 10 * 0.62) + 8 : xd - barW
+      for (let i = 0; i < 10; i++) {
+        const llena = i < llenosCx
+        s += `<rect data-ctx="${llena ? 'llena' : 'vacia'}" x="${xb + i * 5}" y="${yl - 8}" width="4" height="9" fill="${llena ? colorCx : C.grisClaro}"/>`
+      }
+      s += texto(dosLineas ? pad : xb - 8, yl, cxTxt, 10, C.contorno, dosLineas ? '' : ' text-anchor="end"')
+    }
+  }
+  s += rect(b, y0 - 2, w - 2 * b, 2, C.beigeOscuro)
   if (!apilado) s += rect(pw, y0, 2, altoPanel, C.beigeOscuro)
   else s += rect(b, y0 + altoPanel - 1, w - 2 * b, 2, C.beigeOscuro)
 

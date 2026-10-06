@@ -84,3 +84,46 @@ test('el texto alternativo trae las mismas cifras', () => {
   for (const t of ['1.284.560', '25 %', '61 %']) expect(alt.includes(t)).toBe(true)
   expect(tableroUsoSvg(completo, 420).includes(`aria-label="${alt}"`)).toBe(true)
 })
+
+test('contexto y costo aparecen en el dibujo y en el texto alternativo', () => {
+  const d = { ...completo, contexto: 8, costo: 1.234 }
+  for (const px of [378, 600, 300]) {
+    const svg = tableroUsoSvg(d, px)
+    expect(svg.includes('contexto 8 %')).toBe(true)
+    expect(svg.includes('US$ 1,23')).toBe(true)
+  }
+  const alt = altUso(d)
+  expect(alt.includes('contexto 8 %')).toBe(true)
+  expect(alt.includes('US$ 1,23')).toBe(true)
+  expect(altUso(completo).includes('contexto')).toBe(false)
+})
+
+test('sin contexto ni costo el alto es el de siempre y con ellos nunca es menor', () => {
+  expect(alto(tableroUsoSvg(completo, 600))).toBe(166)
+  expect(alto(tableroUsoSvg(completo, 420))).toBe(166)
+  expect(alto(tableroUsoSvg(completo, 300))).toBe(250)
+  expect(tableroUsoSvg(completo, 420).includes('data-ctx')).toBe(false)
+  expect(tableroUsoSvg({ ...completo, contexto: undefined, costo: undefined }, 420)).toBe(tableroUsoSvg(completo, 420))
+  expect(alto(tableroUsoSvg({ ...completo, contexto: 8 }, 600))).toBe(166)
+})
+
+test('a 300 px con contexto y costo nada se sale del ancho', () => {
+  const d = { ...completo, contexto: 8, costo: 1.234 }
+  for (const px of [200, 300, 378]) {
+    const svg = tableroUsoSvg(d, px)
+    expect(alto(svg)).toBeGreaterThanOrEqual(alto(tableroUsoSvg(completo, px)))
+    for (const m of svg.matchAll(/<text x="(\d+)"/g)) expect(Number(m[1])).toBeLessThanOrEqual(px)
+    for (const m of svg.matchAll(/<rect data-ctx="\w+" x="(\d+)"/g)) expect(Number(m[1]) + 4).toBeLessThanOrEqual(px)
+  }
+})
+
+test('la mini barra de contexto usa verde, naranja y rojo segun el uso', () => {
+  const barra = (c: number) => tableroUsoSvg({ contexto: c }, 420)
+  expect(barra(95).includes('data-ctx="llena" x="') && /data-ctx="llena"[^>]*fill="#D9363E"/.test(barra(95))).toBe(true)
+  expect(cuantos(barra(95), 'data-ctx="llena"')).toBe(10)
+  expect(/data-ctx="llena"[^>]*fill="#F28C28"/.test(barra(75))).toBe(true)
+  expect(/data-ctx="llena"[^>]*fill="#3FAE6A"/.test(barra(8))).toBe(true)
+  expect(cuantos(barra(8), 'data-ctx="llena"')).toBe(1)
+  expect(barra(95).includes('#D9363E')).toBe(true)
+  expect(barra(8).includes('#D9363E')).toBe(false)
+})
