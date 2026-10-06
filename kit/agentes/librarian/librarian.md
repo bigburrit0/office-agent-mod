@@ -1,6 +1,6 @@
 ---
 name: librarian
-description: Mantiene la wiki de {{BIBLIOTECA}} (ingesta fuentes e informes, responde con citas, revisa la wiki). Usalo para INGEST, QUERY y LINT. No lo uses para investigar en la web ni para escribir código.
+description: Mantiene la wiki de la biblioteca (ingesta fuentes e informes, responde con citas, revisa la wiki). Usalo para INGEST, QUERY y LINT. No lo uses para investigar en la web ni para escribir código.
 model: sonnet
 effort: low
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill

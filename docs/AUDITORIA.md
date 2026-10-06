@@ -94,6 +94,8 @@ Se tomó como «nuevo espacio de trabajo» la compu del trabajo donde se instala
 
 ## 4. Plan de mejora
 
+**Estado al 06/10/2026, tarde:** hecho todo lo que se podía desde acá, salvo M8 (no se puede) y la oleada 3 (es en la compu del trabajo). Detalle en la sección 5.
+
 Ordenado por urgencia. Cada ítem dice qué archivos toca, para armar tarjetas de a 3 en paralelo sin pisarse.
 
 ### Oleada 0: antes de instalar en el trabajo
@@ -135,3 +137,27 @@ Ordenado por urgencia. Cada ítem dice qué archivos toca, para armar tarjetas d
 4. `claude plugin test mod` da 200 pass.
 
 **Prioridad sugerida:** M1 a M4 antes de instalar (son chicos y evitan problemas reales); M5 es la mejora más grande para seguir creciendo; el resto se puede hacer de a poco.
+
+## 5. Qué se hizo (06/10/2026, tarde)
+
+| # | Estado | Cómo quedó |
+|---|---|---|
+| M1 | ✅ | La migración de los 4 roles solo corre si hay roles guardados de la versión vieja (la compu de casa). En una compu sin agentes, Equipos ofrece «Crear los 4 roles base…» con confirmación; se crean cumpliendo el esquema y sin pisar ningún archivo. |
+| M2 | ✅ | Juego de herramientas nuevo **documentos** en el esquema, en el panel y en el editor (que también reconoce **pruebas**). Los 15 agentes del kit pasan sin avisos. |
+| M3 | ✅ | `kit/LEEME.md` con instrucciones paso a paso para la sesión de Claude del trabajo. `kit/ADAPTAR.md` verifica con `/agents` y carga el mod después de los agentes. `kit/CAMBIOS.md` lista lo que hay que llevar a las fuentes de casa. |
+| M4 | ✅ | El disco falso de las pruebas sirve en Windows, Linux y macOS. |
+| M5 | ✅ parcial | Lo puro pasó a `hooks/tablero-nucleo.ts` (`register.tsx` bajó de 2.524 a 2.046 líneas). **No se puede ir más allá:** el motor solo deja pasar `$` a funciones del mismo archivo que los hooks, y lee los átomos de estado donde se declaran. Las acciones, el estado y las vistas (que llaman a `$` desde sus botones) tienen que quedar en `register.tsx`. |
+| M6 | ✅ | Fuera `flashHasta` y `tituloArmado`. Las funciones que solo usa la vista previa quedan en `pixel.ts` (son de la vista previa y de sus pruebas). |
+| M7 | ✅ | El caché borra las celdas de subagentes que ya no están en la lista. |
+| M8 | ➖ | No se puede unificar: Claude Code tiene 8 colores de agente y hay 12 equipos, así que el color de Claude Code y el del patio no pueden coincidir uno a uno. En su lugar, una prueba exige que las 5 tablas por equipo (esquema, color, emblema, placa y actividad) tengan siempre los mismos equipos. |
+| M9 | ✅ | Subtítulos de los 5 equipos del edificio. |
+| M10 | ✅ | Textos alternativos con el tema oficina. Los identificadores mayas quedan (no los ve nadie). |
+| M11 | ✅ | Sin ventanas de 5 horas y semanal, el bloque de uso muestra el costo de la sesión. |
+| M12 | ✅ | Las marcas del eje no se pisan, el total siempre se ve y nada se sale del dibujo en paneles de 200 px. |
+| M13 | ✅ | Si los agentes del patio entran en una fila a escala 3, se dibujan a 66 × 81 px. |
+| M14 | ✅ | Datos trabaja en un monitor oscuro y facilities ordena un tablero de llaves. |
+| M15 | ✅ | El vapor del café ya no tapa el ojo. Todos los chips de la leyenda tienen contraste de 4,5:1 o más. |
+| M16 | ✅ | `README.md` con la aceptación actual. |
+| Extra | ✅ | Prueba de integración permanente con los agentes del kit (`mod/tests/integracion-kit.test.ts`). Encontró que la descripción de `librarian` pasaba los 200 caracteres al resolver `{{BIBLIOTECA}}` con una ruta de Windows: corregida. |
+
+La oleada 3 (verificación en la compu del trabajo) queda para la usuaria, guiada por `kit/LEEME.md`.

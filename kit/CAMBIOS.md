@@ -8,6 +8,7 @@ Cambios hechos en el repo, no en una exportación desde casa. **Hay que llevarlo
 |---|---|---|
 | `LEEME.md` | `{{EQUIPOS}}\kit\LEEME.md` | Instrucciones paso a paso para la sesión de Claude del trabajo: entorno, método, mod, prueba e informe. |
 | `ADAPTAR.md` | `{{EQUIPOS}}\kit\ADAPTAR.md` | Paso 7: verificar agentes con `/agents` en una sesión nueva (`claude agents` lista sesiones en segundo plano). Paso 7b: cargar el mod después de los agentes. |
+| `agentes/librarian/librarian.md` | `{{EQUIPOS}}\agents\librarian\librarian.md` | La descripción ya no lleva la ruta `{{BIBLIOTECA}}`: con una ruta de Windows pasaba el máximo de 200 caracteres del esquema. La ruta sigue en el cuerpo. |
 | `metodo/ESQUEMA-AGENTES.md` | `{{EQUIPOS}}\ESQUEMA-AGENTES.md` | Juego de herramientas nuevo **documentos** (arquitecto y disenador ya lo usan). Filas de los 5 equipos del edificio. El panel se llama `/oficina`. |
 
 Para la sesión del trabajo: en una instalación nueva no hay nada que repetir por estos cambios; en una ya instalada, repetí el paso 7 de `ADAPTAR.md` y la sección 3 de `LEEME.md`.

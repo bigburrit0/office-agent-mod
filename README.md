@@ -12,3 +12,12 @@ Mod de Claude Code: panel de subagentes estilo oficina 8 bits (comando `/oficina
 - `claude plugin test mod` → 0 fail, en Windows, Linux o macOS.
 - `node mod/preview/make-preview.mjs` → `OK` (Node 22.18 o más nuevo; genera `mod/preview/preview.html`).
 - Buscar `command: 'tablero'` en `mod/hooks/register.tsx` → sin resultados (el comando es `/oficina`).
+
+## Cuando cambia un agente del kit
+
+`mod/tests/integracion-kit.test.ts` prueba el mod con los agentes del kit tal como quedan instalados en la compu del trabajo. Si cambia algo en `kit/agentes`, regenerá su copia y volvé a correr las pruebas:
+
+```powershell
+node mod/tests/generar-kit-agentes.mjs
+claude plugin test mod
+```
