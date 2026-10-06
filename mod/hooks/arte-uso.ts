@@ -231,14 +231,14 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
       s += rect(cx + g, y + 29 + g, c - 2 * g, c - 2 * g, i < llenos ? C.azul : C.crema)
       if (i === hoy) {
         const m = Math.round(cx + c / 2)
-        s += `<path d="M${m - 3} ${y + 29 + c + 4}h6l-3 -4z" fill="${C.naranjaOscuro}"/>`
+        s += `<path d="M${m - 2} ${y + 29 + c + 2}h4l-2 -2z" fill="${C.naranjaOscuro}"/>`
       }
     }
     if (sm) {
       const t = `quedan ${quedaPct(sm.pct)} %`
-      s += texto(x, y + 62, t, ajustar(t, maxTxt, 15), C.contorno, ' font-weight="bold"')
+      s += texto(x, y + 67, t, ajustar(t, maxTxt, 15), C.contorno, ' font-weight="bold"')
       const r = `se renueva ${corto(sm.renueva)}`
-      s += texto(x, y + 77, r, ajustar(r, maxTxt, 10.5), C.contorno)
+      s += texto(x, y + 80, r, ajustar(r, maxTxt, 10.5), C.contorno)
     } else {
       const t = 'esperando la primera respuesta'
       s += texto(x, y + 66, t, ajustar(t, maxTxt, 11), C.contorno)

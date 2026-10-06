@@ -2110,7 +2110,6 @@ export const register: Register = on => {
               {showHeader && resumenAbierto && escenaUnica !== '' && (
                 <Svg key="svg-escena" source={escenaUnica} alt={escenaAlt} {...sizeProps(escenaUnica)} isInteractive />
               )}
-              {usoClaro}
             </Box>
             {showHeader && resumenAbierto && escenaUnica !== '' && burbujaEstado() !== '' && (
               <Box backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
@@ -2135,6 +2134,7 @@ export const register: Register = on => {
                 <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
               </Box>
             )}
+            {usoClaro}
           </Box>
         ) : (
           showHeader && resumenAbierto && caraSvg !== '' && cabecera(escenaPatio, burbujaEstado())
@@ -2158,11 +2158,13 @@ export const register: Register = on => {
             ))}
             {tokensVistos > 0 && <Text {...suave}>{`${fmtNum(tokensVistos)} tokens`}</Text>}
             <Box flexGrow={1} />
-            <Button
-              key="abrir-resumen"
-              label={resumenAbierto ? '▾ Resumen visual' : '▸ Resumen visual'}
-              onPress={() => alternar($, 'resumen', true)}
-            />
+            {rows.length > 0 && (
+              <Button
+                key="abrir-resumen"
+                label={resumenAbierto ? '▾ Resumen visual' : '▸ Resumen visual'}
+                onPress={() => alternar($, 'resumen', true)}
+              />
+            )}
           </Box>
         ) : (
           summaryText

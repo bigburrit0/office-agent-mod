@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { D, DOS_EQUIPOS, PANES, PROPS, PANE, altsSvg, fsFalso, montar, montarEquipos, textosDe } from './ayuda-tablero'
+import { D, DOS_EQUIPOS, PANES, PROPS, PANE, altsSvg, descendientes, fsFalso, montar, montarEquipos, textosDe } from './ayuda-tablero'
 
 const USO_90 = {
   startedAt: 0,
@@ -67,4 +67,29 @@ test('en terminal no aparece el arte nuevo', async ($, on) => {
   for (const a of ['Escritorio libre esperando a un agente', 'Pasillo de la oficina', 'Estante con carpetas']) {
     expect(alts.includes(a)).toBe(false)
   }
+})
+
+const cadena = (n: any): string =>
+  typeof n === 'string' ? n : [n?.text, ...(n?.children ?? []).map(cadena), typeof n?.props?.children === 'string' ? n.props.children : ''].filter(Boolean).join('')
+
+test('Subagentes escritorio: la burbuja del robot va antes del tablero de uso', async ($, on) => {
+  const ui = await montarSubVacio($, on, 'desktop', USO_90)
+  const raiz = (await ui.findAll({ type: 'Box' }))[0]
+  const orden = descendientes(raiz, () => true)
+  const iBurbuja = orden.findIndex(n => n.type === 'Text' && cadena(n).startsWith('Ojo:'))
+  const iUso = orden.findIndex(n => n.type === 'Svg' && String(n.props?.alt ?? '').startsWith('Tokens de la sesión'))
+  expect(iBurbuja >= 0).toBe(true)
+  expect(iUso >= 0).toBe(true)
+  expect(iBurbuja < iUso).toBe(true)
+})
+
+test('Subagentes sin agentes no hay botón abrir-resumen', async ($, on) => {
+  const vacio = await montarSubVacio($, on, 'desktop')
+  expect((await vacio.findAll({ type: 'Button', key: 'abrir-resumen' })).length).toBe(0)
+})
+
+test('Subagentes con un agente corriendo sí hay botón abrir-resumen', async ($, on) => {
+  const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
+  await paso(2000)
+  expect((await ui.findAll({ type: 'Button', key: 'abrir-resumen' })).length).toBe(1)
 })

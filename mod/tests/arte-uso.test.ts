@@ -127,3 +127,15 @@ test('la mini barra de contexto usa verde, naranja y rojo segun el uso', () => {
   expect(barra(95).includes('#D9363E')).toBe(true)
   expect(barra(8).includes('#D9363E')).toBe(false)
 })
+
+test('en la semana el marcador de hoy deja 3 px hasta las letras de «quedan»', () => {
+  for (const px of [300, 420, 600]) {
+    const svg = tableroUsoSvg(completo, px)
+    const marcas = [...svg.matchAll(/<path d="M(-?\d+) (\d+)h(\d+)l-?[\d.]+ -(\d+)z"/g)]
+    expect(marcas.length).toBe(1)
+    const bordeInf = Number(marcas[0][2])
+    const textos = [...svg.matchAll(/<text[^>]*y="(\d+(?:\.\d+)?)"[^>]*font-size="(\d+(?:\.\d+)?)"[^>]*>quedan 61 %/g)]
+    expect(textos.length).toBe(1)
+    expect(Number(textos[0][1]) - Number(textos[0][2]) >= bordeInf + 3).toBe(true)
+  }
+})

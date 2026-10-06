@@ -144,3 +144,13 @@ Evidencia: `docs/capturas/2026-10-06-subagentes-claro-v1.png` (Subagentes en la 
 **Verificación final (orquestador):** `plugin test mod` 270 pass, 0 fail; `plugin validate mod` OK; vista previa OK. Falta: captura de Nimai del panel real.
 
 **Error del orquestador en E-2:** la tarjeta no listó `tablero-emociones.test.ts` ni `integracion-kit.test.ts`, que también dependían de los dibujos sueltos (regla R7: buscar con grep todas las pruebas que tocan lo que cambia). Se corrigió con E-2b.
+
+### Tercera vuelta (06/10/2026, tarde)
+
+| Tarjeta | Estado | Cómo quedó |
+|---|---|---|
+| E-4 | ✅ | La misma escena en Equipos (placas de los equipos colgadas) y Editar (ícono del rol y placa del equipo). |
+| M-1 | ✅ | Maqueta HTML del panel (`node mod/preview/maqueta.mjs --nueva` → `mod/tests/salida/maqueta.html`): el mismo árbol que recibe la app, a 378 px. Sirve para revisar sin la app; no reemplaza la captura real. |
+| F-1 | ✅ | Lo que mostró la maqueta: burbuja pegada a la escena (antes quedaba debajo del uso), sin «Resumen visual» cuando no hay agentes, y el almanaque sin texto pisado. |
+
+**Verificación (orquestador):** `plugin test mod` 281 pass, 0 fail; validate OK; vista previa OK; maqueta revisada en el navegador en las cuatro vistas.
