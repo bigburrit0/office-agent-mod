@@ -2,9 +2,9 @@
 
 **Fecha:** 06/10/2026. **Rama:** `skin-piratas` (salió de `master` en `c9b07b1`).
 **Fuente:** el formulario «Nueva skin de la oficina» que completó Nimai (respuestas guardadas el 06/10/2026, 20:30).
-**Boceto:** `node mod/preview/boceto-piratas.mjs` → `mod/tests/salida/boceto-piratas.html` (escena, loro en 4 emociones, peces, tiburón, banderas y paleta).
+**Boceto:** `node mod/preview/boceto-piratas.mjs` → `mod/tests/salida/boceto-piratas.html` (panel a 378 px, el loro en 8 emociones, los peces, el tiburón, las banderas y los huevos de pascua). Abrirlo en el navegador: todo se mueve.
 
-Este documento es el plan: todavía no se tocó el mod. Falta que Nimai mire el boceto y responda las preguntas de la sección 5.
+Este documento es el plan: todavía no se tocó el mod. Nimai aprobó el plan y las ideas el 06/10/2026 y pidió subir el nivel del arte (ver sección 6).
 
 ## 1. Lo que pidió Nimai
 
@@ -85,3 +85,56 @@ Orden: P-0 y P-1 primero (lo que más se ve), después P-2 y P-3, y al final P-4
 3. **¿Qué es el tiburón?** Propuesta: aparece cuando un subagente **falla** y se come al pez (la fase «explota»). Los que terminan bien se van nadando.
 4. **Solo rama.** ¿Te sirve traer `master` a la rama después de cada oleada para no perder arreglos?
 5. **El boceto:** ¿el loro, los peces y las banderas van por buen camino?
+
+## 6. Boceto 2: el arte (06/10/2026)
+
+**Pedido de Nimai:** «Pixel art de excelente nivel. Con alma, detalles, easter eggs. Algo que la gente diga wow. El loro tiene que ser visto de frente y tener un parche en el ojo.»
+
+**Cómo se dibuja ahora.** El boceto 1 armaba las figuras con rectángulos y elipses por fórmula: a 42 × 34 píxeles eso queda borroso. El boceto 2 dibuja a mano, píxel por píxel, lo que lleva carácter (la cara, el pico, el parche, los peces, la calavera) y deja las fórmulas solo para lo que es naturalmente continuo (el ala del tricornio, los degradés del cielo y del agua, las olas). Reglas que sigue todo:
+
+- Luz de luna desde arriba a la izquierda, con rampas de 3 a 5 tonos por color.
+- Borde neón de los faroles a la derecha (rosa en el loro, turquesa en el sombrero).
+- Contorno oscuro casi negro (`#1a0f24`), y contorno cálido donde el rojo está iluminado.
+- Animaciones en cuadros discretos (SMIL). El botón «Quieto» las apaga todas.
+
+**Archivos** (todos en `mod/preview/`, el mod todavía no los usa):
+
+| Archivo | Qué tiene |
+|---|---|
+| `pixel-piratas.mjs` | Motor: grillas de colores, tramas, líneas, SVG con cuadros animados |
+| `loro-piratas.mjs` | El loro de frente en 42 × 34 (el lienzo del robot con marco), 8 emociones |
+| `escena-piratas.mjs` | La escena en corte, los peces y el tiburón |
+| `boceto-piratas.mjs` | La página del boceto y las banderas |
+
+**El loro:** guacamayo rojo de frente, con tricornio (copa con calavera, ribete de oro en V, pluma magenta, agujero de bala), parche con una cruz bordada en oro, aro de oro, collar con doblón y alas con las bandas amarilla, verde y azul. Emociones del boceto: vigía, risa, pánico (plumas paradas), dormido (sombrero caído), sospecha, ¡al abordaje!, hambre y guiño. Las 31 del robot se arman con las mismas piezas (ojo, pico, parche, plumas, extras) en P-1.
+
+**Huevos de pascua del boceto:**
+- El loro levanta el parche para guiñar, y el ojo de abajo está perfecto.
+- El cangrejito saluda desde la percha.
+- La luna tiene cara y guiña cada 27 s.
+- Hay una constelación con forma de ancla.
+- El gato del barco mira por un ojo de buey y parpadea.
+- Un patito de goma flota en el agua.
+- El tiburón tiene un diente de oro.
+- Un pulpito con tricornio se asoma del cofre.
+- Cada medio minuto, un tentáculo del kraken sale de la arena.
+- Hay una botella con un mensaje en la arena.
+- Pasa una estrella fugaz cada 19 s.
+- El barco se llama «La Galleta».
+
+**Decisiones que tomé por las respuestas del formulario** (Nimai aprobó el plan; si alguna no va, se cambia):
+- Solo tema oscuro.
+- Animación viva.
+- El tiburón aparece cuando un subagente falla.
+- Traer `master` a la rama al cerrar cada oleada.
+
+**Peso:** el panel limita cada SVG a 131.072 caracteres (`SVG_MAX`). Hoy pesan:
+- Escena completa: 290.848 caracteres animada, 179.111 quieta.
+- Loro: 91.118 en vigía (8 cuadros), entre 22.000 y 46.000 el resto.
+
+En P-1 y P-2 hay que bajarlo:
+- El loro y los peces van como SVG aparte, anidados en la escena, igual que hoy el robot y las celdas.
+- Los cuadros del loro guardan solo lo que cambia (ojo, pico, pluma), no el loro entero cada vez.
+- El cielo, la isla y el barco se dibujan una sola vez y se guardan en caché.
+
+**Para pulir en su oleada:** los emblemas de las banderas se leen poco a escala 3 (P-4). El casco bajo el agua y el reflejo de la luna pueden quedar más finos (P-2).
