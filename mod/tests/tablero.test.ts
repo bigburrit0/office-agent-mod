@@ -2,14 +2,22 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import { STATUS_COLORS } from '../hooks/pixel'
 import { CLARO, contrasteHex, legibleSobre } from '../hooks/tema'
-import { RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, AGENTS, rotulo, PANES, D, montar, celdasAlt, montarAncho, todos, textosDe, montarSub, USO, turnoSub, textos, glifoAlts, burbuja, altsSvg } from './ayuda-tablero'
+import { RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, AGENTS, rotulo, PANES, D, montar, montarAncho, todos, textosDe, montarSub, USO, turnoSub, textos, glifoAlts, burbuja, altsSvg } from './ayuda-tablero'
 
 // Alias local: el ayudante compartido (ayuda-tablero.ts) todavía busca el texto viejo del robot.
 const jaguarAlt = async (ui: any): Promise<string> => {
   const svgs: Array<{ props: Record<string, unknown> }> = await ui.findAll({ type: 'Svg' })
   const svg = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
-  return String(svg?.props.alt ?? '')
+  // La escena única suma los agentes al alt tras «Oficina, robot <emoción>»: acá va solo la emoción.
+  return String(svg?.props.alt ?? '').split('. Agente ')[0].split('. Y ')[0]
 }
+// Agentes de la escena única (su alt: «Oficina, robot …. Agente T-9 trabajando. Y 6 agentes más»).
+const agentesEscena = async (ui: any): Promise<string[]> => {
+  const svgs: Array<{ props: Record<string, unknown> }> = await ui.findAll({ type: 'Svg' })
+  const svg = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
+  return String(svg?.props.alt ?? '').split('. ').slice(1)
+}
+const celdasEscena = async (ui: any): Promise<string[]> => (await agentesEscena(ui)).filter(a => /^Agente /.test(a))
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`con agentes en ${surface}`, async ($, on) => {
@@ -280,19 +288,19 @@ test('patio: una celda por subagente, sale al completarse y explota al fallar', 
   let list: unknown[] = [D('r1', 'running'), D('r2', 'running')]
   const { ui, paso } = await montar($, on, () => list)
   await paso(2000)
-  let alts = await celdasAlt(ui)
+  let alts = await celdasEscena(ui)
   expect(alts.length).toBe(2)
   for (const a of alts) expect(/trabajando$/.test(a)).toBe(true)
   list = [D('r1', 'completed'), D('r2', 'running')]
   await paso(2000)
-  alts = await celdasAlt(ui)
+  alts = await celdasEscena(ui)
   expect(alts.filter(a => /saliendo$/.test(a)).length).toBe(1)
   await paso(2000)
-  alts = await celdasAlt(ui)
+  alts = await celdasEscena(ui)
   expect(alts.length).toBe(1)
   list = [D('r1', 'completed'), D('r2', 'failed')]
   await paso(2000)
-  alts = await celdasAlt(ui)
+  alts = await celdasEscena(ui)
   expect(alts.filter(a => /explotando$/.test(a)).length).toBe(1)
 })
 
@@ -583,25 +591,27 @@ test('burbuja: «¡ERROR! Falló T-9.» cuando falla uno', async ($, on) => {
   expect(await burbuja(ui, /¡ERROR! Falló T-9\. A mí no me mires\./)).toBe(true)
 })
 
-test('encabezado: la cara mide 126 de ancho y existe el dosel', async ($, on) => {
+test('encabezado: la escena única mide el ancho del panel y lleva la cara de 126 de ancho', async ($, on) => {
   fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   const svgs: any[] = await ui.findAll({ type: 'Svg' })
-  const cara = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
-  expect(Number(cara.props.width)).toBe(126)
-  expect(/width="126"/.test(String(cara.props.source))).toBe(true)
-  expect(svgs.some(s => s.props.alt === 'Cielorraso de la oficina')).toBe(true)
+  const escena = svgs.filter(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
+  expect(escena.length).toBe(1)
+  // 100 columnas: ancho de diseño 640; la cara (126 de ancho) va anidada dentro de la escena.
+  expect(Number(escena[0].props.width)).toBe(640)
+  expect(/width="126"/.test(String(escena[0].props.source))).toBe(true)
+  expect(escena[0].props.isInteractive).toBe(true)
 })
 
 test('patio: con más agentes que el máximo se muestra «Y N agentes más»', async ($, on) => {
   const lista = Array.from({ length: 25 }, (_, i) => D(`m${i}`, 'running'))
   const { ui, paso } = await montar($, on, () => lista)
   await paso(2000)
-  const alts = await altsSvg(ui)
-  // 100 columnas (arte de 600 px, 474 de patio): 10 celdas por fila a escala 2, máximo 20, se muestran 19 y la celda «+N».
-  expect(alts.includes('Y 6 agentes más')).toBe(true)
-  expect(alts.filter(a => /^Agente /.test(a)).length).toBe(19)
+  const alts = await agentesEscena(ui)
+  // 100 columnas (escena de 640 px): 7 celdas por fila a escala 3, máximo 8: se muestran 7 y la celda «+N».
+  expect(alts.includes('Y 18 agentes más')).toBe(true)
+  expect(alts.filter(a => /^Agente /.test(a)).length).toBe(7)
 })
 
 test('barra común: el primer botón es la pestaña Subagentes y sin hotkey (desktop)', async ($, on) => {

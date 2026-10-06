@@ -132,3 +132,15 @@ Evidencia: `docs/capturas/2026-10-06-subagentes-claro-v1.png` (Subagentes en la 
 | E-2 | Panel: la escena reemplaza cabecera + patio + tarjeta de escritorio libre en Subagentes; en el escritorio, el uso se ve solo en el tablero (las filas de texto quedan para la terminal), con «Uso de la sesión» y «Compactar» en una sola fila; ancho del arte con `× 7,8`; pasillo de hasta 140 px (una sola fila de objetos). | `hooks/register.tsx`, `hooks/tablero-nucleo.ts`, pruebas del tablero |
 
 **Lección para próximas tarjetas:** una tarjeta de interfaz no termina con las pruebas en verde; el orquestador pide una captura del panel real antes de dar la oleada por cerrada, y las medidas de pantalla se sacan de una captura, no se estiman.
+
+### Qué se hizo (06/10/2026, tarde)
+
+| Tarjeta | Estado | Cómo quedó |
+|---|---|---|
+| E-1, E-1b | ✅ | `hooks/arte-escena.ts`: un solo SVG a todo el ancho con cielorraso, pared, robot colgado, agentes a escala 3 (hasta 2 filas) y escritorio libre sobre el mismo piso. Revisado en el navegador con 0, 2, 3 y 6 agentes. |
+| E-3 | ✅ | El tablero de uso suma contexto (mini barra) y costo. |
+| E-2, E-2b | ✅ | Subagentes: la escena reemplaza cabecera, patio y tarjeta de escritorio libre; el uso está **solo** en el tablero (las filas de texto quedan para la terminal); «Uso de la sesión» y «Compactar» en una fila; ancho `× 7,8`; caja con fondo de pared para que no queden franjas blancas; pasillo de hasta 140 px. Pruebas adaptadas a la escena sin debilitarlas. |
+
+**Verificación final (orquestador):** `plugin test mod` 270 pass, 0 fail; `plugin validate mod` OK; vista previa OK. Falta: captura de Nimai del panel real.
+
+**Error del orquestador en E-2:** la tarjeta no listó `tablero-emociones.test.ts` ni `integracion-kit.test.ts`, que también dependían de los dibujos sueltos (regla R7: buscar con grep todas las pruebas que tocan lo que cambia). Se corrigió con E-2b.

@@ -559,6 +559,8 @@ export function datosUsoDe(uso: UsoSesion | null, tokens: TokensSesion, ahora: n
   if (cinco) d.cincoHoras = { pct: cinco.percentUsed, renueva: cuandoRenueva(cinco.resetsAt, ahora) }
   const sem = uso?.limites.find(l => l.kind === 'seven_day')
   if (sem) d.semana = { pct: sem.percentUsed, renueva: cuandoRenueva(sem.resetsAt, ahora), hoy: new Date(ahora).getDay() }
+  if (uso?.contexto !== undefined) d.contexto = uso.contexto
+  if (uso?.costo !== undefined) d.costo = uso.costo
 
   return d
 }

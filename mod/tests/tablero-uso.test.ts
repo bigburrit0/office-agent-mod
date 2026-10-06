@@ -46,9 +46,13 @@ const linea = async (ui: any, patron: RegExp): Promise<string> => {
   return ''
 }
 
-for (const surface of ['terminal', 'desktop'] as const) {
-  test(`uso de la sesión: 5 horas y semanal con barra, porcentaje y renovación (${surface})`, async ($, on) => {
-    const { ui, pedidos } = await montarUso($, on, USO, surface)
+const alts = async (ui: any): Promise<string[]> =>
+  (await ui.findAll({ type: 'Svg' })).map((s: any) => String(s.props.alt ?? ''))
+const altTablero = async (ui: any): Promise<string> => (await alts(ui)).find(a => a.startsWith('Tokens de la sesión')) ?? ''
+
+test('uso de la sesión: 5 horas y semanal con barra, porcentaje y renovación (terminal)', async ($, on) => {
+  {
+    const { ui, pedidos } = await montarUso($, on, USO, 'terminal')
     expect(pedidos()).toBe(1)
     const cinco = await linea(ui, /^5 horas/)
     expect(cinco.includes('42,5 %')).toBe(true)
@@ -60,8 +64,28 @@ for (const surface of ['terminal', 'desktop'] as const) {
     // 5 horas va antes que la semanal aunque el motor las mande al revés.
     const claves = (await ui.findAll({ type: 'Box' })).map((b: any) => String(b.key ?? ''))
     expect(claves.indexOf('uso-five_hour') >= 0 && claves.indexOf('uso-five_hour') < claves.indexOf('uso-seven_day')).toBe(true)
+  }
+})
+
+test('uso de la sesión: en el escritorio el uso está solo en el tablero dibujado, sin filas de texto (desktop)', async ($, on) => {
+  const { ui, pedidos } = await montarUso($, on, USO, 'desktop')
+  expect(pedidos()).toBe(1)
+  const claves = (await ui.findAll({ type: 'Box' })).map((b: any) => String(b.key ?? ''))
+  expect(claves.includes('uso-five_hour')).toBe(false)
+  expect(claves.includes('uso-seven_day')).toBe(false)
+  expect(claves.includes('uso-contexto')).toBe(false)
+  expect(await linea(ui, /^5 horas/)).toBe('')
+  const alt = await altTablero(ui)
+  expect(alt.includes('queda 58 %')).toBe(true)
+  expect(alt.includes('contexto 63 %')).toBe(true)
+  expect((await alts(ui)).filter(a => a.startsWith('Tokens de la sesión')).length).toBe(1)
+  // «Uso de la sesión» y «Compactar» van en una sola fila.
+  const filas = (await ui.findAll({ type: 'Box' })).filter((b: any) => {
+    const claves = (b.children ?? []).map((c: any) => String(c?.props?.key ?? ''))
+    return claves.includes('abrir-uso') && claves.includes('compactar')
   })
-}
+  expect(filas.length > 0).toBe(true)
+})
 
 test('uso de la sesión: el desplegable arranca abierto y se cierra', async ($, on) => {
   const { ui } = await montarUso($, on, USO)
@@ -70,10 +94,11 @@ test('uso de la sesión: el desplegable arranca abierto y se cierra', async ($, 
   expect(String((await ui.find({ type: 'Button', key: 'abrir-uso' })).props.label)).toBe('▸ Uso de la sesión')
   expect(await linea(ui, /^5 horas/)).toBe('')
   expect(await ui.find({ type: 'Button', key: 'compactar' })).toBe(undefined)
+  expect(await altTablero(ui)).toBe('')
 })
 
 test('uso de la sesión: sin ventanas dice que aparecen después de la primera respuesta', async ($, on) => {
-  const { ui } = await montarUso($, on, { startedAt: 0, context: { window: 200000 }, rateLimits: [] })
+  const { ui } = await montarUso($, on, { startedAt: 0, context: { window: 200000 }, rateLimits: [] }, 'terminal')
   const textos = await textosDe(ui)
   expect(textos.some(t => /Las ventanas de 5 horas y semanal aparecen después de la primera respuesta\./.test(t))).toBe(true)
   expect(textos.some(t => /suscripción/.test(t))).toBe(false)
@@ -82,7 +107,7 @@ test('uso de la sesión: sin ventanas dice que aparecen después de la primera r
 
 test('uso de la sesión: session.measure actualiza las barras', async ($, on) => {
   on('session.measure', (_$: any, e: any) => ({ changed: e.changed }))
-  const { ui } = await montarUso($, on, USO)
+  const { ui } = await montarUso($, on, USO, 'terminal')
   await $.session.measure({
     context: { window: 200000, percent: 80 },
     rateLimits: [{ kind: 'five_hour', percentUsed: 91 }],
@@ -92,6 +117,20 @@ test('uso de la sesión: session.measure actualiza las barras', async ($, on) =>
   expect((await linea(ui, /^5 horas/)).includes('91 %')).toBe(true)
   expect((await linea(ui, /^Contexto/)).includes('80 %')).toBe(true)
   expect(await linea(ui, /^Semanal/)).toBe('')
+})
+
+test('uso de la sesión: session.measure actualiza el tablero (desktop)', async ($, on) => {
+  on('session.measure', (_$: any, e: any) => ({ changed: e.changed }))
+  const { ui } = await montarUso($, on, USO)
+  await $.session.measure({
+    context: { window: 200000, percent: 80 },
+    rateLimits: [{ kind: 'five_hour', percentUsed: 91 }],
+    changed: ['rateLimits', 'context'],
+  } as never)
+  await ui.redraw()
+  const alt = await altTablero(ui)
+  expect(alt.includes('queda 9 %')).toBe(true)
+  expect(alt.includes('contexto 80 %')).toBe(true)
 })
 
 test('compactar: pide confirmación, «No» no hace nada y «Sí» compacta y avisa los tokens', async ($, on) => {
@@ -135,18 +174,22 @@ test('compactar: si otro plugin lo frena, avisa el motivo', async ($, on) => {
 })
 
 test('uso de la sesión: con clave de API (sin ventanas) muestra el costo de la sesión', async ($, on) => {
-  const { ui } = await montarUso($, on, { startedAt: 0, context: { window: 200000, percent: 12 }, rateLimits: [], cost: { usd: 3.456 } })
+  const { ui } = await montarUso($, on, { startedAt: 0, context: { window: 200000, percent: 12 }, rateLimits: [], cost: { usd: 3.456 } }, 'terminal')
   expect((await linea(ui, /^Costo/)).includes('US$ 3,46 en esta sesión')).toBe(true)
   expect((await linea(ui, /^Contexto/)).includes('12 %')).toBe(true)
 })
 
-test('uso de la sesión: con suscripción no se muestra el costo', async ($, on) => {
-  const { ui } = await montarUso($, on, { ...USO, cost: { usd: 3.456 } })
-  expect(await linea(ui, /^Costo/)).toBe('')
+test('uso de la sesión: con clave de API el tablero dibujado lleva el costo y el contexto (desktop)', async ($, on) => {
+  const { ui } = await montarUso($, on, { startedAt: 0, context: { window: 200000, percent: 12 }, rateLimits: [], cost: { usd: 3.456 } })
+  const alt = await altTablero(ui)
+  expect(alt.includes('costo US$ 3,46')).toBe(true)
+  expect(alt.includes('contexto 12 %')).toBe(true)
 })
 
-const alts = async (ui: any): Promise<string[]> =>
-  (await ui.findAll({ type: 'Svg' })).map((s: any) => String(s.props.alt ?? ''))
+test('uso de la sesión: con suscripción no se muestra el costo', async ($, on) => {
+  const { ui } = await montarUso($, on, { ...USO, cost: { usd: 3.456 } }, 'terminal')
+  expect(await linea(ui, /^Costo/)).toBe('')
+})
 
 test('tokens de la sesión: suma el hilo principal y los subagentes y el Svg muestra el total', async ($, on) => {
   let guardado: any = null
@@ -171,6 +214,10 @@ test('tablero de uso: el Svg dice cuánto queda de 5 horas y de la semana', asyn
   const alt = (await alts(ui)).find(a => a.startsWith('Tokens de la sesión')) ?? ''
   expect(alt.includes('Ventana de 5 horas: queda 58 %')).toBe(true)
   expect(alt.includes('Semana: queda 82 %')).toBe(true)
+})
+
+test('tablero de uso: en la terminal las filas de texto dicen cuánto queda', async ($, on) => {
+  const { ui } = await montarUso($, on, USO, 'terminal')
   expect((await linea(ui, /^5 horas/)).includes('quedan 58 %')).toBe(true)
   expect((await linea(ui, /^Semanal/)).includes('quedan 82 %')).toBe(true)
 })

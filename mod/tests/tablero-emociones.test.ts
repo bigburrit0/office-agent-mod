@@ -1,12 +1,23 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { D, PANES, PROPS, PANE, burbuja, celdasAlt, fsFalso, montar } from './ayuda-tablero'
+import { D, PANES, PROPS, PANE, burbuja, fsFalso, montar } from './ayuda-tablero'
 
 const caraAlt = async (ui: any): Promise<string> => {
   const svgs: Array<{ props: Record<string, unknown> }> = await ui.findAll({ type: 'Svg' })
   const svg = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
-  return String(svg?.props.alt ?? '')
+  // La escena única suma los agentes al alt tras «Oficina, robot <emoción>»: acá va solo la emoción.
+  return String(svg?.props.alt ?? '').split('. Agente ')[0].split('. Y ')[0]
 }
+// Escena única: su alt y su source (las celdas van anidadas como <svg> dentro de ella).
+const escena = async (ui: any): Promise<{ alt: string; source: string }> => {
+  const svgs: Array<{ props: Record<string, unknown> }> = await ui.findAll({ type: 'Svg' })
+  const svg = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
+  return { alt: String(svg?.props.alt ?? ''), source: String(svg?.props.source ?? '') }
+}
+const celdasEscena = async (ui: any): Promise<string[]> =>
+  (await escena(ui)).alt.split('. ').slice(1).filter(a => /^Agente /.test(a))
+const anchosCeldas = async (ui: any): Promise<number[]> =>
+  [...(await escena(ui)).source.matchAll(/<svg x="[^"]*" y="[^"]*"[^>]*?\swidth="(\d+)"/g)].map(m => Number(m[1])).filter(w => w !== 126) // 126 = el robot
 
 // Una fila de otro equipo: el rol «equipo/agente» da el equipo.
 const DE = (id: string, status: string, rol: string) => ({
@@ -133,10 +144,8 @@ test('hora del día trabajando: la cara es de trabajo y la burbuja suma la frase
 test('patio por color: la celda lleva el equipo en el título y la leyenda lo nombra', async ($, on) => {
   const { ui, paso } = await montar($, on, () => [DE('r1', 'running', 'research/explorador'), DE('r2', 'running', 'datos/analista')])
   await paso(2000)
-  expect((await celdasAlt(ui)).length).toBe(2)
-  const fuentes = (await ui.findAll({ type: 'Svg' }))
-    .filter((s: any) => /^Agente /.test(String(s.props.alt ?? '')))
-    .map((s: any) => String(s.props.source))
+  expect((await celdasEscena(ui)).length).toBe(2)
+  const fuentes = [(await escena(ui)).source]
   expect(fuentes.some(f => f.includes('equipo research'))).toBe(true)
   expect(fuentes.some(f => f.includes('equipo datos'))).toBe(true)
   // Color de research en la camisa (#5aa9e6) y de datos (#2cc6d0).
@@ -158,18 +167,16 @@ test('leyenda: cada chip tiene contraste de 4,5:1 o más (mantenimiento usa el t
   expect(s.props.color).toBe('#FFF4DF')
 })
 
-test('patio: con pocos agentes las celdas van a escala 3; si no entran en una fila, a escala 2', async ($, on) => {
+test('patio: la escena única pone las celdas siempre a escala 3, con pocos agentes y con ocho', async ($, on) => {
   let list: unknown[] = [D('r1', 'running'), D('r2', 'running')]
   const { ui, paso } = await montar($, on, () => list)
   await paso(2000)
-  const anchos = async () =>
-    (await ui.findAll({ type: 'Svg' }))
-      .filter((s: any) => /^Agente /.test(String(s.props.alt ?? '')))
-      .map((s: any) => Number(s.props.width))
-  expect(await anchos()).toEqual([66, 66])
+  expect((await celdasEscena(ui)).length).toBe(2)
+  expect(await anchosCeldas(ui)).toEqual([66, 66])
   list = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8'].map(id => D(id, 'running'))
   await paso(2000)
-  const ocho = await anchos()
+  const ocho = await anchosCeldas(ui)
+  expect((await celdasEscena(ui)).length).toBe(8)
   expect(ocho.length).toBe(8)
-  for (const a of ocho) expect(a).toBe(44)
+  for (const a of ocho) expect(a).toBe(66)
 })

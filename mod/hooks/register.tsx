@@ -35,7 +35,7 @@ import {
   PATIO_ANCHO,
   pisoPatioSvg,
 } from './arte-escritorios'
-import { estanteSvg, oficinaVaciaSvg, pieOficinaSvg } from './arte-oficina'
+import { estanteSvg, pieOficinaSvg } from './arte-oficina'
 import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
 import { DIOSES_EQUIPO, diosSvg, EQUIPO_ACENTO, glifoSvg, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
 import { actividadDe, actividadParaCelda } from './arte-actividades'
@@ -105,6 +105,7 @@ import {
   totalTokens,
 } from './tablero-nucleo'
 import { altUso, quedaPct, tableroUsoSvg } from './arte-uso'
+import { ESCENA_FONDO, escenaAlto, escenaOficinaSvg } from './arte-escena'
 import { CLARO, colorUsoClaro, legibleSobre, PASTILLAS_CLARO } from './tema'
 import type { Ordered, PatioEntrada, UsoSesion } from './tablero-nucleo'
 
@@ -767,7 +768,7 @@ export const register: Register = on => {
         : undefined)
     const W =
       columns !== undefined
-        ? Math.min(DESIGN_WIDTH, Math.max(200, Math.round(columns * 6)))
+        ? Math.min(DESIGN_WIDTH, Math.max(200, Math.floor(columns * 7.8)))
         : DESIGN_WIDTH
     // Panel angosto: menos de 70 celdas útiles. Si no se sabe el ancho, se asume ancho.
     const narrow = bodyColumns !== undefined && bodyColumns < NARROW_COLUMNS
@@ -962,7 +963,7 @@ export const register: Register = on => {
       ) : null
 
     // Pasillo de la oficina, justo antes de la cornisa: llena el espacio que sobra de la vista.
-    const pieCierre = (altoPx: number, maximo = 300) => {
+    const pieCierre = (altoPx: number, maximo = 140) => {
       if (!claro) return null
       const alto = Math.max(60, Math.min(maximo, Math.round(altoPx)))
       const pie = cachedSvg('pie', `${W}|${alto}|${quieto}`, () => pieOficinaSvg(W, alto, 2, { quieto }))
@@ -1285,7 +1286,7 @@ export const register: Register = on => {
                 </Box>
               )}
             </Box>
-            {pieCierre((termRows - 30) * 20, 240)}
+            {pieCierre((termRows - 30) * 20)}
             {frisoCierre}
           </Box>
         )
@@ -1669,7 +1670,7 @@ export const register: Register = on => {
           })}
           <Text dimColor>Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
           </Box>
-          {pieCierre((termRows - 30) * 20, 240)}
+          {pieCierre((termRows - 30) * 20)}
           {frisoCierre}
         </Box>
       )
@@ -1708,7 +1709,41 @@ export const register: Register = on => {
         (a.kind === 'five_hour' ? 0 : a.kind === 'seven_day' ? 1 : 2) -
         (b.kind === 'five_hour' ? 0 : b.kind === 'seven_day' ? 1 : 2),
     )
-    const panelUso = (
+    const confirmacionCompactar = confirmandoCompactar ? (
+      <Box flexDirection="column">
+        <Text color={tx} wrap="wrap">
+          ¿Compactar la conversación ahora? Claude resume lo hablado y libera contexto, igual que /compact.
+        </Text>
+        <Box flexDirection="row" columnGap={2} marginTop={1}>
+          <Button key="compactar-si" label="Sí, compactar" onPress={() => compactarSesion($)} />
+          <Button
+            key="compactar-no"
+            label="No"
+            onPress={() => update($, abiertosAtom, v => ({ ...v, 'confirmar-compactar': false }))}
+          />
+        </Box>
+      </Box>
+    ) : null
+    // Escritorio: un solo lugar para el uso, el tablero dibujado. Botones en una fila arriba, pegado a la escena.
+    const usoClaro = (
+      <Box key="uso-sesion" flexDirection="column" width="100%" backgroundColor={ESCENA_FONDO}>
+        <Box flexDirection="row" columnGap={2}>
+          <Button
+            key="abrir-uso"
+            label={`${usoAbierto ? '▾' : '▸'} Uso de la sesión`}
+            onPress={() => alternar($, 'uso', true)}
+          />
+          {usoAbierto && (
+            <Button key="compactar" label="Compactar sesión…" onPress={() => alternar($, 'confirmar-compactar')} />
+          )}
+        </Box>
+        {usoAbierto && confirmacionCompactar}
+        {usoAbierto && svgUso !== '' && (
+          <Svg key="svg-uso" source={svgUso} alt={altUso(datosUso)} {...sizeProps(svgUso)} />
+        )}
+      </Box>
+    )
+    const panelUso = claro ? null : (
       <Box key="uso-sesion" flexDirection="column">
         <Box marginTop={1}>
           <Button
@@ -1742,27 +1777,15 @@ export const register: Register = on => {
                 onPress={() => alternar($, 'confirmar-compactar')}
               />
             </Box>
-            {confirmandoCompactar && (
-              <Box flexDirection="column">
-                <Text color={tx} wrap="wrap">
-                  ¿Compactar la conversación ahora? Claude resume lo hablado y libera contexto, igual que /compact.
-                </Text>
-                <Box flexDirection="row" columnGap={2} marginTop={1}>
-                  <Button key="compactar-si" label="Sí, compactar" onPress={() => compactarSesion($)} />
-                  <Button
-                    key="compactar-no"
-                    label="No"
-                    onPress={() => update($, abiertosAtom, v => ({ ...v, 'confirmar-compactar': false }))}
-                  />
-                </Box>
-              </Box>
-            )}
+            {confirmacionCompactar}
           </Box>
         )}
       </Box>
     )
     // Líneas que ocupa el bloque de uso (para no tapar la lista con poco espacio).
-    const lineasUso = linesOf(svgUso) + (usoAbierto
+    const lineasUso = claro
+      ? 1 + (usoAbierto ? linesOf(svgUso) + (confirmandoCompactar ? 3 : 0) : 0)
+      : (usoAbierto
       ? 2 +
         Math.max(1, limitesUso.length) +
         (limitesUso.length === 0 && uso?.costo !== undefined ? 1 : 0) +
@@ -1794,7 +1817,7 @@ export const register: Register = on => {
 
     // Cada SVG se arma aparte: si uno falla, se omite y el resto sigue.
     let pisoSvg = ''
-    type Celda = { id: string; fase: string; svg: string; alt: string; titulo: string }
+    type Celda = { id: string; fase: string; svg: string; alt: string; titulo: string; equipo: string }
     const celdas: Celda[] = []
     // Equipos que hay en el patio, en orden de aparición: la leyenda de colores.
     const equiposPatio: string[] = []
@@ -1813,6 +1836,12 @@ export const register: Register = on => {
       }).length
       escalaPatio = enPatio > 0 && enPatio <= Math.floor(disponible / (PATIO_ANCHO * 3)) ? 3 : 2
       celdasPorFila = Math.max(1, Math.floor(disponible / (PATIO_ANCHO * escalaPatio)))
+      // Escritorio: la escena única usa siempre escala 3 y mide sus celdas por fila (126 px del robot + 28 de márgenes).
+      if (claro) {
+        escalaPatio = 3
+        celdasPorFila = Math.max(0, Math.floor((W - 154) / (PATIO_ANCHO * 3)))
+      }
+      const fondoCelda = claro ? ESCENA_FONDO : fondo
       podarCeldas(new Set(rows.map(row => row.id)))
       for (const row of [...rows].sort((x, y) => (x.firstSeen ?? 0) - (y.firstSeen ?? 0))) {
         const entrada = patioEstado[row.id]
@@ -1832,32 +1861,40 @@ export const register: Register = on => {
             escala: escalaPatio,
             etiqueta,
             quieto,
-            fondo,
+            fondo: fondoCelda,
             titulo,
           }),
         )
         if (svg !== '' && !equiposPatio.includes(equipo)) equiposPatio.push(equipo)
         if (svg === '') continue
         const accion = fase === 'explota' ? 'explotando' : fase === 'sale' ? 'saliendo' : 'trabajando'
-        celdas.push({ id: row.id, fase, svg, alt: `Agente ${etiqueta} ${accion}`, titulo })
+        celdas.push({ id: row.id, fase, svg, alt: `Agente ${etiqueta} ${accion}`, titulo, equipo })
       }
       // Tope de dos filas: salen/explotan primero, luego las que corren de la más nueva a la más vieja.
-      const maxCeldas = celdasPorFila * 2
+      const maxCeldas = claro ? Math.min(8, celdasPorFila * 2) : celdasPorFila * 2
       if (celdas.length > maxCeldas) {
         const orden = new Map(rows.map((row, i) => [row.id, i]))
         const saliendo = celdas.filter(c => c.fase === 'sale' || c.fase === 'explota')
         const corriendo = celdas
           .filter(c => !(c.fase === 'sale' || c.fase === 'explota'))
           .sort((x, y) => (rows[orden.get(y.id) ?? 0]?.firstSeen ?? 0) - (rows[orden.get(x.id) ?? 0]?.firstSeen ?? 0))
-        const elegidas = [...saliendo, ...corriendo].slice(0, maxCeldas - 1)
+        const elegidas = [...saliendo, ...corriendo].slice(0, Math.max(0, maxCeldas - 1))
         const resto = celdas.length - elegidas.length
-        const masSvg = cachedSvg(`celda-mas-${resto}`, `${resto}`, () => celdaMasSvg(resto, 2, { fondo }))
+        const escalaMas = claro ? 3 : 2
+        const masSvg =
+          maxCeldas > 0
+            ? cachedSvg(`celda-mas-${resto}-${escalaMas}`, `${resto}|${fondoCelda}`, () =>
+                celdaMasSvg(resto, escalaMas, { fondo: fondoCelda }),
+              )
+            : ''
         celdas.length = 0
         celdas.push(...elegidas)
-        if (masSvg !== '') celdas.push({ id: 'mas', fase: '', svg: masSvg, alt: `Y ${resto} agentes más`, titulo: '' })
+        if (masSvg !== '') {
+          celdas.push({ id: 'mas', fase: '', svg: masSvg, alt: `Y ${resto} agentes más`, titulo: '', equipo: '' })
+        }
       }
-      filasPatio = Math.max(1, Math.ceil(celdas.length / celdasPorFila))
-      if (celdas.length < celdasPorFila) {
+      filasPatio = Math.max(1, Math.ceil(celdas.length / Math.max(1, celdasPorFila)))
+      if (!claro && celdas.length < celdasPorFila) {
         const resto = disponible - celdas.length * PATIO_ANCHO * escalaPatio
         if (resto > 0) {
           pisoSvg = cachedSvg(`piso-${resto}-${escalaPatio}`, `${resto}|${escalaPatio}`, () =>
@@ -1925,7 +1962,9 @@ export const register: Register = on => {
         showLine = true
         spare -= lineCost
       }
-      const headerPx = Math.max(CARA_ALTO, DOSEL_ALTO + PATIO_ALTO * escalaPatio * filasPatio)
+      const headerPx = claro
+        ? escenaAlto(W, celdas.length, celdas.length === 0)
+        : Math.max(CARA_ALTO, DOSEL_ALTO + PATIO_ALTO * escalaPatio * filasPatio)
       // Se suman la franja de greca y la línea de la burbuja del robot.
       // También la línea de la leyenda de colores del patio.
       const headerCost =
@@ -1948,11 +1987,24 @@ export const register: Register = on => {
       room += 1
     }
 
-    const oficinaVacia =
-      claro && sorted.length === 0
-        ? cachedSvg('oficina-vacia', `${W}|${quieto}`, () => oficinaVaciaSvg(W, 2, { quieto }))
-        : ''
-
+    // Escena única (escritorio): cielorraso, robot colgado y agentes en un solo SVG, en caché por su firma.
+    const escenaAlt = [caraAlt, ...celdas.map(c => c.alt)].join('. ')
+    const escenaUnica = (() => {
+      if (!claro || caraSvg === '') return ''
+      const firma = `${estado.emocion}|${quieto}|${W}|${celdas.map(c => `${c.id}:${c.fase}:${c.equipo}:${c.titulo}`).join(',')}`
+      return cachedSvg('escena', `${firma}|${escenaAlt}`, () =>
+        escenaOficinaSvg({
+          ancho: W,
+          cara: cachedSvg('cara-escena', `${estado.emocion}|${quieto}`, () =>
+            caraRobotSvg(estado.emocion, 3, { quieto, fondo: ESCENA_FONDO, marco: true }),
+          ),
+          celdas: celdas.map(c => ({ svg: c.svg })),
+          vacia: true,
+          quieto,
+          alt: escenaAlt,
+        }),
+      )
+    })()
     const escenaPatio = (
       <Box flexDirection="row" flexWrap="wrap" backgroundColor={CLARO.escena}>
         {celdas.map(celda => (
@@ -1999,9 +2051,40 @@ export const register: Register = on => {
       <Box flexDirection="column">
         {barraSuperior()}
         {noticeLine}
-        {showHeader && resumenAbierto && caraSvg !== '' && cabecera(escenaPatio, burbujaEstado())}
-        {svgUso !== '' && (
-          <Svg key="svg-uso" source={svgUso} alt={altUso(datosUso)} {...sizeProps(svgUso)} />
+        {claro ? (
+          <Box flexDirection="column">
+            <Box flexDirection="column" width="100%" backgroundColor={ESCENA_FONDO}>
+              {showHeader && resumenAbierto && escenaUnica !== '' && (
+                <Svg key="svg-escena" source={escenaUnica} alt={escenaAlt} {...sizeProps(escenaUnica)} isInteractive />
+              )}
+              {usoClaro}
+            </Box>
+            {showHeader && resumenAbierto && escenaUnica !== '' && burbujaEstado() !== '' && (
+              <Box backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
+                <Text color={CLARO.texto} wrap="wrap">
+                  {burbujaEstado()}
+                </Text>
+              </Box>
+            )}
+            {showHeader && resumenAbierto && escenaUnica !== '' && equiposPatio.length > 0 && (
+              <Box key="leyenda-patio" flexDirection="row" flexWrap="wrap" width="100%" columnGap={1}>
+                {equiposPatio.map(equipo => (
+                  <Text
+                    key={`leyenda-${equipo}`}
+                    backgroundColor={chipEquipo(equipo).fondo}
+                    color={chipEquipo(equipo).letra}
+                  >{` ■ ${equipo} `}</Text>
+                ))}
+              </Box>
+            )}
+            {showHeader && resumenAbierto && escenaUnica !== '' && grecaSvg !== '' && (
+              <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
+                <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
+              </Box>
+            )}
+          </Box>
+        ) : (
+          showHeader && resumenAbierto && caraSvg !== '' && cabecera(escenaPatio, burbujaEstado())
         )}
         <Box flexDirection="column">
         {hasSvg && e.surface !== 'terminal' ? (
@@ -2044,22 +2127,9 @@ export const register: Register = on => {
         {panelUso}
         {sorted.length === 0 &&
           (hasSvg && e.surface !== 'terminal' ? (
-            <Box borderStyle="round" borderColor={CLARO.borde} paddingX={1} flexDirection="column">
-              {oficinaVacia !== '' && (
-                <Svg
-                  key="svg-oficina-vacia"
-                  source={oficinaVacia}
-                  alt="Escritorio libre esperando a un agente"
-                  {...sizeProps(oficinaVacia)}
-                />
-              )}
+            <Box flexDirection="row" columnGap={2} alignItems="center">
               <Text color={tx} bold>Todavía no corrió ningún subagente.</Text>
-              <Text {...suave} wrap="wrap">
-                Cuando el orquestador despache una tarjeta, el agente aparece en el patio con un poof.
-              </Text>
-              <Box marginTop={1}>
-                <Button key="ir-equipos" label="Ver equipos" onPress={() => showView($, 'roles')} />
-              </Box>
+              <Button key="ir-equipos" label="Ver equipos" onPress={() => showView($, 'roles')} />
             </Box>
           ) : (
             <Text bold>Todavía no corrió ningún subagente.</Text>

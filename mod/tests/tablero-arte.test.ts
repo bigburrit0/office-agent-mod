@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { DOS_EQUIPOS, PANES, PROPS, PANE, altsSvg, fsFalso, montarEquipos, textosDe } from './ayuda-tablero'
+import { D, DOS_EQUIPOS, PANES, PROPS, PANE, altsSvg, fsFalso, montar, montarEquipos, textosDe } from './ayuda-tablero'
 
 const USO_90 = {
   startedAt: 0,
@@ -27,13 +27,23 @@ async function montarSubVacio($: any, on: any, surface: 'terminal' | 'desktop', 
   return ui
 }
 
-test('Subagentes sin agentes: escritorio libre y pasillo antes de la cornisa', async ($, on) => {
+test('Subagentes sin agentes: escena única y pasillo antes de la cornisa', async ($, on) => {
   const ui = await montarSubVacio($, on, 'desktop')
   const alts = await altsSvg(ui)
-  expect(alts.includes('Escritorio libre esperando a un agente')).toBe(true)
+  expect(alts.filter(a => a.startsWith('Oficina, robot')).length).toBe(1)
+  expect(alts.includes('Escritorio libre esperando a un agente')).toBe(false)
   expect(alts.filter(a => a === 'Pasillo de la oficina').length).toBe(1)
   expect(alts.indexOf('Pasillo de la oficina') < alts.indexOf('Cornisa del edificio')).toBe(true)
   expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
+})
+
+test('Subagentes con 2 agentes corriendo: la escena única nombra a los dos en su alt', async ($, on) => {
+  fsFalso(on)
+  const { ui, paso } = await montar($, on, () => [D('r1', 'running'), D('r2', 'running')])
+  await paso(2000)
+  const escena = (await altsSvg(ui)).filter(a => a.startsWith('Oficina, robot'))
+  expect(escena.length).toBe(1)
+  expect((escena[0].match(/Agente /g) ?? []).length).toBe(2)
 })
 
 test('Equipos: estante con carpetas y pasillo, con la cornisa al final', async ($, on) => {
