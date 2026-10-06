@@ -188,7 +188,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-test('Editar: aparece el códice del escriba', async ($, on) => {
+test('Editar: aparece la pizarra del escriba', async ($, on) => {
   fsFalso(on)
   const clock = mock.clock(on, { now: 5_000 })
   mock.store(on, {})
@@ -206,7 +206,7 @@ test('Editar: aparece el códice del escriba', async ($, on) => {
   await ui.press({ key: 'tab-roles' })
   await abrirAgente(ui, 'implementador')
   await ui.press({ key: 'editar-implementador' })
-  expect((await altsSvg(ui)).includes('Códice del escriba')).toBe(true)
+  expect((await altsSvg(ui)).includes('Pizarra del escriba')).toBe(true)
 })
 
 
@@ -275,9 +275,9 @@ test('Editar: tras cambiar el modelo la cara tiene sospecha (d)', async ($, on) 
   })
   await abrirAgente(ui, 'implementador')
   await ui.press({ key: 'editar-implementador' })
-  expect((await altsSvg(ui)).includes('Tablero, jaguar con sospecha')).toBe(false)
+  expect((await altsSvg(ui)).includes('Oficina, robot con una ceja levantada')).toBe(false)
   await ui.select({ plugin: 'tablero-oficina', key: 'rol-model', value: 'haiku' })
-  expect((await altsSvg(ui)).includes('Tablero, jaguar con sospecha')).toBe(true)
+  expect((await altsSvg(ui)).includes('Oficina, robot con una ceja levantada')).toBe(true)
 })
 
 test('Editar: tras guardar la burbuja dice «¡Guardado!» y a los 3,5 s ya no (e)', async ($, on) => {
@@ -301,7 +301,7 @@ test('Editar: tras guardar la burbuja dice «¡Guardado!» y a los 3,5 s ya no (
   await ui.select({ plugin: 'tablero-oficina', key: 'rol-model', value: 'haiku' })
   await ui.press({ key: 'rol-guardar' })
   await ui.redraw()
-  expect((await textosDe(ui)).some(t => t.includes('¡Guardado! implementador cambia en la próxima sesión.'))).toBe(true)
+  expect((await textosDe(ui)).some(t => t.includes('¡Guardado! implementador estrena rol en la próxima sesión. De nada.'))).toBe(true)
   await clock.advance(3500)
   await ui.redraw()
   expect((await textosDe(ui)).some(t => t.includes('¡Guardado!'))).toBe(false)

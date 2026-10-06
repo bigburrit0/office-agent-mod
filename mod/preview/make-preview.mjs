@@ -4,11 +4,11 @@ import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import * as px from '../hooks/pixel.ts'
-import * as cara from '../hooks/arte-cara.ts'
-import * as patio from '../hooks/arte-patio.ts'
-import * as glifos from '../hooks/arte-glifos.ts'
-import * as dioses from '../hooks/arte-dioses.ts'
-import * as templo from '../hooks/arte-templo.ts'
+import * as cara from '../hooks/arte-robot.ts'
+import * as patio from '../hooks/arte-escritorios.ts'
+import * as glifos from '../hooks/arte-iconos.ts'
+import * as dioses from '../hooks/arte-iconos.ts'
+import * as templo from '../hooks/arte-edificio.ts'
 
 const aca = dirname(fileURLToPath(import.meta.url))
 const todos = [] // { nombre, svg } para la verificación final
@@ -36,19 +36,19 @@ function bloqueEscalas(nombre, fabrica) {
     `<div><small>${nombre} 3x</small><br>${registrar(nombre + ' 3x', fabrica(3))}</div></div>`
 }
 
-// Sección «Cara del jaguar»: las 9 emociones, sin marco y con marco (si la opción ya existe).
+// Sección «Cara del robot»: las 9 emociones, sin marco y con marco (si la opción ya existe).
 function seccionCara() {
-  let h = '<h2>Cara del jaguar (8 bits)</h2>'
+  let h = '<h2>Cara del robot (8 bits)</h2>'
   h += '<h3>9 emociones, escala 3, sobre fondo selva</h3><div class="fila">'
   for (const e of cara.EMOCIONES) {
-    h += `<div><small>${e}</small><br>${registrar('cara ' + e, cara.caraJaguarSvg(e, 3, { fondo: '#0E4A22' }))}</div>`
+    h += `<div><small>${e}</small><br>${registrar('cara ' + e, cara.caraRobotSvg(e, 3, { fondo: '#0E4A22' }))}</div>`
   }
   h += '</div>'
-  h += '<h3>9 emociones con marco de piedra</h3><div class="fila">'
+  h += '<h3>9 emociones con marco</h3><div class="fila">'
   let hayMarco = false
   for (const e of cara.EMOCIONES) {
-    const svg = cara.caraJaguarSvg(e, 3, { fondo: '#0E4A22', marco: true })
-    if (svg !== cara.caraJaguarSvg(e, 3, { fondo: '#0E4A22' })) hayMarco = true
+    const svg = cara.caraRobotSvg(e, 3, { fondo: '#0E4A22', marco: true })
+    if (svg !== cara.caraRobotSvg(e, 3, { fondo: '#0E4A22' })) hayMarco = true
     h += `<div><small>${e}</small><br>${registrar('cara marco ' + e, svg)}</div>`
   }
   h += '</div>'

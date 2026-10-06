@@ -1,7 +1,14 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { STATUS_COLORS } from '../hooks/pixel'
-import { RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, AGENTS, rotulo, PANES, jaguarAlt, D, montar, celdasAlt, montarAncho, todos, textosDe, montarSub, USO, turnoSub, textos, glifoAlts, burbuja, altsSvg } from './ayuda-tablero'
+import { RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, AGENTS, rotulo, PANES, D, montar, celdasAlt, montarAncho, todos, textosDe, montarSub, USO, turnoSub, textos, glifoAlts, burbuja, altsSvg } from './ayuda-tablero'
+
+// Alias local: el ayudante compartido (ayuda-tablero.ts) todavía busca el texto viejo del robot.
+const jaguarAlt = async (ui: any): Promise<string> => {
+  const svgs: Array<{ props: Record<string, unknown> }> = await ui.findAll({ type: 'Svg' })
+  const svg = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
+  return String(svg?.props.alt ?? '')
+}
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`con agentes en ${surface}`, async ($, on) => {
@@ -150,14 +157,14 @@ test('estado base del jaguar: pensando si algo corre', async ($, on) => {
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   await paso(8000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar pensando')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
 })
 
 test('estado base del jaguar: aburrido si nada corre', async ($, on) => {
     fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('c1', 'completed')])
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar aburrido')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
 })
 
 test('ruge al fallar un subagente y vuelve a pensando a los ~5 s', async ($, on) => {
@@ -167,11 +174,11 @@ test('ruge al fallar un subagente y vuelve a pensando a los ~5 s', async ($, on)
   await paso(2000)
   list = [D('r1', 'running'), D('r2', 'failed')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar rugiendo')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot en alarma')
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar rugiendo')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot en alarma')
   await paso(4000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar pensando')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
 })
 
 test('contento cuando terminan todos sin fallos y luego aburrido', async ($, on) => {
@@ -181,9 +188,9 @@ test('contento cuando terminan todos sin fallos y luego aburrido', async ($, on)
   await paso(2000)
   list = [D('r1', 'completed')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar contento')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot feliz')
   await paso(6000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar aburrido')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
 })
 
 test('al acecho con un subagente nuevo corriendo y luego pensando', async ($, on) => {
@@ -193,9 +200,9 @@ test('al acecho con un subagente nuevo corriendo y luego pensando', async ($, on
   await paso(2000)
   list = [D('r1', 'running'), D('r2', 'running')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar al acecho')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot manos a la obra')
   await paso(4000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar pensando')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
 })
 
 test('un subagente visto por primera vez ya terminado no dispara reacción (queda aburrido)', async ($, on) => {
@@ -205,7 +212,7 @@ test('un subagente visto por primera vez ya terminado no dispara reacción (qued
   await paso(2000)
   list = [D('x1', 'failed'), D('x2', 'completed')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar aburrido')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
 })
 
 test('bufa cuando un subagente es frenado y a los ~2 s vuelve a aburrido', async ($, on) => {
@@ -215,9 +222,9 @@ test('bufa cuando un subagente es frenado y a los ~2 s vuelve a aburrido', async
   await paso(2000)
   list = [D('r1', 'killed')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar bufando')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot resoplando')
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar aburrido')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
 })
 
 test('con sospecha si algo corre hace más de 10 minutos', async ($, on) => {
@@ -225,9 +232,9 @@ test('con sospecha si algo corre hace más de 10 minutos', async ($, on) => {
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar pensando')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
   for (let i = 0; i < 61; i++) await paso(10000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar con sospecha')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot con una ceja levantada')
 })
 
 test('molesto después de rugir, hasta que aparece uno nuevo corriendo', async ($, on) => {
@@ -237,23 +244,23 @@ test('molesto después de rugir, hasta que aparece uno nuevo corriendo', async (
   await paso(2000)
   list = [D('r1', 'failed')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar rugiendo')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot en alarma')
   await paso(6000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar molesto')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot ofendido')
   list = [D('r1', 'failed'), D('r2', 'running')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar al acecho')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot manos a la obra')
   await paso(4000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar pensando')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
 })
 
 test('dormido tras 2 minutos sin nada corriendo', async ($, on) => {
     fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('c1', 'completed')])
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar aburrido')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
   await paso(130000)
-  expect(await jaguarAlt(ui)).toBe('Tablero, jaguar dormido')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot en ahorro de energía')
 })
 
 test('patio: una celda por subagente, sale al completarse y explota al fallar', async ($, on) => {
@@ -282,7 +289,7 @@ test('quieto: el botón apaga las animaciones de la cara', async ($, on) => {
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   const fuente = async () =>
-    String((await ui.findAll({ type: 'Svg' })).find((s: any) => /^Tablero, jaguar/.test(String(s.props.alt ?? ''))).props.source)
+    String((await ui.findAll({ type: 'Svg' })).find((s: any) => /^Oficina, robot/.test(String(s.props.alt ?? ''))).props.source)
   expect((await fuente()).includes('<animate')).toBe(true)
   await ui.press({ key: 'quieto' })
   expect((await fuente()).includes('<animate')).toBe(false)
@@ -295,7 +302,7 @@ test('la cara no cambia entre dos redibujos seguidos sin cambios (caché estable
   const { ui, paso } = await montar($, on, () => [D('c1', 'completed')])
   await paso(2000)
   const fuente = async () =>
-    String((await ui.findAll({ type: 'Svg' })).find((s: any) => /^Tablero, jaguar/.test(String(s.props.alt ?? ''))).props.source)
+    String((await ui.findAll({ type: 'Svg' })).find((s: any) => /^Oficina, robot/.test(String(s.props.alt ?? ''))).props.source)
   const a = await fuente()
   await ui.redraw()
   await paso(2000)
@@ -421,7 +428,7 @@ test('Subagentes: «Resumen visual» esconde el arte pero deja la palabra grande
   expect(await rotulo(ui, 'abrir-resumen')).toBe('▸ Resumen visual')
   a = await alts()
   expect(a.some(x => /Estado general/.test(x))).toBe(true)
-  expect(a.some(x => /Tablero de subagentes|Tablero, jaguar|Línea de tiempo/.test(x))).toBe(false)
+  expect(a.some(x => /Tablero de subagentes|Oficina, robot|Línea de tiempo/.test(x))).toBe(false)
   await ui.press({ key: 'abrir-resumen' })
   expect((await alts()).some(x => /Línea de tiempo/.test(x))).toBe(true)
 })
@@ -507,7 +514,7 @@ test('Informe: un texto de 5000 caracteres queda recortado', async ($, on) => {
   expect(linea.includes('x'.repeat(4001))).toBe(false)
 })
 
-for (const [tipo, glifo] of [['implementador', 'Escriba'], ['revisor', 'Guardián']] as const) {
+for (const [tipo, glifo] of [['implementador', 'Redacción'], ['revisor', 'Control']] as const) {
   test(`descripción «T-81 ...» sin formato (${tipo}): tarjeta y glifo`, async ($, on) => {
     fsFalso(on)
     const lista = [{ id: 's1', description: 'T-81 cara del jaguar', type: tipo, status: 'running' }]
@@ -539,29 +546,29 @@ test('descripción «Holas-1 mundo» (prefijo de 5 letras) no se toma como tarje
   expect((await ui.findAll({ type: 'Text', text: /^Holas-1\s*$/ })).length).toBe(0)
 })
 
-test('burbuja: «Nada que hacer» sin agentes', async ($, on) => {
+test('burbuja: «Tomando café» sin agentes', async ($, on) => {
   fsFalso(on)
   const { ui, paso } = await montar($, on, () => [])
   await paso(2000)
-  expect(await burbuja(ui, /Nada que hacer\./)).toBe(true)
+  expect(await burbuja(ui, /Tomando café\. Avisame cuando alguien trabaje\./)).toBe(true)
 })
 
-test('burbuja: «Pensando con 1 agente» con uno corriendo', async ($, on) => {
+test('burbuja: «Laburando con 1 agente» con uno corriendo', async ($, on) => {
   fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   await paso(8000)
-  expect(await burbuja(ui, /Pensando con 1 agente: T-9/)).toBe(true)
+  expect(await burbuja(ui, /Laburando con 1 agente: T-9\. No me distraigas\./)).toBe(true)
 })
 
-test('burbuja: «¡GRRR! Falló T-9.» cuando falla uno', async ($, on) => {
+test('burbuja: «¡ERROR! Falló T-9.» cuando falla uno', async ($, on) => {
   fsFalso(on)
   let list: unknown[] = [D('r1', 'running')]
   const { ui, paso } = await montar($, on, () => list)
   await paso(2000)
   list = [D('r1', 'failed')]
   await paso(2000)
-  expect(await burbuja(ui, /¡GRRR! Falló T-9\./)).toBe(true)
+  expect(await burbuja(ui, /¡ERROR! Falló T-9\. A mí no me mires\./)).toBe(true)
 })
 
 test('encabezado: la cara mide 126 de ancho y existe el dosel', async ($, on) => {
@@ -569,7 +576,7 @@ test('encabezado: la cara mide 126 de ancho y existe el dosel', async ($, on) =>
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   const svgs: any[] = await ui.findAll({ type: 'Svg' })
-  const cara = svgs.find(s => /^Tablero, jaguar/.test(String(s.props.alt ?? '')))
+  const cara = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
   expect(Number(cara.props.width)).toBe(126)
   expect(/width="126"/.test(String(cara.props.source))).toBe(true)
   expect(svgs.some(s => s.props.alt === 'Dosel de la selva')).toBe(true)

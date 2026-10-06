@@ -28,7 +28,7 @@ import {
   toolsKind,
   toolsLabel,
 } from './roles'
-import { EMOCION_ALT, caraJaguarSvg } from './arte-cara'
+import { EMOCION_ALT, caraRobotSvg } from './arte-robot'
 import {
   PATIO_ALTO,
   PATIO_ANCHO,
@@ -38,10 +38,10 @@ import {
   celdaPatioSvg,
   doselPatioSvg,
   pisoPatioSvg,
-} from './arte-patio'
-import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-templo'
-import { DIOSES_EQUIPO, diosSvg } from './arte-dioses'
-import { EQUIPO_ACENTO, TIPO_NOMBRE, glifoMatriz, glifoPaleta, glifoSvg, tipoDeAgente } from './arte-glifos'
+} from './arte-escritorios'
+import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
+import { DIOSES_EQUIPO, diosSvg } from './arte-iconos'
+import { EQUIPO_ACENTO, TIPO_NOMBRE, glifoMatriz, glifoPaleta, glifoSvg, tipoDeAgente } from './arte-iconos'
 import type { FilaTiempo } from './pixel'
 import {
   PALETTE,
@@ -64,7 +64,7 @@ const TAREA_EQUIPO: Record<string, string> = {
 }
 
 const PANE = 'tablero-oficina'
-const TITLE = 'Tablero de subagentes'
+const TITLE = 'Oficina'
 const PERIOD_MS = 2000
 const MAX_AGENTS = 100
 const SEP = ' · '
@@ -451,7 +451,7 @@ async function refresh($: EngineInterface): Promise<void> {
   const bucketChanged = anyRunning && bucketOf(now) !== bucketOf(storedNow)
   // Lo que el panel muestra (huellas) depende de `flash > now`: se reescribe `now` si cambia.
   const flashVisibleChanged = flash > storedNow !== flash > now
-  // Reacción del jaguar: una nueva reemplaza a la anterior; al vencer se borra (una sola escritura).
+  // Reacción del robot: una nueva reemplaza a la anterior; al vencer se borra (una sola escritura).
   const react0 = await read($, reaccionAtom)
   const reaction = detectReaction(prev, merged.rows, now)
   const expired = reaction === null && react0 !== null && react0.hasta <= now
@@ -955,7 +955,7 @@ export const register: Register = on => {
     ) : null
 
     const quieto = (await read($, quietoAtom)) === true
-    // Estado del jaguar, común a las tres vistas.
+    // Estado del robot, común a las tres vistas.
     const rows = (await read($, agents)).filter(row => row && typeof row.id === 'string')
     const now = await read($, nowAtom)
     const molestoRaw: unknown = await read($, molestoAtom)
@@ -974,7 +974,7 @@ export const register: Register = on => {
         draftComun.model !== editadoComun.model ||
         draftComun.effort !== editadoComun.effort ||
         JSON.stringify(draftComun.tools) !== JSON.stringify(editadoComun.tools))
-    // Emoción del jaguar: la reacción vigente manda; si no, la base según lo que pasa.
+    // Emoción del robot: la reacción vigente manda; si no, la base según lo que pasa.
     const nowReal = await $.clock.now()
     const emocionDe = (): { emocion: string; ocioDesde: number; dormirEn?: number } => {
       const tipo = reaccion && reaccion.hasta > now ? String(reaccion.tipo) : ''
@@ -1009,12 +1009,12 @@ export const register: Register = on => {
     let frisoArte = ''
     let disponible = PATIO_ANCHO * 2
     if (hasSvg) {
-      caraAlt = `Tablero, jaguar ${EMOCION_ALT[estado.emocion] ?? estado.emocion}`
+      caraAlt = `Oficina, robot ${EMOCION_ALT[estado.emocion] ?? estado.emocion}`
       // La firma no lleva `now`: el string queda idéntico entre redibujos y la animación no reinicia.
       caraSvg = cachedSvg(
         'cara',
         estado.emocion === 'aburrido' ? `aburrido|${estado.ocioDesde}|${quieto}` : `${estado.emocion}|${quieto}`,
-        () => caraJaguarSvg(estado.emocion, 3, { dormirEn: estado.dormirEn, quieto, fondo, marco: true }),
+        () => caraRobotSvg(estado.emocion, 3, { dormirEn: estado.dormirEn, quieto, fondo, marco: true }),
       )
       const anchoCara = svgSize(caraSvg).width || CARA_ANCHO
       disponible = Math.max(PATIO_ANCHO * 2, W - anchoCara)
@@ -1022,23 +1022,23 @@ export const register: Register = on => {
       grecaSvg = cachedSvg(`greca-${W}`, `${W}`, () => grecaBand(W, 6))
       frisoArte = cachedSvg(`friso-${W}`, `${W}`, () => frisoSvg(W, 2))
     }
-    // Burbuja del jaguar: una frase que explica lo que pasa (con la tarjeta cuando se sabe).
+    // Burbuja del robot: una frase que explica lo que pasa (con la tarjeta cuando se sabe).
     const burbujaEstado = (): string => {
       const con = (nombre: string, antes: string, despues: string): string =>
         nombre !== '' ? `${antes}${nombre}${despues}` : ''
       const quienReaccion = reaccion && typeof reaccion.quien === 'string' ? reaccion.quien : ''
       const minutos = (ms: number): number => Math.max(0, Math.floor(ms / 60000))
-      if (guardadoVigente) return `¡Guardado! ${quienReaccion} cambia en la próxima sesión.`
+      if (guardadoVigente) return `¡Guardado! ${quienReaccion} estrena rol en la próxima sesión. De nada.`
       switch (estado.emocion) {
         case 'dormido':
-          return `Zzz… hace ${minutos(nowReal - estado.ocioDesde)} min que no hay trabajo.`
+          return `Modo ahorro de energía hace ${minutos(nowReal - estado.ocioDesde)} min. Despertame si pasa algo interesante.`
         case 'pensando': {
           const corriendo = rows.filter(row => row.status === 'running')
           const tarjetas = corriendo.map(row => parse(row.description, roleNames, row.type).card).filter(c => c !== '')
           const lista =
-            tarjetas.length > 0 ? `: ${tarjetas.slice(0, 4).join(', ')}${tarjetas.length > 4 ? '…' : ''}` : '.'
+            tarjetas.length > 0 ? `: ${tarjetas.slice(0, 4).join(', ')}${tarjetas.length > 4 ? '…' : ''}.` : '.'
 
-          return `Pensando con ${plural(corriendo.length, 'agente', 'agentes')}${lista}`
+          return `Laburando con ${plural(corriendo.length, 'agente', 'agentes')}${lista} No me distraigas.`
         }
         case 'sospecha': {
           const largo = rows
@@ -1047,20 +1047,20 @@ export const register: Register = on => {
           const mins = largo ? minutos(now - largo.firstSeen) : 0
           const nombre = largo ? parse(largo.description, roleNames, largo.type).card : ''
 
-          return `${nombre !== '' ? nombre : 'Un agente'} lleva ${mins} min… ¿todo bien?`
+          return `${nombre !== '' ? nombre : 'Un agente'} lleva ${mins} min… ¿se fue a almorzar?`
         }
         case 'caceria':
-          return `¡Llegó${con(quienReaccion, ' ', '')}! A cazar.`
+          return `¡Llegó${con(quienReaccion, ' ', '')}! A trabajar, que el café no se paga solo.`
         case 'ruge':
-          return `¡GRRR! Falló${con(quienReaccion, ' ', '')}.`
+          return `¡ERROR! Falló${con(quienReaccion, ' ', '')}. A mí no me mires.`
         case 'molesto':
-          return `Hmpf. Falló${con(molestoQuien, ' ', '')}. Se me pasa cuando despaches otra.`
+          return `Falló${con(molestoQuien, ' ', '')}. Estoy ofendido hasta que despaches otra.`
         case 'bufido':
-          return `¡Pfff! Frenaron${con(quienReaccion, ' ', '')}.`
+          return `¿Frenaron${con(quienReaccion, ' ', '')}? Ok. Ok. Respiro.`
         case 'contento':
-          return '¡Listo! Oleada terminada sin fallas.'
+          return '¡Listo! Oleada terminada sin fallas. Obvio.'
         default:
-          return 'Nada que hacer. Despachá una tarjeta y me pongo a pensar.'
+          return 'Tomando café. Avisame cuando alguien trabaje.'
       }
     }
 
@@ -1196,7 +1196,7 @@ export const register: Register = on => {
                 <Svg key="svg-pared-taller" source={paredArte} alt="Taller del escriba" {...sizeProps(paredArte)} />
               )}
               {codiceArte !== '' && (
-                <Svg key="svg-codice" source={codiceArte} alt="Códice del escriba" {...sizeProps(codiceArte)} />
+                <Svg key="svg-codice" source={codiceArte} alt="Pizarra del escriba" {...sizeProps(codiceArte)} />
               )}
             </Box>
           )
@@ -1850,7 +1850,7 @@ export const register: Register = on => {
         spare -= lineCost
       }
       const headerPx = Math.max(CARA_ALTO, DOSEL_ALTO + PATIO_FILA_ALTO * filasPatio)
-      // Se suman la franja de greca y la línea de la burbuja del jaguar.
+      // Se suman la franja de greca y la línea de la burbuja del robot.
       const headerCost =
         resumenAbierto && caraSvg !== '' ? Math.ceil(headerPx / 20) + 2 : 0
       if (headerCost > 0 && spare >= headerCost) {
