@@ -1,0 +1,227 @@
+<title>Cuestionario de la idea</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Public+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: columna única de 760px; arriba la idea, en el medio una tarjeta por feature, abajo la matriz valor/esfuerzo. */
+:root{
+  --bg:#f6f7f5; --panel:#ffffff; --fg:#1d2321; --muted:#5c6862; --line:#d5dcd7;
+  --accent:#1f6f5c; --accent-fg:#ffffff; --alta:#b4432b; --media:#a8741a; --baja:#4b6a8a;
+  --font-display:"Fraunces",Georgia,serif; --font-body:"Public Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121715; --panel:#1b2220; --fg:#e8eeea; --muted:#9fb0a7; --line:#33403b;
+  --accent:#5cc2a6; --accent-fg:#0c1411; --alta:#ee8a72; --media:#e0b04f; --baja:#86aad0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121715; --panel:#1b2220; --fg:#e8eeea; --muted:#9fb0a7; --line:#33403b;
+  --accent:#5cc2a6; --accent-fg:#0c1411; --alta:#ee8a72; --media:#e0b04f; --baja:#86aad0; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.5;padding-inline:16px}
+main{max-width:760px;margin-inline:auto;padding-block:24px 48px;display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:1.8rem} h2{font-size:1.2rem}
+p{margin:0} .muted{color:var(--muted)}
+.hdr{display:flex;flex-direction:column;gap:8px}
+.estado{font-size:.85rem;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card header{display:flex;flex-direction:column;gap:4px}
+label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
+label small{font-weight:400;color:var(--muted)}
+textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;min-height:3.5em;resize:vertical;width:100%;box-sizing:border-box}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+legend{font-weight:600;font-size:.9rem;padding:0;margin-bottom:4px}
+.prio{display:flex;gap:8px;flex-wrap:wrap}
+.prio button{font:inherit;font-weight:600;min-height:44px;padding:0 18px;border-radius:6px;border:2px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.prio button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+textarea:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.fin{font-size:.85rem;color:var(--muted)}
+.fin.ok{color:var(--accent)}
+.aviso{border:1px solid var(--media);border-radius:6px;padding:8px 12px;font-size:.9rem}
+.chart{overflow-x:auto}
+svg{display:block;width:100%;height:auto;min-width:320px}
+svg text{fill:var(--fg);font-family:var(--font-body);font-size:11px}
+svg .m{fill:var(--muted)}
+</style>
+
+<script type="application/json" id="datos">
+{
+  "idea": {
+    "nombre": "Idea de ejemplo",
+    "resumen": "Reemplazá este texto por una o dos frases que expliquen la idea."
+  },
+  "features": [
+    { "id": "f1", "nombre": "Feature de ejemplo uno", "descripcion": "Qué hace, en una frase.", "esfuerzo": "Bajo" },
+    { "id": "f2", "nombre": "Feature de ejemplo dos", "descripcion": "Qué hace, en una frase.", "esfuerzo": "Medio" },
+    { "id": "f3", "nombre": "Feature de ejemplo tres", "descripcion": "Qué hace, en una frase.", "esfuerzo": "Alto" }
+  ]
+}
+</script>
+
+<main>
+  <div class="hdr">
+    <h1 id="titulo"></h1>
+    <p id="resumen" class="muted"></p>
+    <p>Contestá las seis preguntas de cada feature. Lo que escribís se guarda solo. Podés dejar algo en blanco y volver después.</p>
+    <p id="estado" class="estado" role="status"></p>
+    <p id="aviso" class="aviso" hidden></p>
+  </div>
+  <div id="tarjetas" style="display:flex;flex-direction:column;gap:16px"></div>
+  <section class="card" aria-labelledby="hm">
+    <h2 id="hm">Matriz de prioridad</h2>
+    <p class="muted">Cada feature aparece según la prioridad que le diste (alto = más valor). El esfuerzo sale del campo «esfuerzo» de la lista de features. Sin prioridad, el punto queda en gris abajo.</p>
+    <div class="chart"><svg id="matriz" viewBox="0 0 400 320" role="img" aria-label="Matriz de prioridad, valor contra esfuerzo"></svg></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var D = JSON.parse(document.getElementById("datos").textContent);
+  var PREG = [
+    ["problema","¿Qué problema resuelve?","Contalo como lo vive la persona, sin jerga."],
+    ["paraQuien","¿Para quién es?","Quién lo usa y en qué momento."],
+    ["funciona","¿Cómo sabés que funciona?","Qué tendría que pasar para decir «esto anda»."],
+    ["afuera","¿Qué queda afuera?","Lo que esta versión no hace a propósito."],
+    ["ejemplo","Un ejemplo concreto","Una situación real, paso a paso."]
+  ];
+  var PRIO = ["Alta","Media","Baja"];
+  var VALOR = {Alta:3,Media:2,Baja:1};
+  var ESF = {Bajo:1,Medio:2,Alto:3};
+  var respuestas = {};
+  var ref = null, usaDb = false, cola = Promise.resolve(), timers = {};
+  var $ = function(id){return document.getElementById(id);};
+  var LS = "respuestas-usuaria:" + D.idea.nombre;
+
+  $("titulo").textContent = D.idea.nombre;
+  $("resumen").textContent = D.idea.resumen;
+  document.title = "Cuestionario: " + D.idea.nombre;
+
+  function estado(t, ok){ var e=$("estado"); e.textContent=t; e.className="estado"+(ok?" ok":""); }
+  function aviso(t){ var a=$("aviso"); a.textContent=t; a.hidden=false; }
+
+  function ls(op, v){
+    try{ if(op==="get") return JSON.parse(localStorage.getItem(LS)||"null"); localStorage.setItem(LS, JSON.stringify(v)); return true; }
+    catch(e){ return op==="get"?null:false; }
+  }
+
+  function guardar(){
+    cola = cola.then(function(){
+      if(usaDb){
+        return ref.set(respuestas).then(function(){ estado("Guardado en el almacenamiento de la página.", true); });
+      }
+      var ok = ls("set", respuestas);
+      estado(ok?"Guardado solo en este navegador.":"No se pudo guardar. Copiá tus respuestas aparte.", ok);
+    }).catch(function(){ estado("No se pudo guardar. Probá de nuevo en un momento.", false); });
+  }
+
+  function cambio(fid, campo, valor){
+    respuestas[fid] = respuestas[fid] || {};
+    respuestas[fid][campo] = valor;
+    dibujar();
+    estado("Guardando...", false);
+    clearTimeout(timers.g);
+    timers.g = setTimeout(guardar, 600);
+  }
+
+  function tarjeta(f){
+    var r = respuestas[f.id] || {};
+    var c = document.createElement("article"); c.className = "card";
+    var h = document.createElement("header");
+    var t = document.createElement("h2"); t.textContent = f.nombre;
+    var p = document.createElement("p"); p.className = "muted"; p.textContent = f.descripcion;
+    h.append(t, p); c.append(h);
+    PREG.slice(0,2).forEach(function(q){ c.append(campo(f,q,r)); });
+    var fs = document.createElement("fieldset");
+    var lg = document.createElement("legend"); lg.textContent = "¿Qué prioridad tiene?";
+    var bx = document.createElement("div"); bx.className = "prio";
+    PRIO.forEach(function(n){
+      var b = document.createElement("button"); b.type="button"; b.textContent=n;
+      b.setAttribute("aria-pressed", r.prioridad===n ? "true":"false");
+      b.addEventListener("click", function(){
+        bx.querySelectorAll("button").forEach(function(o){ o.setAttribute("aria-pressed", o===b?"true":"false"); });
+        cambio(f.id,"prioridad",n);
+      });
+      bx.append(b);
+    });
+    fs.append(lg, bx); c.append(fs);
+    PREG.slice(2).forEach(function(q){ c.append(campo(f,q,r)); });
+    return c;
+  }
+  function campo(f,q,r){
+    var l = document.createElement("label"); l.htmlFor = f.id+"-"+q[0];
+    l.append(document.createTextNode(q[1]));
+    var s = document.createElement("small"); s.textContent = q[2]; l.append(s);
+    var ta = document.createElement("textarea"); ta.id = f.id+"-"+q[0]; ta.value = r[q[0]]||"";
+    ta.addEventListener("input", function(){ cambio(f.id,q[0],ta.value); });
+    var w = document.createElement("div"); w.style.cssText="display:flex;flex-direction:column;gap:4px";
+    w.append(l, ta); return w;
+  }
+
+  var NS = "http://www.w3.org/2000/svg";
+  function el(n,a,t){ var e=document.createElementNS(NS,n); for(var k in a) e.setAttribute(k,a[k]); if(t!=null) e.textContent=t; return e; }
+  function dibujar(){
+    var s = $("matriz"); s.textContent = "";
+    var L=50, T=16, W=330, H=250, mx=L+W/2, my=T+H/2;
+    s.append(el("rect",{x:L,y:T,width:W/2,height:H/2,fill:"none",stroke:"var(--line)"}));
+    s.append(el("rect",{x:mx,y:T,width:W/2,height:H/2,fill:"none",stroke:"var(--line)"}));
+    s.append(el("rect",{x:L,y:my,width:W/2,height:H/2,fill:"none",stroke:"var(--line)"}));
+    s.append(el("rect",{x:mx,y:my,width:W/2,height:H/2,fill:"none",stroke:"var(--line)"}));
+    s.append(el("text",{x:L+6,y:T+14,class:"m"},"Hacelo primero"));
+    s.append(el("text",{x:mx+6,y:T+14,class:"m"},"Proyecto grande"));
+    s.append(el("text",{x:L+6,y:T+H-6,class:"m"},"Si sobra tiempo"));
+    s.append(el("text",{x:mx+6,y:T+H-6,class:"m"},"Mejor no"));
+    s.append(el("text",{x:L+W/2,y:T+H+22,"text-anchor":"middle"},"Esfuerzo (bajo a alto)"));
+    var yl = el("text",{x:12,y:T+H/2,"text-anchor":"middle",transform:"rotate(-90 12 "+(T+H/2)+")"},"Valor (prioridad)");
+    s.append(yl);
+    var celdas = {};
+    D.features.forEach(function(f,i){
+      var r = respuestas[f.id]||{};
+      var v = VALOR[r.prioridad]||0, e = ESF[f.esfuerzo]||2;
+      var cx = L + (e-0.5)*(W/3);
+      var cy = v ? T + H - (v-0.5)*(H/3) : T + H - 10;
+      var k = v+"-"+e; var n = celdas[k]=(celdas[k]||0)+1;
+      cx += (n-1)*16 - 0; cy += ((n-1)%2)*14;
+      var col = v===3?"var(--alta)":v===2?"var(--media)":v===1?"var(--baja)":"var(--muted)";
+      s.append(el("circle",{cx:cx,cy:cy,r:9,fill:col}));
+      s.append(el("text",{x:cx,y:cy+4,"text-anchor":"middle",style:"fill:var(--bg);font-weight:600"},String(i+1)));
+    });
+    ["Alta","Media","Baja"].forEach(function(n,i){
+      s.append(el("text",{x:L-6,y:T+(i+0.5)*(H/3)+4,"text-anchor":"end",class:"m"},n));
+    });
+  }
+
+  function leyenda(){
+    var m = $("matriz").parentNode;
+    var ol = document.createElement("ol"); ol.className="muted"; ol.style.margin="8px 0 0";
+    D.features.forEach(function(f){ var li=document.createElement("li"); li.textContent=f.nombre; ol.append(li); });
+    m.after(ol);
+  }
+
+  function pintar(){
+    var cont = $("tarjetas"); cont.textContent = "";
+    D.features.forEach(function(f){ cont.append(tarjeta(f)); });
+    dibujar();
+  }
+
+  function arrancar(){
+    pintar(); leyenda();
+    try{
+      if(window.claude && claude.use){
+        claude.use("db").then(function(db){
+          if(!db) return fallback("");
+          ref = db.collection("respuestas").doc("usuaria");
+          return ref.get().then(function(snap){
+            usaDb = true;
+            if(snap.exists){ respuestas = snap.data()||{}; pintar(); }
+            estado("Conectado: tus respuestas se guardan solas.", true);
+          });
+        }).catch(function(){ fallback(""); });
+      } else fallback("");
+    }catch(e){ fallback(""); }
+  }
+  function fallback(){
+    usaDb = false;
+    var g = ls("get");
+    if(g){ respuestas = g; pintar(); }
+    aviso("El almacenamiento de la página no está disponible. Tus respuestas se guardan solo en este navegador y no las ve nadie más.");
+    estado("Listo.", false);
+  }
+  arrancar();
+})();
+</script>

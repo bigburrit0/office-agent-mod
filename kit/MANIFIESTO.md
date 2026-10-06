@@ -1,0 +1,45 @@
+# Manifiesto
+
+| archivo | origen | sha256 |
+|---|---|---|
+| ADAPTAR.md | {{EQUIPOS}}\kit\ADAPTAR.md | feb0f46b86a2 |
+| LEEME.md | {{EQUIPOS}}\kit\LEEME.md | 07b22bb36bb3 |
+| agentes/base/corrector.md | {{EQUIPOS}}\agents\base\corrector.md | a97808588e9e |
+| agentes/base/implementador.md | {{EQUIPOS}}\agents\base\implementador.md | ac1eba896d7f |
+| agentes/base/investigador.md | {{EQUIPOS}}\agents\base\investigador.md | a861e05f3952 |
+| agentes/base/mecanico.md | {{EQUIPOS}}\agents\base\mecanico.md | ad4e031a836a |
+| agentes/base/revisor.md | {{EQUIPOS}}\agents\base\revisor.md | 4392c4a8fc6f |
+| agentes/datos/analista.md | {{EQUIPOS}}\agents\datos\analista.md | 4bf8479038d4 |
+| agentes/datos/dataviz.md | {{EQUIPOS}}\agents\datos\dataviz.md | 6b52ffe33580 |
+| agentes/direccion/arquitecto.md | {{EQUIPOS}}\agents\direccion\arquitecto.md | 4caa791fc3e3 |
+| agentes/direccion/disenador.md | {{EQUIPOS}}\agents\direccion\disenador.md | bdce301075f4 |
+| agentes/direccion/estratega.md | {{EQUIPOS}}\agents\direccion\estratega.md | aa17a07fa9a8 |
+| agentes/direccion/pm.md | {{EQUIPOS}}\agents\direccion\pm.md | dfb069f652ee |
+| agentes/librarian/librarian.md | {{EQUIPOS}}\agents\librarian\librarian.md | 25ed62e25935 |
+| agentes/research/esceptico.md | {{EQUIPOS}}\agents\research\esceptico.md | 6713181b5cdb |
+| agentes/research/explorador.md | {{EQUIPOS}}\agents\research\explorador.md | c7ec8ace137f |
+| agentes/research/practico.md | {{EQUIPOS}}\agents\research\practico.md | ca8a5d709ecf |
+| metodo/CLAUDE-global.md | %USERPROFILE%\.claude\CLAUDE.md | 4a3b59bda5bc |
+| metodo/ESQUEMA-AGENTES.md | {{EQUIPOS}}\ESQUEMA-AGENTES.md | a3eddf7f8d66 |
+| metodo/ESQUEMA-SISTEMA.md | {{EQUIPOS}}\ESQUEMA-SISTEMA.md | 03957fd95d03 |
+| metodo/METODO.md | {{EQUIPOS}}\METODO.md | afffb1f994c2 |
+| metodo/README.md | {{EQUIPOS}}\README.md | 3dcc1efab248 |
+| metodo/REGLAS-TARJETAS.md | {{EQUIPOS}}\REGLAS-TARJETAS.md | 3ad76320f59e |
+| oficina/CLAUDE.md | {{OFICINA}}\CLAUDE.md | 81124fc9e018 |
+| oficina/ideas-CLAUDE.md | {{OFICINA}}\ideas\CLAUDE.md | 02fbc4418680 |
+| plantillas/BACKEND.md | {{EQUIPOS}}\plantillas\BACKEND.md | f5f58a64315c |
+| plantillas/DISENO.md | {{EQUIPOS}}\plantillas\DISENO.md | f33b0ef4396a |
+| plantillas/FLUJO.md | {{EQUIPOS}}\plantillas\FLUJO.md | baffa10b691f |
+| plantillas/PRD.md | {{EQUIPOS}}\plantillas\PRD.md | ee6964322a68 |
+| plantillas/TRD.md | {{EQUIPOS}}\plantillas\TRD.md | 8b76eee51a35 |
+| plantillas/pagina-idea.html | {{EQUIPOS}}\plantillas\pagina-idea.html | 56e9ecac69be |
+| plantillas/pagina-idea.md | {{EQUIPOS}}\plantillas\pagina-idea.md | 980581af3a4f |
+| skills/equipo-base/SKILL.md | {{EQUIPOS}}\skills\equipo-base\SKILL.md | ec17ac335cb7 |
+| skills/equipo-datos/SKILL.md | {{EQUIPOS}}\skills\equipo-datos\SKILL.md | 60f64c3c22fc |
+| skills/equipo-direccion/SKILL.md | {{EQUIPOS}}\skills\equipo-direccion\SKILL.md | 2d39cd4af44f |
+| skills/equipo-librarian/SKILL.md | {{EQUIPOS}}\skills\equipo-librarian\SKILL.md | 28ff8115a0c3 |
+| skills/equipo-research/SKILL.md | {{EQUIPOS}}\skills\equipo-research\SKILL.md | 3fab2f49cf1f |
+| skills/idea-nueva/SKILL.md | {{EQUIPOS}}\skills\idea-nueva\SKILL.md | f928e5d7e039 |
+| skills/revisar-skills/SKILL.md | {{EQUIPOS}}\skills\revisar-skills\SKILL.md | b63262e16bbf |
+| skills/revisar-skills/revisar_skills.py | {{EQUIPOS}}\skills\revisar-skills\revisar_skills.py | 854d2749ce04 |
+| skills/turno/SKILL.md | {{EQUIPOS}}\skills\turno\SKILL.md | c69a88d9a8fd |
