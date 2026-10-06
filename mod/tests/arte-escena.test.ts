@@ -2,7 +2,6 @@ import { expect, test } from 'claude-code/testing'
 
 import { caraRobotSvg } from '../hooks/arte-robot'
 import { celdaPatioSvg } from '../hooks/arte-escritorios'
-import { oficinaVaciaSvg } from '../hooks/arte-oficina'
 import { ESCENA_FONDO, escenaAlto, escenaOficinaSvg } from '../hooks/arte-escena'
 
 const celda = (i: number, quieto = false) => ({
@@ -24,7 +23,7 @@ test('el viewBox mide el ancho pedido y el alto de escenaAlto', () => {
       expect(v.w).toBe(ancho)
       expect(v.h).toBe(escenaAlto(ancho, n, false))
     }
-    const vv = viewBox(escenaOficinaSvg({ ancho, cara, celdas: [], vacia: oficinaVaciaSvg(ancho - 146, 2) }))
+    const vv = viewBox(escenaOficinaSvg({ ancho, cara, celdas: [], vacia: true }))
     expect(vv.h).toBe(escenaAlto(ancho, 0, true))
   }
 })
@@ -40,8 +39,12 @@ test('anida el robot y las celdas', () => {
 
 test('sin celdas muestra el escritorio libre y sin nada no lanza', () => {
   const cara = caraRobotSvg('aburrido', 3, { marco: true })
-  const vacia = oficinaVaciaSvg(232, 2)
-  expect(escenaOficinaSvg({ ancho: 378, cara, celdas: [], vacia }).includes(trozo(vacia))).toBe(true)
+  const s = escenaOficinaSvg({ ancho: 378, cara, celdas: [], vacia: true })
+  expect(s.includes('LIBRE') || s.includes('#F28C28')).toBe(true)
+  expect(s.includes('#13251b')).toBe(true)
+  expect((s.match(/<svg/g) ?? []).length).toBe(2)
+  expect(escenaOficinaSvg({ ancho: 378, cara, celdas: [], vacia: 'x' as unknown as boolean }).includes('#13251b')).toBe(true)
+  expect(escenaAlto(378, 0, true)).toBe(escenaAlto(378, 1, false))
   expect(() => escenaOficinaSvg({ ancho: 378, cara, celdas: [] })).not.toThrow()
 })
 
@@ -57,6 +60,9 @@ test('con quieto no hay animaciones', () => {
   const s = escenaOficinaSvg({ ancho: 640, cara, celdas: celdas(4, true), quieto: true })
   expect(s.includes('<animate')).toBe(false)
   expect(escenaOficinaSvg({ ancho: 640, cara, celdas: [] }).includes('<animate')).toBe(true)
+  const q = caraRobotSvg('bostezo', 3, { fondo: ESCENA_FONDO, marco: true, quieto: true })
+  expect(escenaOficinaSvg({ ancho: 378, cara: q, celdas: [], vacia: true, quieto: true }).includes('<animate')).toBe(false)
+  expect(escenaOficinaSvg({ ancho: 378, cara: q, celdas: [], vacia: true }).includes('<animate')).toBe(true)
 })
 
 test('alt se escapa y no hay script', () => {

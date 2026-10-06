@@ -1,6 +1,6 @@
 // Escena única de la oficina: cielorraso, pared, piso, el robot colgado y los agentes en un solo SVG.
-// Puro y sin imports: el robot, las celdas y el escritorio libre llegan ya armados como strings SVG
-// y se anidan como <svg> hijos con x/y.
+// Puro y sin imports: el robot y las celdas llegan ya armados como strings SVG y se anidan como <svg>
+// hijos con x/y; el escritorio libre se dibuja acá mismo sobre el piso de la escena.
 
 export const ESCENA_FONDO = '#e6dfcb' // color de pared: el panel lo usa de fondo de las celdas y de la caja
 
@@ -203,12 +203,66 @@ function soporteRobot(): string {
   )
 }
 
+// Escritorio libre dibujado sobre el piso (escala 3; el pie de las patas queda en yPiso).
+// Devuelve el SVG y el ancho que ocupa. Sin pared ni piso propios.
+function escritorioLibre(libre: number, quieto: boolean, yPiso: number): { svg: string; ancho: number } {
+  const S = 3
+  const cx = 22
+  const anchoDesk = (cx + 14) * S
+  if (libre < anchoDesk) return { svg: '', ancho: 0 }
+  const conPlanta = libre >= (cx + 31) * S
+  const r = (x: number, y: number, w: number, h: number, f: string) => rect(x, y, w, h, f)
+  let c = ''
+  // Cartel naranja «LIBRE» colgado de la pared.
+  const x0 = cx - 12
+  const letras = [
+    ['100', '100', '100', '100', '111'],
+    ['111', '010', '010', '010', '111'],
+    ['110', '101', '110', '101', '110'],
+    ['110', '101', '110', '101', '101'],
+    ['111', '100', '110', '100', '111'],
+  ]
+  c += r(x0 + 4, -33, 1, 2, '#8F8A80') + r(x0 + 19, -33, 1, 2, '#8F8A80')
+  c += r(x0, -31, 24, 10, CONTORNO) + r(x0 + 1, -30, 22, 8, '#F28C28')
+  letras.forEach((letra, i) => {
+    letra.forEach((fila, fy) => {
+      for (let fx = 0; fx < 3; fx++) if (fila[fx] === '1') c += r(x0 + 3 + i * 4 + fx, -29 + fy, 1, 1, CONTORNO)
+    })
+  })
+  // Silla azul.
+  c += r(cx - 22, -18, 4, 11, CONTORNO) + r(cx - 21, -17, 2, 9, '#1F5FA8')
+  c += r(cx - 22, -8, 9, 3, CONTORNO) + r(cx - 21, -8, 7, 2, '#1F5FA8')
+  c += r(cx - 18, -5, 2, 4, '#8F8A80') + r(cx - 22, -1, 9, 1, CONTORNO)
+  // Escritorio.
+  c += r(cx - 14, -11, 28, 2, CONTORNO) + r(cx - 13, -11, 26, 1, '#d9c28f')
+  c += r(cx - 13, -9, 26, 6, CONTORNO) + r(cx - 12, -9, 24, 5, '#b8975f')
+  c += r(cx + 3, -8, 8, 3, CONTORNO) + r(cx + 4, -7, 6, 1, '#C2AE86')
+  c += r(cx - 13, -3, 2, 3, CONTORNO) + r(cx + 11, -3, 2, 3, CONTORNO)
+  // Monitor CRT apagado.
+  c += r(cx - 7, -21, 12, 10, CONTORNO) + r(cx - 6, -20, 10, 9, '#c9c3b0') + r(cx - 5, -19, 8, 6, '#13251b')
+  c += r(cx - 5, -19, 2, 1, '#2f4a3a') + r(cx - 3, -14, 4, 3, '#c9c3b0') + r(cx - 5, -12, 8, 1, CONTORNO)
+  if (!quieto) {
+    c += `<rect x="${cx - 5}" y="-19" width="8" height="6" fill="#4f8f68" opacity="0"><animate attributeName="opacity" calcMode="discrete" values="0;1;0;1;0" keyTimes="0;0.9;0.93;0.96;0.98" dur="7s" repeatCount="indefinite"/></rect>`
+  }
+  // Taza.
+  c += r(cx + 7, -15, 5, 4, CONTORNO) + r(cx + 8, -14, 3, 3, '#F4F0E4') + r(cx + 12, -14, 1, 2, CONTORNO)
+  // Planta en maceta.
+  if (conPlanta) {
+    const x = cx + 20
+    c += r(x + 1, -5, 8, 5, CONTORNO) + r(x + 2, -4, 6, 4, MACETA) + r(x + 2, -4, 6, 1, '#C2AE86')
+    c += r(x + 4, -16, 2, 11, PLANTA) + r(x + 1, -15, 4, 3, PLANTA) + r(x + 5, -16, 4, 3, PLANTA)
+    c += r(x, -11, 4, 3, PLANTA) + r(x + 6, -10, 4, 3, PLANTA)
+  }
+  const ancho = (conPlanta ? cx + 31 : cx + 14) * S
+  return { svg: `<g transform="translate(${ZONA_X} ${yPiso}) scale(${S})">${c}</g>`, ancho }
+}
+
 function armar(
   w: number,
   h: number,
   cara: string,
   celdas: CeldaEscena[],
-  vacia: string | undefined,
+  vacia: boolean,
   quieto: boolean,
   alt: string,
 ): string {
@@ -228,11 +282,11 @@ function armar(
       const arriba = celdas.length - n
       c += rellenar(ZONA_X + arriba * CELDA_ANCHO, w - MARGEN_DER, yPiso - CELDA_ALTO, true)
     }
-  } else if (typeof vacia === 'string' && vacia !== '') {
+  } else if (vacia) {
     const libre = w - ZONA_X - MARGEN_DER
-    const anchoV = Math.min(libre, 200)
-    c += anidar(vacia, ZONA_X, yPiso - VACIA_ALTO)
-    c += rellenar(ZONA_X + anchoV, w - MARGEN_DER, yPiso, false)
+    const anchoV = escritorioLibre(libre, quieto, yPiso)
+    c += anchoV.svg
+    c += rellenar(ZONA_X + anchoV.ancho, w - MARGEN_DER, yPiso, false)
   } else {
     c += rellenar(ZONA_X, w - MARGEN_DER, yPiso, false)
   }
@@ -247,24 +301,24 @@ export function escenaOficinaSvg(o: {
   ancho: number // px, acotado a 200..1200; el SVG mide exactamente esto
   cara: string // SVG del robot (126 x 102)
   celdas: CeldaEscena[] // agentes a dibujar (quien llama ya limitó la cantidad)
-  vacia?: string // SVG del escritorio libre, para cuando no hay celdas
+  vacia?: boolean // dibuja el escritorio libre cuando no hay celdas (un string se trata como true)
   quieto?: boolean
   alt?: string // aria-label; por defecto «Oficina de agentes»
 }): string {
   const w = anchoValido(o.ancho)
   const lista = Array.isArray(o.celdas) ? o.celdas.filter((x) => x && typeof x.svg === 'string') : []
-  const conVacia = typeof o.vacia === 'string' && o.vacia !== ''
+  const conVacia = o.vacia === true || (typeof o.vacia === 'string' && o.vacia !== '')
   const h = escenaAlto(w, lista.length, conVacia)
   const n = porFila(w)
   let visibles = lista.slice(0, n * 2)
   const alt = typeof o.alt === 'string' && o.alt !== '' ? o.alt : 'Oficina de agentes'
   const quieto = o.quieto === true
   const cara = String(o.cara ?? '')
-  let out = armar(w, h, cara, visibles, o.vacia, quieto, alt)
+  let out = armar(w, h, cara, visibles, conVacia, quieto, alt)
   // Si se pasa del peso, se dibujan menos celdas (de a una desde el final).
   while (out.length >= PESO_MAX && visibles.length > 0) {
     visibles = visibles.slice(0, -1)
-    out = armar(w, h, cara, visibles, o.vacia, quieto, alt)
+    out = armar(w, h, cara, visibles, conVacia, quieto, alt)
   }
   return out
 }
