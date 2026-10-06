@@ -31,7 +31,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect((await ui.find({ type: 'Button', key: 'rol-guardar' })) !== undefined).toBe(true)
     const svgs = await ui.findAll({ type: 'Svg' })
     if (surface === 'desktop') {
-      expect(svgs.filter(s => /^Dios /.test(String(s.props.alt ?? ''))).length).toBe(1)
+      expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(1)
     } else {
       expect(svgs.length).toBe(0)
     }
@@ -85,7 +85,7 @@ test('Editar rol con panel de 40 columnas: los SVG respetan el ancho', async ($,
   await ui.press({ key: 'editar-implementador' })
   await ui.press({ key: 'rol-ver-prompt' })
   const svgs = await todos(ui, { type: 'Svg' })
-  expect(svgs.filter(s => /^Dios /.test(String(s.props.alt ?? ''))).length).toBe(1)
+  expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(1)
   for (const svg of svgs) {
     const width = svg.props.width
     if (typeof width === 'number') expect(width <= 40 * 8).toBe(true)
@@ -188,7 +188,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-test('Editar: aparece la pizarra del escriba', async ($, on) => {
+test('Editar: aparece la pizarra del taller', async ($, on) => {
   fsFalso(on)
   const clock = mock.clock(on, { now: 5_000 })
   mock.store(on, {})
@@ -206,7 +206,7 @@ test('Editar: aparece la pizarra del escriba', async ($, on) => {
   await ui.press({ key: 'tab-roles' })
   await abrirAgente(ui, 'implementador')
   await ui.press({ key: 'editar-implementador' })
-  expect((await altsSvg(ui)).includes('Pizarra del escriba')).toBe(true)
+  expect((await altsSvg(ui)).includes('Pizarra del taller')).toBe(true)
 })
 
 

@@ -308,7 +308,7 @@ export const agenteValido = (nombre: string, equipo: string): string =>
 export const textos = async (ui: any, patron: RegExp): Promise<string[]> =>
   (await ui.findAll({ type: 'Text', text: patron })).map((t: any) => String(t.props.children ?? t.text ?? ''))
 export const glifoAlts = async (ui: any): Promise<string[]> =>
-  (await ui.findAll({ type: 'Svg' })).map((s: any) => String(s.props.alt ?? '')).filter((a: string) => /^Glifo /.test(a))
+  (await ui.findAll({ type: 'Svg' })).map((s: any) => String(s.props.alt ?? '')).filter((a: string) => /^Ícono /.test(a))
 export const burbuja = async (ui: any, patron: RegExp): Promise<boolean> =>
   (await ui.findAll({ type: 'Text', text: patron })).length > 0
 

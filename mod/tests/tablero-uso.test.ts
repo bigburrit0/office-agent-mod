@@ -129,3 +129,14 @@ test('compactar: si otro plugin lo frena, avisa el motivo', async ($, on) => {
   await ui.press({ key: 'compactar-si' })
   expect((await textosDe(ui)).some(t => t === 'No se compactó: apagado por política.')).toBe(true)
 })
+
+test('uso de la sesión: con clave de API (sin ventanas) muestra el costo de la sesión', async ($, on) => {
+  const { ui } = await montarUso($, on, { startedAt: 0, context: { window: 200000, percent: 12 }, rateLimits: [], cost: { usd: 3.456 } })
+  expect((await linea(ui, /^Costo/)).includes('US$ 3,46 en esta sesión')).toBe(true)
+  expect((await linea(ui, /^Contexto/)).includes('12 %')).toBe(true)
+})
+
+test('uso de la sesión: con suscripción no se muestra el costo', async ($, on) => {
+  const { ui } = await montarUso($, on, { ...USO, cost: { usd: 3.456 } })
+  expect(await linea(ui, /^Costo/)).toBe('')
+})

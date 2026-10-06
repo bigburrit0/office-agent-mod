@@ -65,6 +65,11 @@ const TAREA_EQUIPO: Record<string, string> = {
   datos: 'métricas y gráficos de lo que ya funciona',
   research: 'investigan en paralelo, esfuerzo bajo',
   librarian: 'mantiene la wiki de la biblioteca',
+  seguridad: 'cámaras, accesos y rondas del edificio',
+  mantenimiento: 'arreglos y mantenimiento preventivo',
+  limpieza: 'limpieza y su planificación',
+  facilities: 'servicios del edificio: llaves, proveedores y espacios',
+  arquitectura: 'planos y reformas de los espacios',
 }
 
 const PANE = 'tablero-oficina'
@@ -92,7 +97,6 @@ const catalogoAtom = atom(
   { agentes: [], errores: [], cargado: false, raiz: '' } as CatalogoEstado,
 )
 const filtroAtom = atom({ plugin: 'tablero-oficina', key: 'filtro' } as const, 'todas')
-const flashAtom = atom({ plugin: 'tablero-oficina', key: 'flashHasta' } as const, 0)
 
 const reaccionAtom = atom({ plugin: 'tablero-oficina', key: 'reaccion' } as const, null)
 const usoAtom = atom({ plugin: 'tablero-oficina', key: 'uso' } as const, null)
@@ -115,7 +119,6 @@ const REACT_MEDIO_MS = 3000
 const REACT_SHORT_MS = 2000
 const REACT_BUFIDO_MS = 1500
 const REACT_CHISPAZO_MS = 2500
-const FLASH_MS = 5000
 const SVG_MAX = 131072
 const BUCKET_MS = 10000
 
@@ -262,6 +265,14 @@ function plural(n: number, one: string, many: string): string {
 // exactamente el mismo, para que el marco no se recargue y la animación siga.
 // Si el dibujo falla o es demasiado grande, devuelve '' y el panel lo omite.
 const svgCache = new Map<string, { sig: string; svg: string }>()
+
+// Borra del caché las celdas del patio de subagentes que ya no están en la lista (sin esto,
+// una sesión larga con cientos de subagentes acumula una entrada por cada uno).
+function podarCeldas(ids: Set<string>): void {
+  for (const nombre of [...svgCache.keys()]) {
+    if (nombre.startsWith('celda-') && !nombre.startsWith('celda-mas-') && !ids.has(nombre.slice(6))) svgCache.delete(nombre)
+  }
+}
 
 function cachedSvg(name: string, sig: string, build: () => string): string {
   const hit = svgCache.get(name)
@@ -491,7 +502,7 @@ function bucketOf(ms: number): number {
 
 // Lee `$.agent.list()` y mezcla con lo ya guardado. Escribir en `$.state`
 // redibuja el panel (y la app recarga cada marco Svg), así que solo se escribe
-// si cambia algo visible: la lista, el destello de huellas, o el balde de 10 s
+// si cambia algo visible: la lista, una reacción, el patio, el ritmo del ocio, o el balde de 10 s
 // de `now` mientras algo corre. Sin cambios, no hay escrituras.
 async function refresh($: EngineInterface): Promise<void> {
   // Con un borrador abierto no se toca el estado: el redibujado pisaría lo tipeado.
@@ -503,12 +514,8 @@ async function refresh($: EngineInterface): Promise<void> {
   const merged = mergeAgents(prev, list, now)
   const changed = JSON.stringify(merged.rows) !== JSON.stringify(prev)
   const storedNow = await read($, nowAtom)
-  const flash0 = await read($, flashAtom)
-  const flash = merged.finished ? now + FLASH_MS : flash0
   const anyRunning = merged.rows.some(row => row.status === 'running')
   const bucketChanged = anyRunning && bucketOf(now) !== bucketOf(storedNow)
-  // Lo que el panel muestra (huellas) depende de `flash > now`: se reescribe `now` si cambia.
-  const flashVisibleChanged = flash > storedNow !== flash > now
   // Reacción del robot: una nueva reemplaza a la anterior; al vencer se borra (una sola escritura).
   const react0 = await read($, reaccionAtom)
   // Molesto: se enoja con una falla y se le pasa cuando otro subagente termina bien (alivio).
@@ -528,7 +535,6 @@ async function refresh($: EngineInterface): Promise<void> {
   const patio = nextPatio(prev, merged.rows, patio0 as Record<string, PatioEntrada>, now)
   const patioChanged = JSON.stringify(patio) !== JSON.stringify(patio0)
   if (changed) await update($, agents, () => merged.rows)
-  if (flash !== flash0) await update($, flashAtom, () => flash)
   if (reaction !== null) await update($, reaccionAtom, () => reaction)
   else if (expired) await update($, reaccionAtom, () => null)
   if (molesto !== molestoRaw) await update($, molestoAtom, () => molesto)
@@ -539,8 +545,6 @@ async function refresh($: EngineInterface): Promise<void> {
   if (
     changed ||
     bucketChanged ||
-    flashVisibleChanged ||
-    flash !== flash0 ||
     reaction !== null ||
     expired ||
     patioChanged ||
@@ -607,6 +611,8 @@ async function refreshQuietly($: EngineInterface): Promise<void> {
 type UsoSesion = {
   limites: Array<{ kind: string; percentUsed: number; resetsAt?: string }>
   contexto?: number
+  /** Costo de la sesión en dólares, como lo suma /cost; ausente si el motor no lleva la cuenta. */
+  costo?: number
   medido: number
 }
 
@@ -615,7 +621,7 @@ let usoPedido = false
 
 // Lo que el panel guarda de `$.session.usage()` o de `session.measure`: solo números y textos simples.
 function normalizarUso(datos: unknown, medido: number): UsoSesion {
-  const d = (datos ?? {}) as { rateLimits?: unknown; context?: { percent?: unknown } }
+  const d = (datos ?? {}) as { rateLimits?: unknown; context?: { percent?: unknown }; cost?: { usd?: unknown } }
   const limites: UsoSesion['limites'] = []
   for (const l of Array.isArray(d.rateLimits) ? d.rateLimits : []) {
     const kind = String((l as { kind?: unknown })?.kind ?? '')
@@ -627,6 +633,8 @@ function normalizarUso(datos: unknown, medido: number): UsoSesion {
   const pct = Number(d.context?.percent)
   const out: UsoSesion = { limites, medido }
   if (d.context?.percent !== undefined && Number.isFinite(pct)) out.contexto = pct
+  const usd = Number(d.cost?.usd)
+  if (d.cost?.usd !== undefined && Number.isFinite(usd)) out.costo = Math.round(usd * 100) / 100
 
   return out
 }
@@ -640,7 +648,8 @@ async function guardarUso($: EngineInterface, datos: unknown): Promise<void> {
     const igual =
       previo !== null &&
       JSON.stringify(previo.limites) === JSON.stringify(nuevo.limites) &&
-      previo.contexto === nuevo.contexto
+      previo.contexto === nuevo.contexto &&
+      previo.costo === nuevo.costo
     if (!igual) await update($, usoAtom, () => nuevo)
   } catch {
     // El uso es accesorio: sin datos, el panel lo dice.
@@ -1348,7 +1357,7 @@ export const register: Register = on => {
 
     const frisoCierre =
       frisoArte !== '' ? (
-        <Svg key="svg-friso-cierre" source={frisoArte} alt="Friso de piedra tallada" {...sizeProps(frisoArte)} />
+        <Svg key="svg-friso-cierre" source={frisoArte} alt="Cornisa del edificio" {...sizeProps(frisoArte)} />
       ) : null
 
     // Cabecera común: cara grande a la izquierda, escena de la vista a la derecha, burbuja y greca debajo.
@@ -1361,7 +1370,7 @@ export const register: Register = on => {
             <Svg key="svg-pista" source={caraSvg} {...sizeProps(caraSvg)} alt={caraAlt} isInteractive />
             <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0} backgroundColor={PALETTE.selva}>
               {doselSvg !== '' && (
-                <Svg key="svg-dosel" source={doselSvg} alt="Dosel de la selva" {...sizeProps(doselSvg)} />
+                <Svg key="svg-dosel" source={doselSvg} alt="Cielorraso de la oficina" {...sizeProps(doselSvg)} />
               )}
               {escena}
             </Box>
@@ -1374,13 +1383,13 @@ export const register: Register = on => {
             </Box>
           )}
           {grecaSvg !== '' && (
-            <Svg key="svg-greca" source={grecaSvg} alt="Franja de greca maya" {...sizeProps(grecaSvg)} />
+            <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
           )}
         </Box>
       )
     }
 
-    // Día del calendario maya (hora local), con su numeral.
+    // Fecha de hoy (hora local), con su número en el display.
     const local = nowReal - new Date(nowReal).getTimezoneOffset() * 60000
     const diaMaya = tzolkin(local)
     const barraSuperior = () => {
@@ -1410,7 +1419,7 @@ export const register: Register = on => {
             <Svg
               key="svg-dia-maya"
               source={numMaya}
-              alt={`Hoy en el calendario maya: ${diaMaya.texto}`}
+              alt={`Fecha de hoy: ${diaMaya.texto}`}
               {...sizeProps(numMaya)}
             />
           ) : null}
@@ -1477,10 +1486,10 @@ export const register: Register = on => {
           escenaEditar = (
             <Box flexDirection="column">
               {paredArte !== '' && (
-                <Svg key="svg-pared-taller" source={paredArte} alt="Taller del escriba" {...sizeProps(paredArte)} />
+                <Svg key="svg-pared-taller" source={paredArte} alt="Pared del taller" {...sizeProps(paredArte)} />
               )}
               {codiceArte !== '' && (
-                <Svg key="svg-codice" source={codiceArte} alt="Pizarra del escriba" {...sizeProps(codiceArte)} />
+                <Svg key="svg-codice" source={codiceArte} alt="Pizarra del taller" {...sizeProps(codiceArte)} />
               )}
             </Box>
           )
@@ -1503,7 +1512,7 @@ export const register: Register = on => {
                 <Svg
                   key="svg-dios-equipo"
                   source={diosArte}
-                  alt={`Dios ${dios} del equipo ${equipo}`}
+                  alt={`Placa ${dios} del equipo ${equipo}`}
                   {...sizeProps(diosArte)}
                 />
               )}
@@ -1912,7 +1921,7 @@ export const register: Register = on => {
             <Svg
               key={`svg-grupo-${equipo}`}
               source={diosArte}
-              alt={dios !== '' ? `Dios ${dios} del equipo ${equipo}` : `Dios del equipo ${equipo}`}
+              alt={dios !== '' ? `Placa ${dios} del equipo ${equipo}` : `Placa del equipo ${equipo}`}
               {...sizeProps(diosArte)}
             />
             <Box flexDirection="column" flexGrow={1} minWidth={0} paddingX={1}>
@@ -1925,7 +1934,7 @@ export const register: Register = on => {
                 <Svg
                   key={`svg-maya-${equipo}`}
                   source={numArte}
-                  alt={`${cantidad} en numeral maya`}
+                  alt={`${cantidad} en el contador`}
                   {...sizeProps(numArte)}
                 />
                 <Text>{cantidad === 1 ? ' 1 agente' : ` ${cantidad} agentes`}</Text>
@@ -1948,7 +1957,7 @@ export const register: Register = on => {
           {noticeLine}
           {cabecera(
             temploArte !== '' ? (
-              <Svg key="svg-templo" source={temploArte} alt="Templo abandonado" {...sizeProps(temploArte)} />
+              <Svg key="svg-templo" source={temploArte} alt="Edificio de la oficina" {...sizeProps(temploArte)} />
             ) : null,
             burbujaEquipos,
           )}
@@ -2067,6 +2076,13 @@ export const register: Register = on => {
             {limitesUso.map(l =>
               filaUso(l.kind, NOMBRE_LIMITE[l.kind] ?? l.kind, l.percentUsed, cuandoRenueva(l.resetsAt, nowReal)),
             )}
+            {limitesUso.length === 0 && uso?.costo !== undefined && (
+              <Box key="uso-costo" flexDirection="row" flexWrap="wrap">
+                <Text>{pad('Costo', 10)}</Text>
+                <Text bold>{`US$ ${uso.costo.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</Text>
+                <Text dimColor> en esta sesión</Text>
+              </Box>
+            )}
             {limitesUso.length === 0 && (
               <Text dimColor wrap="wrap">
                 Sin datos de las ventanas de 5 horas y semanal: aparecen con una suscripción, después de la primera respuesta.
@@ -2102,7 +2118,11 @@ export const register: Register = on => {
     )
     // Líneas que ocupa el bloque de uso (para no tapar la lista con poco espacio).
     const lineasUso = usoAbierto
-      ? 2 + Math.max(1, limitesUso.length) + (uso?.contexto !== undefined ? 1 : 0) + (confirmandoCompactar ? 3 : 0)
+      ? 2 +
+        Math.max(1, limitesUso.length) +
+        (limitesUso.length === 0 && uso?.costo !== undefined ? 1 : 0) +
+        (uso?.contexto !== undefined ? 1 : 0) +
+        (confirmandoCompactar ? 3 : 0)
       : 1
     const sorted = orderTree(rows)
 
@@ -2139,6 +2159,7 @@ export const register: Register = on => {
     let lineSvg = ''
     if (hasSvg) {
       celdasPorFila = Math.max(1, Math.floor(disponible / (PATIO_ANCHO * 2)))
+      podarCeldas(new Set(rows.map(row => row.id)))
       for (const row of [...rows].sort((x, y) => (x.firstSeen ?? 0) - (y.firstSeen ?? 0))) {
         const entrada = patioEstado[row.id]
         const fase = row.status === 'running' ? 'entra' : entrada && entrada.hasta > now ? entrada.fase : ''
@@ -2407,7 +2428,7 @@ export const register: Register = on => {
                   <Svg
                     key={`icono-${row.id}`}
                     source={iconSvg}
-                    alt={`Glifo ${TIPO_NOMBRE[glifoFila.tipo] ?? info.base} del equipo ${glifoFila.equipo}`}
+                    alt={`Ícono ${TIPO_NOMBRE[glifoFila.tipo] ?? info.base} del equipo ${glifoFila.equipo}`}
                     {...sizeProps(iconSvg)}
                   />
                 )}

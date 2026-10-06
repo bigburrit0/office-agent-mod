@@ -530,7 +530,7 @@ for (const [tipo, glifo] of [['implementador', 'Redacción'], ['revisor', 'Contr
     await paso(2000)
     expect((await ui.findAll({ type: 'Text', text: /T-81/ })).length > 0).toBe(true)
     expect((await ui.findAll({ type: 'Text', text: /—\s+—/ })).length).toBe(0)
-    expect((await glifoAlts(ui)).includes(`Glifo ${glifo} del equipo base`)).toBe(true)
+    expect((await glifoAlts(ui)).includes(`Ícono ${glifo} del equipo base`)).toBe(true)
   })
 }
 
@@ -587,7 +587,7 @@ test('encabezado: la cara mide 126 de ancho y existe el dosel', async ($, on) =>
   const cara = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
   expect(Number(cara.props.width)).toBe(126)
   expect(/width="126"/.test(String(cara.props.source))).toBe(true)
-  expect(svgs.some(s => s.props.alt === 'Dosel de la selva')).toBe(true)
+  expect(svgs.some(s => s.props.alt === 'Cielorraso de la oficina')).toBe(true)
 })
 
 test('patio: con más agentes que el máximo se muestra «Y N agentes más»', async ($, on) => {

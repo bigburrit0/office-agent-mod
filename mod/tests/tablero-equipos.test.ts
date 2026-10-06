@@ -334,24 +334,24 @@ test('Equipos: nuevo agente crea el archivo con la plantilla, rechaza inválidos
 test('Equipos: barra y templo antes de los dioses; un solo friso (el de cierre)', async ($, on) => {
   const { ui } = await montarEquipos($, on, {})
   const alts = await altsSvg(ui)
-  expect(alts.includes('Templo abandonado')).toBe(true)
-  expect(alts.filter(a => a === 'Friso de piedra tallada').length).toBe(1)
+  expect(alts.includes('Edificio de la oficina')).toBe(true)
+  expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
   // Cambio T-97: la cara chica «pensando» ya no existe; la cara grande de la cabecera común sigue a la emoción (aburrido sin agentes).
   const cara = alts.findIndex(a => /^Oficina, robot /.test(a))
-  const primerDios = alts.findIndex(a => /^Dios /.test(a))
+  const primerDios = alts.findIndex(a => /^Placa /.test(a))
   expect(cara >= 0).toBe(true)
-  expect(primerDios > alts.indexOf('Templo abandonado')).toBe(true)
-  expect(alts.indexOf('Templo abandonado') > cara).toBe(true)
+  expect(primerDios > alts.indexOf('Edificio de la oficina')).toBe(true)
+  expect(alts.indexOf('Edificio de la oficina') > cara).toBe(true)
   expect(alts.some(a => /^Emblema del equipo/.test(a))).toBe(false)
 })
 
-test('Equipos: dios y numeral maya por equipo', async ($, on) => {
+test('Equipos: placa y contador por equipo', async ($, on) => {
   const { ui } = await montarEquipos($, on, DOS_EQUIPOS)
   const alts = await altsSvg(ui)
-  expect(alts.includes('Dios Caja de herramientas del equipo base')).toBe(true)
+  expect(alts.includes('Placa Caja de herramientas del equipo base')).toBe(true)
   // base tiene alfa y los 4 roles migrados; dev-a1 tiene 1.
-  expect(alts.includes('5 en numeral maya')).toBe(true)
-  expect(alts.includes('1 en numeral maya')).toBe(true)
+  expect(alts.includes('5 en el contador')).toBe(true)
+  expect(alts.includes('1 en el contador')).toBe(true)
 })
 
 test('Equipos: el encabezado de base lleva el color del equipo', async ($, on) => {
@@ -409,17 +409,17 @@ for (const vista of ['subagentes', 'equipos', 'editar'] as const) {
     expect(clavesBarra.includes('tab-subagentes')).toBe(true)
     expect(clavesBarra.includes('tab-roles')).toBe(true)
     const altsBarra = descendientes(primero, n => n.type === 'Svg').map((n: any) => String(n.props?.alt ?? ''))
-    expect(altsBarra.some(a => a.startsWith('Hoy en el calendario maya: '))).toBe(true)
+    expect(altsBarra.some(a => a.startsWith('Fecha de hoy: '))).toBe(true)
     // (b) exactamente un jaguar.
     const alts = await altsSvg(ui)
     expect(alts.filter(a => a.startsWith('Oficina, robot ')).length).toBe(1)
     // (c) friso de cierre y escena propia.
     // El motor de pruebas no expone la key de un Svg: el friso de cierre se reconoce por su alt y por ir al final.
-    expect(alts.filter(a => a === 'Friso de piedra tallada').length).toBe(1)
-    expect(alts[alts.length - 1]).toBe('Friso de piedra tallada')
-    expect(alts.includes('Templo abandonado')).toBe(vista === 'equipos')
-    expect(alts.includes('Taller del escriba')).toBe(vista === 'editar')
-    expect(alts.includes('Pizarra del escriba')).toBe(vista === 'editar')
+    expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
+    expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
+    expect(alts.includes('Edificio de la oficina')).toBe(vista === 'equipos')
+    expect(alts.includes('Pared del taller')).toBe(vista === 'editar')
+    expect(alts.includes('Pizarra del taller')).toBe(vista === 'editar')
     // (f) ninguna caja de fondo de color cortada.
     for (const caja of await ui.findAll({ type: 'Box' })) {
       expect(['#1a1d16', '#1f1610', '#0f2418'].includes(String((caja as any).props.backgroundColor))).toBe(false)
@@ -471,12 +471,12 @@ test('Equipos: «Cómo trabaja el equipo» va dentro de la tarjeta del equipo (c
   const { ui } = await montarEquipos($, on, { [`${RAIZ_FALSA}\base\alfa.md`]: archivoAgente('alfa', 'base', ['general']) })
   await ui.press({ key: 'abrir-grupo-base' })
   await ui.redraw()
-  const dios: any = await ui.find({ type: 'Svg', alt: 'Dios Caja de herramientas del equipo base' })
+  const dios: any = await ui.find({ type: 'Svg', alt: 'Placa Caja de herramientas del equipo base' })
   expect(dios !== undefined).toBe(true)
   const tarjetas = (await ui.findAll({ type: 'Box' })).filter((b: any) => b.props?.borderStyle === 'round')
   const duena = tarjetas.find(
     (b: any) =>
-      descendientes(b, n => n.type === 'Svg' && n.props?.alt === 'Dios Caja de herramientas del equipo base').length > 0 &&
+      descendientes(b, n => n.type === 'Svg' && n.props?.alt === 'Placa Caja de herramientas del equipo base').length > 0 &&
       descendientes(b, n => n.type === 'Button' && n.props?.key === 'abrir-skill-base').length > 0,
   )
   expect(duena !== undefined).toBe(true)

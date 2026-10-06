@@ -110,10 +110,6 @@ declare module 'claude-code' {
       nuevo: { nombre: string; equipo: string } | null
       /** Aviso de una línea (error o confirmación); vacío si no hay. */
       notice: string
-      /** Instante (ms desde epoch) hasta el que se muestran las huellas de «un subagente terminó»; 0 si no hay. */
-      flashHasta: number
-      /** `true` cuando el título animado ya se armó una vez en esta sesión: desde ahí se dibuja estático. */
-      tituloArmado: boolean
       /** Reacción transitoria del jaguar y el instante (ms desde epoch) en que vence; `null` si no hay. */
       reaccion: {
         tipo:
@@ -142,6 +138,8 @@ declare module 'claude-code' {
       uso: {
         limites: Array<{ kind: string; percentUsed: number; resetsAt?: string }>
         contexto?: number
+        /** Costo de la sesión en dólares (redondeado a centavos); ausente si el motor no lo da. */
+        costo?: number
         medido: number
       } | null
       /**
