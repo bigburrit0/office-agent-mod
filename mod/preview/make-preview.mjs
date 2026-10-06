@@ -11,6 +11,8 @@ import * as dioses from '../hooks/arte-iconos.ts'
 import * as templo from '../hooks/arte-edificio.ts'
 import * as actividades from '../hooks/arte-actividades.ts'
 import * as emociones from '../hooks/emociones.ts'
+import * as uso from '../hooks/arte-uso.ts'
+import * as oficina from '../hooks/arte-oficina.ts'
 
 const aca = dirname(fileURLToPath(import.meta.url))
 const todos = [] // { nombre, svg } para la verificación final
@@ -178,6 +180,28 @@ function seccionTaller() {
 }
 
 const cuerpo = seccionCara() + seccionPatio() + seccionLeyenda() + seccionGlifos() + seccionDioses() + seccionTaller() + seccionTextoPixel() + seccionResto()
+// Sección «Tema claro (el panel)»: el arte nuevo sobre fondo claro, una sola vez.
+function seccionTemaClaro() {
+  const d = { tokens: { total: 1284560, nuevos: 212000, cache: 1072560 }, cincoHoras: { pct: 75, renueva: 'hoy 14:00' }, semana: { pct: 39, renueva: 'vie 22:00', hoy: 2 } }
+  const d92 = { ...d, cincoHoras: { pct: 92, renueva: 'hoy 14:00' } }
+  const items = [
+    ['tablero uso 420', uso.tableroUsoSvg(d, 420)],
+    ['tablero uso 300', uso.tableroUsoSvg(d, 300)],
+    ['tablero uso 92%', uso.tableroUsoSvg(d92, 420)],
+    ['tablero uso vacío', uso.tableroUsoSvg({}, 420)],
+    ['oficinaVacia 420', oficina.oficinaVaciaSvg(420)],
+    ['estante 420', oficina.estanteSvg(420)],
+    ['pieOficina 420x120', oficina.pieOficinaSvg(420, 120)],
+    ['pieOficina 420x300', oficina.pieOficinaSvg(420, 300)],
+    ['timeline claro 420', px.timelineSvg(filas, AHORA, 420, { tema: 'claro' })],
+    ['cara aburrido azul', cara.caraRobotSvg('aburrido', 3, { fondo: '#D9E7F2', marco: true })],
+    ['cara sospecha azul', cara.caraRobotSvg('sospecha', 3, { fondo: '#D9E7F2', marco: true })],
+  ]
+  let h = '<section style="background:#FBF6EA;color:#2B2118;padding:12px"><h2>Tema claro (el panel)</h2><div class="fila">'
+  for (const [nombre, svg] of items) h += `<div><small>${nombre}</small><br>${registrar('claro ' + nombre, svg)}</div>`
+  return h + '</div></section>'
+}
+const temaClaro = seccionTemaClaro()
 const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Preview pixel</title>
 <style>
 body{margin:0;font-family:monospace}
@@ -189,6 +213,7 @@ h3{margin:14px 0 6px}
 </style></head><body>
 <div class="oscuro"><h2>Fondo oscuro</h2>${cuerpo}</div>
 <div class="claro"><h2>Fondo claro</h2>${cuerpo}</div>
+${temaClaro}
 </body></html>`
 
 const salida = join(aca, 'preview.html')
