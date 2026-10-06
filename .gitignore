@@ -1,2 +1,4 @@
 node_modules/
 mod/preview/preview.html
+mod/tests/salida/
+.claude/
