@@ -35,6 +35,7 @@ import {
   PATIO_ANCHO,
   pisoPatioSvg,
 } from './arte-escritorios'
+import { estanteSvg, oficinaVaciaSvg, pieOficinaSvg } from './arte-oficina'
 import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
 import { DIOSES_EQUIPO, diosSvg, EQUIPO_ACENTO, glifoSvg, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
 import { actividadDe, actividadParaCelda } from './arte-actividades'
@@ -813,7 +814,12 @@ export const register: Register = on => {
     const ocioDesde = ocioDesdeDe(rows, nowReal)
     const minutosHoy = minutosDelDia(nowReal)
     const franja = franjaHora(minutosHoy)
+    // Uso de la sesión: lo necesita el robot (preocupado) y el tablero de uso de Subagentes.
+    const uso = (await read($, usoAtom)) as UsoSesion | null
+    const tokensSes = await read($, tokensSesionAtom)
+    const datosUso = datosUsoDe(uso, tokensSes, nowReal)
     const estado: { emocion: string; grupo: Grupo } = decidirEmocion({
+      usoCincoHoras: datosUso.cincoHoras?.pct,
       reaccion: reaccionVigente,
       corriendo: running,
       masLargoMs,
@@ -880,6 +886,15 @@ export const register: Register = on => {
           )
         }
         case 'sospecha': {
+          if (estado.grupo === 'uso') {
+            const cinco = datosUso.cincoHoras
+            const q = quedaPct(cinco?.pct ?? 0)
+            const renueva = cinco?.renueva ?? ''
+            const cuando = renueva !== '' ? ` (se renueva ${renueva})` : ''
+            if ((cinco?.pct ?? 0) >= 95) return `¡Casi sin ventana! Queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
+
+            return `Ojo: queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
+          }
           if (estado.grupo === 'cambios' || (hayCambios && masLargoMs <= SOSPECHA_MS)) {
             return 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
           }
@@ -945,6 +960,15 @@ export const register: Register = on => {
           <Svg key="svg-friso-cierre" source={frisoArte} alt="Cornisa del edificio" {...sizeProps(frisoArte)} />
         </Box>
       ) : null
+
+    // Pasillo de la oficina, justo antes de la cornisa: llena el espacio que sobra de la vista.
+    const pieCierre = (altoPx: number, maximo = 300) => {
+      if (!claro) return null
+      const alto = Math.max(60, Math.min(maximo, Math.round(altoPx)))
+      const pie = cachedSvg('pie', `${W}|${alto}|${quieto}`, () => pieOficinaSvg(W, alto, 2, { quieto }))
+
+      return pie !== '' ? <Svg key="svg-pie" source={pie} alt="Pasillo de la oficina" {...sizeProps(pie)} /> : null
+    }
 
     // Cabecera común: cara grande a la izquierda, escena de la vista a la derecha, burbuja y greca debajo.
     const cabecera = (escena: any, burbuja: string) => {
@@ -1261,11 +1285,13 @@ export const register: Register = on => {
                 </Box>
               )}
             </Box>
+            {pieCierre((termRows - 30) * 20, 240)}
             {frisoCierre}
           </Box>
         )
       }
 
+      const estanteArte = claro ? cachedSvg('estante', `${W}`, () => estanteSvg(W)) : ''
       const temploArte = hasSvg ? cachedSvg(`templo-${disponible}`, `${disponible}`, () => temploSvg(disponible, 2)) : ''
 
       const skills = await read($, skillsEquipoAtom)
@@ -1571,6 +1597,9 @@ export const register: Register = on => {
             burbujaEquipos,
           )}
           <Box flexDirection="column">
+          {claro && estanteArte !== '' && (
+            <Svg key="svg-estante" source={estanteArte} alt="Estante con carpetas" {...sizeProps(estanteArte)} />
+          )}
           <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2}>
             {formNuevo}
             <Select
@@ -1640,6 +1669,7 @@ export const register: Register = on => {
           })}
           <Text dimColor>Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
           </Box>
+          {pieCierre((termRows - 30) * 20, 240)}
           {frisoCierre}
         </Box>
       )
@@ -1650,11 +1680,8 @@ export const register: Register = on => {
     const resumenAbierto = abiertosSub.resumen !== false
 
     // Uso de la sesión: ventanas de 5 h y semanal, contexto y el botón de compactar. Arranca abierto.
-    const uso = (await read($, usoAtom)) as UsoSesion | null
     const usoAbierto = abiertosSub.uso !== false
     const confirmandoCompactar = abiertosSub['confirmar-compactar'] === true
-    const tokensSes = await read($, tokensSesionAtom)
-    const datosUso = datosUsoDe(uso, tokensSes, nowReal)
     const svgUso =
       hasSvg && e.surface !== 'terminal'
         ? cachedSvg('uso-tablero', `${W}|${quieto}|${JSON.stringify(datosUso)}`, () =>
@@ -1862,7 +1889,7 @@ export const register: Register = on => {
       lineSvg =
         rows.length > 0
           ? cachedSvg('linea', `${W}|${lineNow}|${JSON.stringify(lineRows)}`, () =>
-              timelineSvg(lineRows, lineNow, W),
+              timelineSvg(lineRows, lineNow, W, { tema: 'claro' }),
             )
           : ''
     }
@@ -1920,6 +1947,11 @@ export const register: Register = on => {
       usedLines += need
       room += 1
     }
+
+    const oficinaVacia =
+      claro && sorted.length === 0
+        ? cachedSvg('oficina-vacia', `${W}|${quieto}`, () => oficinaVaciaSvg(W, 2, { quieto }))
+        : ''
 
     const escenaPatio = (
       <Box flexDirection="row" flexWrap="wrap" backgroundColor={CLARO.escena}>
@@ -2013,6 +2045,14 @@ export const register: Register = on => {
         {sorted.length === 0 &&
           (hasSvg && e.surface !== 'terminal' ? (
             <Box borderStyle="round" borderColor={CLARO.borde} paddingX={1} flexDirection="column">
+              {oficinaVacia !== '' && (
+                <Svg
+                  key="svg-oficina-vacia"
+                  source={oficinaVacia}
+                  alt="Escritorio libre esperando a un agente"
+                  {...sizeProps(oficinaVacia)}
+                />
+              )}
               <Text color={tx} bold>Todavía no corrió ningún subagente.</Text>
               <Text {...suave} wrap="wrap">
                 Cuando el orquestador despache una tarjeta, el agente aparece en el patio con un poof.
@@ -2114,6 +2154,7 @@ export const register: Register = on => {
         {sorted.length > room && (
           <Text {...suave}>… y {sorted.length - room} más (agrandá la ventana).</Text>
         )}
+        {pieCierre((budget - usedLines) * 20)}
         {frisoCierre}
       </Box>
     )

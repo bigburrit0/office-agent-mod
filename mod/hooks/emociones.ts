@@ -7,8 +7,9 @@
 //   2. trabajo (agentes corriendo);
 //   3. molesto (después de una falla, hasta que pasa otra cosa);
 //   4. cambios sin guardar en Editar (sospecha);
-//   5. hora del día (mañana, mediodía, casi la hora de irse);
-//   6. ocio (café, rotación cada 2 minutos y, a los 10 minutos, dormido).
+//   5. uso de las 5 horas al 80 % o más (sospecha);
+//   6. hora del día (mañana, mediodía, casi la hora de irse);
+//   7. ocio (café, rotación cada 2 minutos y, a los 10 minutos, dormido).
 
 /** Un agente que corre hace más que esto: sospecha. */
 export const SOSPECHA_MS = 600000
@@ -18,6 +19,9 @@ export const CONCENTRADO_MS = 180000
 export const OCIO_PASO_MS = 120000
 /** Sin nada que hacer durante esto, se duerme. */
 export const DORMIR_MS = 600000
+
+/** Desde este % usado de las 5 horas el robot se preocupa. */
+export const USO_PREOCUPA_PCT = 80
 
 /** Emociones que se turnan en el ocio, después del café y antes de dormirse. */
 export const ROTACION_OCIO = ['bostezo', 'estira', 'riega', 'diario', 'solitario', 'silba', 'guina']
@@ -48,7 +52,7 @@ export const EMOCION_DE_REACCION: Record<string, { emocion: string; grupo: Grupo
   salta: { emocion: 'caceria', grupo: 'social' },
 }
 
-export type Grupo = 'malo' | 'bueno' | 'social' | 'trabajo' | 'molesto' | 'cambios' | 'hora' | 'ocio'
+export type Grupo = 'malo' | 'bueno' | 'social' | 'trabajo' | 'molesto' | 'cambios' | 'uso' | 'hora' | 'ocio'
 
 export type EstadoRobot = {
   /** Tipo de la reacción vigente (ya vencidas no cuentan); vacío si no hay. */
@@ -61,6 +65,8 @@ export type EstadoRobot = {
   molesto?: boolean
   /** `true` si hay cambios sin guardar en Editar. */
   cambiosSinGuardar?: boolean
+  /** % usado de la ventana de 5 horas; desde 80 el robot se preocupa. */
+  usoCincoHoras?: number
   /** Hace cuánto no hay nada que hacer (ms). */
   ocioMs?: number
   /** Minutos desde la medianoche, hora local; ausente si no se sabe (sin emociones de la hora). */
@@ -111,6 +117,7 @@ export function decidirEmocion(estado: EstadoRobot): { emocion: string; grupo: G
   }
   if (e.molesto === true) return { emocion: 'molesto', grupo: 'molesto' }
   if (e.cambiosSinGuardar === true) return { emocion: 'sospecha', grupo: 'cambios' }
+  if (numero(e.usoCincoHoras) >= USO_PREOCUPA_PCT) return { emocion: 'sospecha', grupo: 'uso' }
   const franja = franjaHora(e.minutosDelDia)
   if (franja) return { emocion: franja.emocion, grupo: 'hora' }
   return { emocion: emocionOcio(e.ocioMs, e.semilla), grupo: 'ocio' }

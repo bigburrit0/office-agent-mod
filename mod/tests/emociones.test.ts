@@ -117,3 +117,13 @@ test('próximo cambio del ocio: el borde del paso, y null cuando ya duerme', () 
   expect(proximoCambioOcio(DORMIR_MS - 1)).toBe(DORMIR_MS)
   expect(proximoCambioOcio(DORMIR_MS)).toBe(null)
 })
+
+test('uso de las 5 horas al 80 % o más: sospecha con grupo uso, salvo reacción, agentes o menos uso', () => {
+  expect(decidirEmocion({ usoCincoHoras: 85, ocioMs: 0 })).toEqual({ emocion: 'sospecha', grupo: 'uso' })
+  expect(decidirEmocion({ usoCincoHoras: 80 }).grupo).toBe('uso')
+  expect(decidirEmocion({ usoCincoHoras: 85, reaccion: 'ruge' })).toEqual({ emocion: 'ruge', grupo: 'malo' })
+  expect(decidirEmocion({ usoCincoHoras: 85, corriendo: 1, masLargoMs: 1000 }).grupo).toBe('trabajo')
+  expect(decidirEmocion({ usoCincoHoras: 85, molesto: true }).grupo).toBe('molesto')
+  expect(decidirEmocion({ usoCincoHoras: 50, ocioMs: 0 }).grupo).not.toBe('uso')
+  expect(decidirEmocion({ usoCincoHoras: 79.9 }).grupo).not.toBe('uso')
+})
