@@ -1,9 +1,11 @@
 // Módulo del «open space» del Tablero de subagentes: cada subagente que trabaja es UNA celda SVG propia
-// (un escritorio beige visto de frente, con un monitor CRT que muestra su ícono y un oficinista detrás).
-// Mismos nombres, formas y medidas que arte-patio.ts, para cambiar solo el import.
+// (un escritorio beige visto de frente y un oficinista detrás, haciendo la actividad de su equipo).
+// El equipo se reconoce por COLOR: camisa (acento), respaldo de la silla (acento oscuro) y una franja
+// en el borde del escritorio. No hay logo en el monitor.
 // Funciones puras que devuelven strings SVG. Sin imports y solo sintaxis «borrable»
 // (nada de enum, namespace ni parameter properties) para que Node 24 lo corra directo.
-// El ícono NO se importa: llega como parámetro (matriz 16×16 + paleta).
+// El color y la actividad NO se importan: llegan como parámetro (acento y cuadros ya dibujados,
+// ver arte-actividades.ts). Sin actividad se dibuja el monitor CRT de siempre, con la pantalla vacía.
 //
 // Reglas que cumple cada SVG: texto externo escapado, sin scripts ni referencias externas,
 // animaciones solo SMIL, y menos de 120000 caracteres.
@@ -178,19 +180,30 @@ function escritorio(s: number): string {
   )
 }
 
-// Objeto sobre el escritorio, a la derecha del monitor (x 18 a 20, apoyado en la fila 18).
+// Objeto de decorado sobre el escritorio, en el rincón derecho (x 19 a 21, apoyado en la fila 18).
 function objeto(s: number, tipo: number): string {
-  if (tipo === 0) return r(s, 18, 15, 3, 3, '#f4f0e4') + r(s, 21, 16, 1, 1, '#f4f0e4') + r(s, 18, 15, 3, 1, '#5a3416') // taza
-  if (tipo === 1) return r(s, 18, 16, 3, 2, '#b5522e') + r(s, 18, 14, 3, 2, '#3fae4a') + r(s, 19, 13, 1, 1, '#2e8a3a') + r(s, 20, 15, 1, 1, '#2e8a3a') // planta
-  return r(s, 18, 16, 3, 2, '#fbfbf5') + r(s, 18, 15, 3, 1, '#d9d9cf') + r(s, 18, 14, 3, 1, '#fbfbf5') // pila de papeles
+  if (tipo === 0) return r(s, 19, 15, 3, 3, '#f4f0e4') + r(s, 19, 15, 3, 1, '#5a3416') // taza
+  if (tipo === 1) return r(s, 19, 16, 3, 2, '#b5522e') + r(s, 19, 14, 3, 2, '#3fae4a') + r(s, 20, 13, 1, 1, '#2e8a3a') + r(s, 21, 15, 1, 1, '#2e8a3a') // planta
+  return r(s, 19, 16, 3, 2, '#fbfbf5') + r(s, 19, 15, 3, 1, '#d9d9cf') + r(s, 19, 14, 3, 1, '#fbfbf5') // pila de papeles
 }
 
-// Oficinista visto de frente, de la cabeza a los hombros (el monitor lo tapa en el medio).
-function oficinista(s: number, semilla: number): string {
+// Respaldo de la silla (acento oscuro del equipo): asoma a los costados de la cabeza.
+function silla(s: number, oscuro: string): string {
+  return r(s, 5, 2, 12, 7, oscuro) + r(s, 6, 1, 10, 1, oscuro)
+}
+
+// Franja de 1 unidad con el color del equipo en el borde del tablero del escritorio.
+function franja(s: number, color: string): string {
+  return r(s, 1, 19, 20, 1, color)
+}
+
+// Oficinista visto de frente, de la cabeza a la cintura. Con `angosto` el torso deja lugar a los brazos
+// de la actividad (x 6 a 15); sin él, los hombros van de punta a punta (el monitor lo tapa en el medio).
+function oficinista(s: number, semilla: number, camisa: string, angosto: boolean): string {
   const pelo = PELOS[semilla % PELOS.length]
-  const camisa = CAMISAS[Math.floor(semilla / 4) % CAMISAS.length]
+  const cuerpo = angosto ? r(s, 6, 8, 10, 10, camisa) + r(s, 10, 8, 2, 1, '#fbfbf5') : r(s, 2, 8, 18, 10, camisa)
   return (
-    r(s, 2, 8, 18, 10, camisa) +
+    cuerpo +
     r(s, 10, 7, 2, 1, PIEL) +
     r(s, 8, 1, 6, 6, PIEL) +
     r(s, 8, 1, 6, 2, pelo) +
@@ -202,16 +215,19 @@ function oficinista(s: number, semilla: number): string {
 }
 
 // Brazos en alto (el estiramiento de la fase «sale»).
-function brazosArriba(s: number, semilla: number): string {
-  const camisa = CAMISAS[Math.floor(semilla / 4) % CAMISAS.length]
+function brazosArriba(s: number, camisa: string): string {
   return r(s, 1, 4, 2, 6, camisa) + r(s, 1, 3, 2, 1, PIEL) + r(s, 19, 4, 2, 6, camisa) + r(s, 19, 3, 2, 1, PIEL)
 }
 
-// Monitor CRT con el ícono (8×8 unidades, la matriz a media escala) dentro de la pantalla.
-function monitor(s: number, matriz: string[], paleta: Record<string, string>, extraIcono: string): string {
+// Monitor CRT con la pantalla vacía (un cursor del color del equipo). `extra` va dentro del grupo de la pantalla.
+function monitor(s: number, color: string, extra: string): string {
   const cuerpo = r(s, 5, 8, 12, 10, CRT) + r(s, 5, 17, 12, 1, CRT_SOMBRA) + r(s, 6, 9, 10, 8, PANTALLA)
-  const icono = `<g transform="translate(${7 * s} ${9 * s}) scale(0.5)">${px(matriz, paleta, s)}</g>`
-  return cuerpo + `<g>${icono}${extraIcono}</g>`
+  return cuerpo + `<g>${r(s, 7, 10, 2, 1, color)}${extra}</g>`
+}
+
+// Globo con un tilde verde arriba a la derecha (la tarea terminó).
+function globoTilde(s: number): string {
+  return r(s, 15, 0, 7, 7, '#fbfbf5') + r(s, 16, 7, 1, 1, '#fbfbf5') + `<g transform="translate(${16 * s} ${1 * s})">${px(TILDE, { J: '#2e9a4a' }, s)}</g>`
 }
 
 // Manos de 1 píxel sobre el tablero, una arriba y la otra abajo según el cuadro.
@@ -235,8 +251,10 @@ function textoEtiqueta(etiqueta: string | undefined, s: number): string {
 
 export function celdaPatioSvg(o: {
   fase: string
-  matriz: string[]
-  paleta: Record<string, string>
+  /** Color del equipo y su tono oscuro (camisa y franja; silla). Sin él, la camisa sale de la semilla. */
+  acento?: [string, string]
+  /** Cuadros de la actividad del equipo (arte-actividades.ts `actividadParaCelda`). Sin ella, monitor CRT. */
+  actividad?: { cuadros: string[]; tiempos: number[]; sinBrazos: string; libre: boolean }
   semilla?: number
   escala?: number
   etiqueta?: string
@@ -246,54 +264,78 @@ export function celdaPatioSvg(o: {
 }): string {
   const s = escalaEntera(o.escala ?? 2)
   const semilla = entero(o.semilla ?? 0)
-  const { matriz, paleta } = o
+  const valido = (c: unknown): c is string => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)
+  const acento = Array.isArray(o.acento) && valido(o.acento[0]) && valido(o.acento[1]) ? o.acento : null
+  const camisa = acento ? acento[0] : CAMISAS[Math.floor(semilla / 4) % CAMISAS.length]
+  const oscuro = acento ? acento[1] : '#555d69'
+  const act =
+    o.actividad && Array.isArray(o.actividad.cuadros) && o.actividad.cuadros.length > 0 && Array.isArray(o.actividad.tiempos)
+      ? o.actividad
+      : null
   const retS = f3((semilla % 7) * 0.13)
   const etiqueta = textoEtiqueta(o.etiqueta, s)
   const fase = o.fase === 'entra' || o.fase === 'sale' || o.fase === 'explota' ? o.fase : 'juega'
-  const base = fondoOficina(s, PATIO_ANCHO) + escritorio(s)
-  const obj = objeto(s, semilla % 3)
+  const base = fondoOficina(s, PATIO_ANCHO) + silla(s, oscuro) + escritorio(s) + (acento ? franja(s, camisa) : '')
+  const obj = !act || act.libre ? objeto(s, semilla % 3) : ''
   const alt = `agente ${fase}`
+  const persona = oficinista(s, semilla, camisa, act !== null)
   const tilde = `<g transform="translate(${10 * s} ${10 * s})">${px(TILDE, { J: '#4fe08a' }, s)}</g>`
   const cruz = `<g transform="translate(${9.5 * s} ${10.5 * s})">${px(CRUZ, { R: '#ff5a3c' }, s)}</g>`
+  const cierre = (c: string): string => abrirSvg(PATIO_ANCHO * s, PATIO_ALTO * s, c + obj + etiqueta, alt, o.fondo, o.titulo)
 
   if (o.quieto) {
-    let c = base + oficinista(s, semilla)
-    if (fase === 'sale') c += brazosArriba(s, semilla) + monitor(s, matriz, paleta, tilde)
-    else if (fase === 'explota') c += monitor(s, matriz, {}, cruz)
-    else c += monitor(s, matriz, paleta, '') + manos(s, 0)
-    return abrirSvg(PATIO_ANCHO * s, PATIO_ALTO * s, c + obj + etiqueta, alt, o.fondo, o.titulo)
+    let c = base + persona
+    if (act) {
+      if (fase === 'sale') c += brazosArriba(s, camisa) + act.sinBrazos + globoTilde(s)
+      else if (fase === 'explota') c += act.sinBrazos + cruz
+      else c += act.cuadros[0]
+    } else {
+      if (fase === 'sale') c += brazosArriba(s, camisa) + monitor(s, camisa, tilde)
+      else if (fase === 'explota') c += monitor(s, PANTALLA, cruz)
+      else c += monitor(s, camisa, '') + manos(s, 0)
+    }
+    return cierre(c)
   }
 
-  const tipea = secuencia([[0, 0.25], [1, 0.25]], (n) => manos(s, n), true, Number(retS))
-  const titila = `<rect x="${6 * s}" y="${9 * s}" width="${10 * s}" height="${8 * s}" fill="#ffffff" opacity="0"><animate attributeName="opacity" calcMode="discrete" values="0;0.18;0;0.1;0" keyTimes="0;0.1;0.2;0.6;0.7" dur="2s" begin="${retS}s" repeatCount="indefinite"/></rect>`
+  // Lo que se hace en el escritorio mientras se trabaja: la actividad en bucle, o el monitor y las manos que tipean.
+  const trabajo = act
+    ? secuencia(
+        act.cuadros.map((_c, i): [number, number] => [i, Number(act.tiempos[i]) > 0 ? Number(act.tiempos[i]) : 0.5]),
+        (n) => act.cuadros[n],
+        true,
+        Number(retS),
+      )
+    : monitor(s, camisa, '') +
+      `<rect x="${6 * s}" y="${9 * s}" width="${10 * s}" height="${8 * s}" fill="#ffffff" opacity="0"><animate attributeName="opacity" calcMode="discrete" values="0;0.18;0;0.1;0" keyTimes="0;0.1;0.2;0.6;0.7" dur="2s" begin="${retS}s" repeatCount="indefinite"/></rect>` +
+      secuencia([[0, 0.25], [1, 0.25]], (n) => manos(s, n), true, Number(retS))
   let c = base
 
   if (fase === 'juega') {
-    c += oficinista(s, semilla) + monitor(s, matriz, paleta, '') + titila + tipea
+    c += persona + trabajo
   } else if (fase === 'entra') {
-    // Entrada: poof de polvo y el oficinista aparece sentado (sin escalar desde 0), luego tipea.
-    const persona =
+    // Entrada: poof de polvo y el oficinista aparece sentado (sin escalar desde 0), luego trabaja.
+    const aparece =
       `<g opacity="0"><animate attributeName="opacity" values="0;1" dur="0.2s" begin="0.1s" fill="freeze"/>` +
-      `<g><animateTransform attributeName="transform" type="translate" values="0 ${2 * s};0 0" keyTimes="0;1" calcMode="spline" keySplines="${EASE}" dur="0.3s" begin="0.1s" fill="freeze"/>${oficinista(s, semilla)}</g></g>`
-    c += persona + monitor(s, matriz, paleta, '') + titila + tipea + poof(s, 3, 0, 0, 0.09, PAL_FX)
+      `<g><animateTransform attributeName="transform" type="translate" values="0 ${2 * s};0 0" keyTimes="0;1" calcMode="spline" keySplines="${EASE}" dur="0.3s" begin="0.1s" fill="freeze"/>${persona}</g></g>`
+    c += aparece + trabajo + poof(s, 3, 0, 0, 0.09, PAL_FX)
   } else if (fase === 'sale') {
-    // Salida: tilde verde en el monitor y el oficinista se estira (brazos arriba, cabeza un píxel más alto).
+    // Salida: el oficinista se estira (brazos arriba, cabeza un píxel más alto) y aparece un tilde verde.
     const estira =
-      `<g><animateTransform attributeName="transform" type="translate" calcMode="discrete" values="0 0;0 ${-s}" keyTimes="0;1" dur="0.4s" begin="0.2s" fill="freeze"/>${oficinista(s, semilla)}</g>` +
-      `<g opacity="0">${brazosArriba(s, semilla)}<animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;1" dur="0.4s" begin="0.2s" fill="freeze"/></g>`
-    const marca =
-      `<g opacity="0">${tilde}<animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.15;0.85" dur="1.2s" fill="freeze"/></g>`
-    c += estira + monitor(s, matriz, paleta, '') + marca
+      `<g><animateTransform attributeName="transform" type="translate" calcMode="discrete" values="0 0;0 ${-s}" keyTimes="0;1" dur="0.4s" begin="0.2s" fill="freeze"/>${persona}</g>` +
+      `<g opacity="0">${brazosArriba(s, camisa)}<animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;1" dur="0.4s" begin="0.2s" fill="freeze"/></g>`
+    const marca = `<g opacity="0">${act ? globoTilde(s) : tilde}<animate attributeName="opacity" calcMode="discrete" values="0;1;0" keyTimes="0;0.15;0.85" dur="1.2s" fill="freeze"/></g>`
+    c += estira + (act ? act.sinBrazos : monitor(s, camisa, '')) + marca
   } else {
-    // Explota: el monitor echa humo gris, chispa naranja y queda una ✕ roja.
+    // Explota: lo del escritorio echa humo gris, chispa naranja y queda una ✕ roja.
     const oculta = `<set attributeName="visibility" to="hidden" begin="0.5s" fill="freeze"/>`
     const chispas =
       `<g transform="translate(${7 * s} ${5 * s})" opacity="0">${px(CHISPAS, { Y: '#ff9a2a', R: '#ff5a3c' }, s)}` +
       `<animate attributeName="opacity" calcMode="discrete" values="0;1;0;1;0" keyTimes="0;0.2;0.4;0.6;0.8" dur="1.4s" begin="0.3s" fill="freeze"/></g>`
     const xroja = `<g opacity="0">${cruz}<animate attributeName="opacity" values="0;1" dur="0.01s" begin="0.5s" fill="freeze"/></g>`
-    c += oficinista(s, semilla) + monitor(s, matriz, paleta, oculta) + xroja + chispas + poof(s, 3, 0, 0.3, 0.12, { W: '#8a8f86', g: '#4d544c' })
+    const objetos = act ? `<g>${act.sinBrazos}${oculta}</g>` : monitor(s, camisa, oculta)
+    c += persona + objetos + xroja + chispas + poof(s, 3, 0, 0.3, 0.12, { W: '#8a8f86', g: '#4d544c' })
   }
-  return abrirSvg(PATIO_ANCHO * s, PATIO_ALTO * s, c + obj + etiqueta, alt, o.fondo, o.titulo)
+  return cierre(c)
 }
 
 // Alfombra de oficina (paredes y baldosas) sin escritorio, `anchoPx` de ancho (múltiplo de la escala; si no, se redondea hacia abajo).

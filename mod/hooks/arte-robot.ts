@@ -3,7 +3,46 @@
 // Funciones puras que devuelven texto SVG. Sin imports, sin scripts, sin referencias externas:
 // la animación es solo SMIL, en pasos discretos. Cada cuadro es una grilla de caracteres ('.' es transparente).
 
-export const EMOCIONES = ['aburrido', 'dormido', 'pensando', 'caceria', 'sospecha', 'ruge', 'molesto', 'bufido', 'contento']
+// Las 9 de siempre primero (mismo orden) y después las 22 nuevas, por grupo (ver emociones.ts).
+export const EMOCIONES = [
+  'aburrido',
+  'dormido',
+  'pensando',
+  'caceria',
+  'sospecha',
+  'ruge',
+  'molesto',
+  'bufido',
+  'contento',
+  // ocio
+  'bostezo',
+  'estira',
+  'riega',
+  'diario',
+  'solitario',
+  'silba',
+  'guina',
+  // hora del día
+  'manana',
+  'hambre',
+  'casa',
+  // trabajo
+  'concentrado',
+  'tipea',
+  'multitarea',
+  // eventos buenos
+  'festeja',
+  'aplaude',
+  'orgullo',
+  'alivio',
+  // eventos malos
+  'panico',
+  'frustrado',
+  'chispazo',
+  // social
+  'saluda',
+  'sorpresa',
+]
 
 export const EMOCION_ALT: Record<string, string> = {
   aburrido: 'tomando café',
@@ -15,6 +54,28 @@ export const EMOCION_ALT: Record<string, string> = {
   molesto: 'ofendido',
   bufido: 'resoplando',
   contento: 'feliz',
+  bostezo: 'bostezando',
+  estira: 'estirándose',
+  riega: 'regando la planta',
+  diario: 'leyendo el diario',
+  solitario: 'jugando al solitario',
+  silba: 'silbando',
+  guina: 'guiñando un ojo',
+  manana: 'con el café de la mañana',
+  hambre: 'con hambre',
+  casa: 'pensando en irse a casa',
+  concentrado: 'concentrado con auriculares',
+  tipea: 'tipeando rápido',
+  multitarea: 'haciendo mil cosas a la vez',
+  festeja: 'festejando',
+  aplaude: 'aplaudiendo',
+  orgullo: 'orgulloso',
+  alivio: 'aliviado',
+  panico: 'en pánico',
+  frustrado: 'frustrado',
+  chispazo: 'echando chispas',
+  saluda: 'saludando',
+  sorpresa: 'sorprendido',
 }
 
 // Paleta común de tablero-oficina (PLAN.md).
@@ -32,6 +93,10 @@ const PAL: Record<string, string> = {
   r: '#D9363E', // rojo
   v: '#3FAE6A', // verde
   f: '#FFF4DF', // crema
+  y: '#F2C230', // amarillo
+  w: '#FFFFFF', // blanco
+  e: '#2E7D4F', // verdeOscuro
+  k: '#5A3416', // marrón
 }
 
 const ANCHO = 34
@@ -448,7 +513,570 @@ function cuadrosContento(): Array<[Grilla, number]> {
   return [[base(true, 0), 0.4], [base(false, 1), 0.4], [base(true, 1), 0.4], [base(false, 0), 0.4]]
 }
 
+// ---- piezas nuevas (emociones 10 a 31) ----
+
+// Ojo cerrado y relajado: una «u» al revés.
+function ojoCerrado(g: Grilla, x: number): void {
+  px(g, x, 11, 'o')
+  rect(g, x + 1, 12, 2, 1, 'o')
+  px(g, x + 3, 11, 'o')
+}
+
+// Ojo chico mirando a un lado: pupila de 2 × 2 corrida `dx` (−1, 0 o 1).
+function ojoChico(g: Grilla, x: number, y: number, dx: number): void {
+  rect(g, x + 1 + dx, y, 2, 2, 'o')
+}
+
+// Ojo enorme y blanco con una pupila mínima (susto).
+function ojoSusto(g: Grilla, x: number, dx: number): void {
+  rect(g, x - 1, 8, 6, 6, 'o')
+  rect(g, x, 9, 4, 4, 'w')
+  px(g, x + 1 + dx, 10, 'o')
+  px(g, x + 2 + dx, 10, 'o')
+}
+
+// Ojo en «X».
+function ojoX(g: Grilla, x: number): void {
+  for (let i = 0; i < 4; i++) {
+    px(g, x + i, 9 + i, 'o')
+    px(g, x + 3 - i, 9 + i, 'o')
+  }
+}
+
+function bocaO(g: Grilla, x: number, y: number, w: number, h: number): void {
+  rect(g, x, y, w, h, 'o')
+  if (w > 2 && h > 2) rect(g, x + 1, y + 1, w - 2, h - 2, 'm')
+}
+
+function bocaGrande(g: Grilla): void {
+  rect(g, 12, 15, 10, 1, 'o')
+  rect(g, 13, 16, 8, 2, 'm')
+  rect(g, 14, 18, 6, 1, 'o')
+  px(g, 12, 16, 'o')
+  px(g, 21, 16, 'o')
+}
+
+function dientes(g: Grilla): void {
+  rect(g, 12, 15, 10, 4, 'o')
+  rect(g, 13, 16, 8, 2, 'w')
+  for (let x = 15; x < 21; x += 2) rect(g, x, 16, 1, 2, 'o')
+}
+
+function gota(g: Grilla, x: number, y: number): void {
+  px(g, x, y, 'c')
+  rect(g, x - 1, y + 1, 3, 2, 'c')
+}
+
+function nota(g: Grilla, x: number, y: number, c: string): void {
+  rect(g, x, y + 2, 2, 2, c)
+  rect(g, x + 1, y, 1, 2, c)
+  px(g, x + 2, y, c)
+}
+
+// Mano chiquita de robot: 4 × 4 con contorno oscuro y la palma beige como la caja.
+function mano(g: Grilla, x: number, y: number): void {
+  rect(g, x, y, 4, 4, 'o')
+  rect(g, x + 1, y + 1, 2, 2, 'b')
+}
+
+// Corre todo el dibujo `dx` columnas (el temblor del pánico). Lo que sale del lienzo se pierde.
+function desplazar(g: Grilla, dx: number): Grilla {
+  return g.map(fila => fila.map((_c, x) => (x - dx >= 0 && x - dx < fila.length ? fila[x - dx] : '.')))
+}
+
+// ---- cuadros de las emociones nuevas ----
+
+function cuadrosBostezo(): Array<[Grilla, number]> {
+  const base = (abre: number, lagrima: boolean): Grilla => {
+    const g = copia()
+    ojoCerrado(g, OJO_I)
+    ojoCerrado(g, OJO_D)
+    if (abre === 0) rect(g, 15, 16, 4, 1, 'o')
+    else bocaO(g, 16 - abre, 17 - abre, 2 + abre * 2, 1 + abre * 2)
+    if (lagrima) px(g, 9, 13, 'c')
+    return g
+  }
+  return [[base(0, false), 0.8], [base(1, false), 0.4], [base(2, false), 0.5], [base(2, true), 0.9], [base(1, true), 0.4]]
+}
+
+function cuadrosEstira(): Array<[Grilla, number]> {
+  const base = (alto: number): Grilla => {
+    const g = copia()
+    ojoFeliz(g, OJO_I)
+    ojoFeliz(g, OJO_D)
+    bocaO(g, 16, 16, 2, 2)
+    // Bracitos que salen de las orejas y suben.
+    const y = 12 - alto * 4
+    rect(g, 1, y + 3, 1, 9 - y - 3 + 1, 'b')
+    rect(g, 32, y + 3, 1, 9 - y - 3 + 1, 'b')
+    mano(g, 0, y)
+    mano(g, 31, y)
+    return g
+  }
+  return [[base(0), 0.6], [base(1), 0.5], [base(2), 1.2], [base(1), 0.5]]
+}
+
+function cuadrosRiega(): Array<[Grilla, number]> {
+  const base = (gotas: number, hoja: boolean): Grilla => {
+    const g = copia()
+    ojoChico(g, OJO_I, 12, 1)
+    ojoChico(g, OJO_D, 12, 1)
+    bocaSonrisa(g)
+    // Maceta abajo a la derecha y la regadera arriba de ella.
+    rect(g, 25, 20, 6, 5, 'k')
+    rect(g, 24, 20, 8, 1, 'm')
+    rect(g, 27, 16, 2, 4, 'v')
+    px(g, 26, 17, 'v')
+    px(g, 29, 16, 'v')
+    if (hoja) {
+      px(g, 25, 15, 'e')
+      px(g, 30, 14, 'e')
+    }
+    rect(g, 20, 9, 6, 4, 'a')
+    rect(g, 26, 10, 2, 1, 'a')
+    px(g, 28, 11, 'a')
+    for (let i = 0; i < gotas; i++) px(g, 28 + (i % 2), 13 + i, 'c')
+    return g
+  }
+  return [[base(0, false), 0.5], [base(1, false), 0.3], [base(2, false), 0.3], [base(3, true), 0.9]]
+}
+
+function cuadrosDiario(): Array<[Grilla, number]> {
+  const base = (dx: number, pagina: boolean): Grilla => {
+    const g = copia()
+    ojoChico(g, OJO_I, 10, dx)
+    ojoChico(g, OJO_D, 10, dx)
+    rect(g, 7, 13, 20, 11, 'f')
+    rect(g, 7, 13, 20, 1, 'l')
+    rect(g, 9, 15, 7, 2, 'o') // titular
+    for (let y = 18; y < 23; y += 2) {
+      rect(g, 9, y, 7, 1, 'l')
+      rect(g, 18, y, 7, 1, 'l')
+    }
+    rect(g, 18, 15, 7, 2, 'c') // foto
+    rect(g, 16, 13, 1, 11, 'd')
+    if (pagina) rect(g, 17, 12, 4, 6, 'f')
+    return g
+  }
+  return [[base(-1, false), 1.0], [base(0, false), 0.8], [base(1, false), 0.8], [base(1, true), 0.4]]
+}
+
+function cuadrosSolitario(): Array<[Grilla, number]> {
+  const carta = (g: Grilla, x: number, y: number, palo: string): void => {
+    rect(g, x, y, 5, 6, 'o')
+    rect(g, x + 1, y + 1, 3, 4, 'w')
+    px(g, x + 2, y + 2, palo)
+    px(g, x + 2, y + 3, palo)
+  }
+  const base = (paso: number): Grilla => {
+    const g = copia()
+    ojoChico(g, OJO_I, 11, paso === 1 ? 1 : 0)
+    ojoChico(g, OJO_D, 11, paso === 1 ? 1 : 0)
+    rect(g, 15, 16, 4, 1, 'o')
+    carta(g, 6, 18, 'r')
+    carta(g, 12, 18, 'o')
+    carta(g, 24, 18, 'r')
+    // La carta del medio viaja a la pila de la derecha.
+    if (paso === 0) carta(g, 18, 18, 'o')
+    if (paso === 1) carta(g, 21, 15, 'o')
+    if (paso === 2) carta(g, 25, 17, 'o')
+    return g
+  }
+  return [[base(0), 1.0], [base(1), 0.4], [base(2), 1.0]]
+}
+
+function cuadrosSilba(): Array<[Grilla, number]> {
+  const base = (sube: number): Grilla => {
+    const g = copia()
+    ojoCerrado(g, OJO_I)
+    ojoCerrado(g, OJO_D)
+    bocaO(g, 18, 16, 2, 2)
+    nota(g, 22, 14 - sube * 2, 'o')
+    if (sube > 0) nota(g, 25, 10 - sube * 2 + 2, 'a')
+    return g
+  }
+  return [[base(0), 0.5], [base(1), 0.5], [base(2), 0.5]]
+}
+
+function cuadrosGuina(): Array<[Grilla, number]> {
+  const base = (guina: boolean, brillo: boolean): Grilla => {
+    const g = copia()
+    ojoAbierto(g, OJO_I, 9)
+    if (guina) ojoFeliz(g, OJO_D)
+    else ojoAbierto(g, OJO_D, 9)
+    bocaSonrisa(g)
+    px(g, 20, 15, 'o')
+    if (brillo) chispa(g, 26, 8, 'f')
+    return g
+  }
+  return [[base(false, false), 1.0], [base(true, false), 0.25], [base(true, true), 0.6], [base(false, false), 0.4]]
+}
+
+function cuadrosManana(): Array<[Grilla, number]> {
+  const base = (abre: boolean, rayos: boolean, humo: number): Grilla => {
+    const g = copia()
+    if (abre) {
+      ojoAbierto(g, OJO_I, 9)
+      ojoAbierto(g, OJO_D, 9)
+    } else {
+      ojoMedia(g, OJO_I)
+      ojoMedia(g, OJO_D)
+    }
+    bocaSonrisa(g)
+    // Sol arriba a la izquierda.
+    rect(g, 0, 0, 4, 4, 'y')
+    if (rayos) {
+      px(g, 5, 1, 'y')
+      px(g, 1, 5, 'y')
+      px(g, 5, 4, 'y')
+    }
+    // Tazón grande de café.
+    rect(g, 12, 18, 10, 6, 'n')
+    rect(g, 13, 18, 8, 1, 'k')
+    rect(g, 22, 19, 2, 1, 'n')
+    rect(g, 23, 20, 1, 2, 'n')
+    rect(g, 12, 23, 10, 1, 'm')
+    vapor(g, 14 + humo, 16, 'f')
+    vapor(g, 18 - humo, 15, 'f')
+    return g
+  }
+  return [[base(false, false, 0), 1.0], [base(false, true, 1), 0.8], [base(true, true, 0), 1.2], [base(true, false, 1), 0.8]]
+}
+
+function cuadrosHambre(): Array<[Grilla, number]> {
+  const base = (baba: number, ruido: boolean): Grilla => {
+    const g = copia()
+    // Mira para arriba, a la hamburguesa soñada.
+    ojoChico(g, OJO_I, 9, 1)
+    ojoChico(g, OJO_D, 9, 1)
+    rect(g, 13, 16, 8, 1, 'o')
+    px(g, 13, 15, 'o')
+    for (let i = 0; i < baba; i++) px(g, 19, 17 + i, 'c')
+    // Globo de pensamiento con una hamburguesa.
+    px(g, 25, 6, 'f')
+    rect(g, 26, 4, 2, 1, 'f')
+    rect(g, 24, 0, 10, 4, 'f')
+    rect(g, 26, 0, 6, 1, 'n')
+    rect(g, 25, 1, 8, 1, 'v')
+    rect(g, 25, 2, 8, 1, 'k')
+    rect(g, 26, 3, 6, 1, 'n')
+    if (ruido) {
+      for (let i = 0; i < 10; i++) px(g, 12 + i, i % 2 === 0 ? 24 : 25, 'o')
+    }
+    return g
+  }
+  return [[base(0, false), 0.8], [base(1, false), 0.6], [base(2, true), 0.5], [base(2, false), 0.6]]
+}
+
+function cuadrosCasa(): Array<[Grilla, number]> {
+  const base = (mira: number, luz: boolean): Grilla => {
+    const g = copia()
+    ojoChico(g, OJO_I, 10, mira)
+    ojoChico(g, OJO_D, 10, mira)
+    bocaSonrisa(g)
+    // Reloj chico arriba a la izquierda.
+    rect(g, 0, 0, 5, 5, 'o')
+    rect(g, 1, 1, 3, 3, 'f')
+    px(g, 2, 2, 'o')
+    px(g, mira < 0 ? 3 : 2, mira < 0 ? 2 : 1, 'o')
+    // Casita soñada arriba a la derecha.
+    rect(g, 26, 2, 7, 4, 'f')
+    for (let i = 0; i < 4; i++) rect(g, 25 + i, 2 - Math.min(i, 3) + (i > 0 ? 0 : 0), 9 - i * 2, 1, 'r')
+    rect(g, 28, 4, 2, 2, 'k')
+    px(g, 31, 3, luz ? 'y' : 'l')
+    // Maletín listo, abajo.
+    rect(g, 22, 20, 7, 5, 'k')
+    rect(g, 24, 19, 3, 1, 'o')
+    rect(g, 22, 22, 7, 1, 'm')
+    return g
+  }
+  return [[base(1, false), 0.9], [base(-1, false), 0.7], [base(1, true), 0.9], [base(0, true), 0.6]]
+}
+
+function cuadrosConcentrado(): Array<[Grilla, number]> {
+  const base = (pestanea: boolean, nota1: boolean): Grilla => {
+    const g = copia()
+    if (pestanea) {
+      ojoRayita(g, OJO_I, 'o')
+      ojoRayita(g, OJO_D, 'o')
+    } else {
+      ojoMedia(g, OJO_I)
+      ojoMedia(g, OJO_D)
+    }
+    cejaPlana(g, OJO_I, 9)
+    cejaPlana(g, OJO_D, 9)
+    bocaPlana(g)
+    // Auriculares: vincha por arriba y almohadillas sobre las orejas.
+    rect(g, 6, 3, 22, 1, 'a')
+    rect(g, 4, 3, 2, 7, 'a')
+    rect(g, 28, 3, 2, 7, 'a')
+    rect(g, 0, 9, 5, 11, 'a')
+    rect(g, 29, 9, 5, 11, 'a')
+    rect(g, 1, 10, 3, 9, 'c')
+    rect(g, 30, 10, 3, 9, 'c')
+    if (nota1) nota(g, 30, 2, 'o')
+    return g
+  }
+  return [[base(false, false), 1.4], [base(false, true), 0.8], [base(true, true), 0.2], [base(false, false), 0.8]]
+}
+
+function cuadrosTipea(): Array<[Grilla, number]> {
+  const base = (lado: number): Grilla => {
+    const g = copia()
+    ojoChico(g, OJO_I, 12, 0)
+    ojoChico(g, OJO_D, 12, 0)
+    cejaEnojada(g, OJO_I, 9, -1)
+    cejaEnojada(g, OJO_D, 9, 1)
+    rect(g, 15, 16, 4, 1, 'o')
+    // Teclado abajo y dos manitos que se turnan.
+    rect(g, 5, 21, 24, 4, 'l')
+    rect(g, 5, 24, 24, 1, 'g')
+    for (let x = 6; x < 28; x += 2) {
+      px(g, x, 22, 'g')
+      px(g, x + 1, 23, 'g')
+    }
+    mano(g, 9, lado === 0 ? 19 : 18)
+    mano(g, 22, lado === 0 ? 18 : 19)
+    if (lado === 0) chispa(g, 10, 17, 'f')
+    else chispa(g, 23, 17, 'f')
+    return g
+  }
+  return [[base(0), 0.15], [base(1), 0.15]]
+}
+
+function cuadrosMultitarea(): Array<[Grilla, number]> {
+  const base = (cambia: boolean): Grilla => {
+    const g = copia()
+    ojoEnBlanco(g, OJO_I, cambia ? 1 : 0)
+    ojoEnBlanco(g, OJO_D, cambia ? 0 : 1)
+    bocaZigzag(g)
+    // Cuatro bracitos con cuatro cosas: hoja, taza, teléfono y lápiz.
+    const arriba = cambia ? 1 : 0
+    rect(g, 0, 4 + arriba, 3, 5, 'f')
+    rect(g, 3, 8 + arriba, 1, 2, 'b')
+    rect(g, 0, 20 - arriba, 4, 3, 'a')
+    rect(g, 3, 19 - arriba, 1, 2, 'b')
+    rect(g, 31, 3 + arriba, 3, 5, 'r')
+    px(g, 32, 4 + arriba, 'w')
+    rect(g, 30, 8 + arriba, 1, 2, 'b')
+    rect(g, 31, 19 - arriba, 1, 5, 'y')
+    px(g, 31, 24 - arriba, 'o')
+    rect(g, 30, 19 - arriba, 1, 2, 'b')
+    return g
+  }
+  return [[base(false), 0.3], [base(true), 0.3]]
+}
+
+function cuadrosFesteja(): Array<[Grilla, number]> {
+  const colores = ['r', 'y', 'c', 'v', 'n', 'a']
+  const base = (paso: number): Grilla => {
+    const g = copia()
+    ojoFeliz(g, OJO_I)
+    ojoFeliz(g, OJO_D)
+    bocaGrande(g)
+    // Gorrito de fiesta en la antena.
+    rect(g, 16, 0, 2, 1, 'y')
+    rect(g, 15, 1, 4, 1, 'r')
+    rect(g, 14, 2, 6, 2, 'y')
+    // Confeti que cae.
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 7 + 3) % 34
+      const y = (i * 5 + paso * 3) % 26
+      px(g, x, y, colores[(i + paso) % colores.length])
+    }
+    return g
+  }
+  return [[base(0), 0.25], [base(1), 0.25], [base(2), 0.25], [base(3), 0.25]]
+}
+
+function cuadrosAplaude(): Array<[Grilla, number]> {
+  const base = (juntas: boolean): Grilla => {
+    const g = copia()
+    ojoFeliz(g, OJO_I)
+    ojoFeliz(g, OJO_D)
+    bocaSonrisa(g)
+    if (juntas) {
+      mano(g, 13, 19)
+      mano(g, 17, 19)
+      px(g, 13, 17, 'f')
+      px(g, 20, 17, 'f')
+      px(g, 16, 17, 'f')
+      px(g, 12, 19, 'f')
+      px(g, 21, 19, 'f')
+    } else {
+      mano(g, 9, 19)
+      mano(g, 21, 19)
+    }
+    return g
+  }
+  return [[base(false), 0.2], [base(true), 0.2]]
+}
+
+function cuadrosOrgullo(): Array<[Grilla, number]> {
+  const base = (guina: boolean): Grilla => {
+    const g = copia()
+    if (guina) {
+      ojoAbierto(g, OJO_I, 10)
+      ojoFeliz(g, OJO_D)
+      chispa(g, 26, 8, 'f')
+    } else {
+      ojoCerrado(g, OJO_I)
+      ojoCerrado(g, OJO_D)
+    }
+    bocaSonrisa(g)
+    px(g, 20, 15, 'o')
+    // Medalla en el pecho.
+    rect(g, 15, 20, 1, 2, 'a')
+    rect(g, 18, 20, 1, 2, 'a')
+    rect(g, 15, 22, 4, 3, 'y')
+    px(g, 16, 23, 'w')
+    return g
+  }
+  return [[base(false), 0.9], [base(true), 0.7], [base(false), 0.6]]
+}
+
+function cuadrosAlivio(): Array<[Grilla, number]> {
+  const base = (paso: number): Grilla => {
+    const g = copia()
+    ojoCerrado(g, OJO_I)
+    ojoCerrado(g, OJO_D)
+    rect(g, 15, 17, 4, 1, 'o')
+    px(g, 14, 16, 'o')
+    px(g, 19, 16, 'o')
+    // Gota de sudor que se va y bocanada de «uf».
+    gota(g, 26, 6 + paso * 2)
+    if (paso > 0) nube(g, 21, 16 - paso)
+    if (paso > 1) nube(g, 24, 14 - paso)
+    return g
+  }
+  return [[base(0), 0.6], [base(1), 0.5], [base(2), 0.9]]
+}
+
+function cuadrosPanico(): Array<[Grilla, number]> {
+  const base = (paso: number): Grilla => {
+    const g = copia()
+    pantalla(g, paso % 2 === 0 ? 'r' : 'p')
+    ojoSusto(g, OJO_I, paso % 2 === 0 ? -1 : 1)
+    ojoSusto(g, OJO_D, paso % 2 === 0 ? -1 : 1)
+    bocaZigzag(g)
+    rect(g, 13, 17, 8, 1, 'o')
+    bola(g, 'r')
+    gota(g, 2, 3 + (paso % 2))
+    gota(g, 31, 4 - (paso % 2))
+    return desplazar(g, paso % 2 === 0 ? -1 : 1)
+  }
+  return [[base(0), 0.12], [base(1), 0.12], [base(2), 0.12], [base(3), 0.12]]
+}
+
+function cuadrosFrustrado(): Array<[Grilla, number]> {
+  const base = (paso: number): Grilla => {
+    const g = copia()
+    ojoMedia(g, OJO_I)
+    ojoMedia(g, OJO_D)
+    cejaEnojada(g, OJO_I, 8, -1)
+    cejaEnojada(g, OJO_D, 8, 1)
+    dientes(g)
+    // Venita en la frente y una nube con garabatos.
+    const v = paso === 1 ? 'r' : 'm'
+    px(g, 24, 8, v)
+    px(g, 26, 8, v)
+    px(g, 25, 7, v)
+    px(g, 25, 9, v)
+    rect(g, 22, 0, 12, 4, 'l')
+    for (let i = 0; i < 5; i++) px(g, 23 + i * 2, (i + paso) % 2 === 0 ? 1 : 2, i % 2 === 0 ? 'r' : 'o')
+    nube(g, 0, 7 - paso)
+    nube(g, 32, 7 - paso)
+    return g
+  }
+  return [[base(0), 0.4], [base(1), 0.4], [base(2), 0.4]]
+}
+
+function cuadrosChispazo(): Array<[Grilla, number]> {
+  const base = (paso: number): Grilla => {
+    const g = copia()
+    ojoX(g, OJO_I)
+    ojoX(g, OJO_D)
+    bocaZigzag(g)
+    // Rayas de interferencia en la pantalla.
+    rect(g, 7, 8 + paso * 3, 20, 1, 'l')
+    rect(g, 7 + paso, 15 - paso, 20 - paso, 1, 'g')
+    bola(g, 'y')
+    // Chispas que saltan de la antena y de las orejas.
+    chispa(g, paso === 0 ? 13 : 20, 1, 'y')
+    chispa(g, 1, paso === 1 ? 7 : 20, 'y')
+    chispa(g, 32, paso === 1 ? 20 : 7, 'n')
+    return g
+  }
+  return [[base(0), 0.1], [base(1), 0.1], [base(2), 0.15]]
+}
+
+function cuadrosSaluda(): Array<[Grilla, number]> {
+  const base = (lado: number, guina: boolean): Grilla => {
+    const g = copia()
+    ojoAbierto(g, OJO_I, 9)
+    if (guina) ojoFeliz(g, OJO_D)
+    else ojoAbierto(g, OJO_D, 9)
+    bocaSonrisa(g)
+    // Manito que saluda desde la derecha, de un lado al otro.
+    const x = lado === 0 ? 29 : 31
+    rect(g, 31, 9, 1, 2, 'b')
+    rect(g, x, 3, 3, 4, 'b')
+    rect(g, x, 2, 1, 1, 'b')
+    rect(g, x + 2, 2, 1, 1, 'b')
+    px(g, x + 1, 4, 'd')
+    rect(g, x + 1, 7, 1, 2, 'b')
+    return g
+  }
+  return [[base(0, false), 0.3], [base(1, false), 0.3], [base(0, false), 0.3], [base(1, true), 0.6]]
+}
+
+function cuadrosSorpresa(): Array<[Grilla, number]> {
+  const base = (salta: boolean): Grilla => {
+    const g = copia()
+    const y = salta ? 8 : 9
+    rect(g, OJO_I, y, 4, 4, 'o')
+    rect(g, OJO_D, y, 4, 4, 'o')
+    px(g, OJO_I + 1, y + 1, 'f')
+    px(g, OJO_D + 1, y + 1, 'f')
+    cejaArco(g, OJO_I, y - 3)
+    cejaArco(g, OJO_D, y - 3)
+    bocaO(g, 15, 15, 4, 4)
+    if (salta) {
+      rect(g, 31, 0, 2, 5, 'n')
+      rect(g, 31, 6, 2, 1, 'n')
+    }
+    return g
+  }
+  return [[base(true), 0.3], [base(false), 0.5], [base(true), 0.3], [base(false), 0.9]]
+}
+
+const CUADROS_NUEVOS: Record<string, () => Array<[Grilla, number]>> = {
+  bostezo: cuadrosBostezo,
+  estira: cuadrosEstira,
+  riega: cuadrosRiega,
+  diario: cuadrosDiario,
+  solitario: cuadrosSolitario,
+  silba: cuadrosSilba,
+  guina: cuadrosGuina,
+  manana: cuadrosManana,
+  hambre: cuadrosHambre,
+  casa: cuadrosCasa,
+  concentrado: cuadrosConcentrado,
+  tipea: cuadrosTipea,
+  multitarea: cuadrosMultitarea,
+  festeja: cuadrosFesteja,
+  aplaude: cuadrosAplaude,
+  orgullo: cuadrosOrgullo,
+  alivio: cuadrosAlivio,
+  panico: cuadrosPanico,
+  frustrado: cuadrosFrustrado,
+  chispazo: cuadrosChispazo,
+  saluda: cuadrosSaluda,
+  sorpresa: cuadrosSorpresa,
+}
+
 function cuadrosDe(emocion: string): Array<[Grilla, number]> {
+  if (Object.prototype.hasOwnProperty.call(CUADROS_NUEVOS, emocion)) return CUADROS_NUEVOS[emocion]()
   switch (emocion) {
     case 'dormido':
       return cuadrosDormido()

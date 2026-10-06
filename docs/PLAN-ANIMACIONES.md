@@ -1,6 +1,6 @@
 # Plan: más vida en la oficina (patio por color, actividades por rol y robot con muchas emociones)
 
-**Estado:** propuesta. No se implementa hasta que la usuaria apruebe las oleadas.
+**Estado:** implementado P-1 a P-8 y P-10 (06/10/2026). Falta P-9: la mirada de la usuaria sobre la vista previa (`mod/preview/make-preview.mjs`).
 **Fecha:** 06/10/2026.
 
 ## Qué se quiere
@@ -50,27 +50,25 @@ Verificado en el código el 06/10/2026:
   - una leyenda opcional de colores debajo del patio.
 - **Equipo desconocido:** usa el color de `base`, gris.
 
-### 2. Actividad por rol
-Primero se busca la actividad por **equipo**. Si el equipo no tiene una, se usa la del **tipo** de agente (`tipoDeAgente`). Cada actividad se anima solo en la fase `juega`, con 2 a 4 cuadros. Las fases `entra`, `sale` y `explota` siguen como están.
+### 2. Actividad por equipo
+La actividad se busca **solo por equipo** (respuesta 1). Un equipo sin actividad usa la genérica y se avisa. Cada actividad se anima solo en la fase `juega`, con 2 a 4 cuadros. Las fases `entra`, `sale` y `explota` siguen como están.
 
-| Equipo o tipo | Actividad | Cuadros de `juega` |
+| Equipo | Actividad | Cuadros de `juega` |
 |---|---|---|
-| research / vidente | cuaderno y binoculares | 1: escribe en el cuaderno · 2: levanta los binoculares · 3: mira a los costados |
-| dev-* | laptop programando | 1: tipea · 2: líneas de código que suben en la pantalla · 3: toma un sorbo de café |
+| research | cuaderno y binoculares | 1: escribe en el cuaderno · 2: levanta los binoculares · 3: mira a los costados |
+| dev-a1, dev-tablero | laptop programando | 1: tipea · 2: líneas de código que suben en la pantalla · 3: toma un sorbo de café |
 | datos | tablas y gráficos | 1: hoja con celdas · 2: un gráfico de barras que crece · 3: señala un dato |
-| librarian | libros | 1: pila de libros · 2: hojea uno · 3: lo acomoda en el estante |
-| direccion / estratega | pizarra con flechas | 1: dibuja una flecha · 2: encierra algo en un círculo |
-| pm | agenda | 1: tilda un ítem · 2: mueve una tarjeta en el tablero |
-| guardian (revisión) | lupa y checklist | 1: mira con la lupa · 2: tilda · 3: frunce el ceño |
-| curandero (corrector) | caja de herramientas | 1: ajusta con una llave · 2: salta una chispa |
-| escriba (base) | papeles y lapicera | 1: escribe · 2: da vuelta la hoja |
+| librarian | libros | 1: pila de libros · 2: hojea uno · 3: lo acomoda en la pila |
+| direccion | pizarra con flechas | 1: dibuja una flecha · 2: encierra algo en un círculo |
+| base | papeles y lapicera | 1: escribe · 2: da vuelta la hoja |
 | seguridad | cámara y walkie | 1: mira el monitor de cámaras · 2: habla por el walkie |
 | mantenimiento | escalera y foco | 1: cambia un foco · 2: se prende |
 | limpieza | carrito | 1: pasa el trapo · 2: brilla |
 | facilities | plano y llaves | 1: revisa el plano · 2: hace sonar el llavero |
 | arquitectura | escuadra y plano | 1: traza una línea · 2: mide |
+| (sin actividad) | genérica: papeles y lapicera | igual que base, con aviso en Equipos |
 
-- Todo vive en un módulo puro nuevo, `arte-actividades.ts`, sin imports. Exporta `ACTIVIDADES` (la tabla de arriba como datos), `actividadDe({ equipo, tipo })` y `actividadSvg(nombre, cuadro, escala)`.
+- Todo vive en un módulo puro nuevo, `arte-actividades.ts`, sin imports. Exporta `ACTIVIDADES` (la tabla de arriba como datos), `ACTIVIDAD_EQUIPO`, `actividadDe(equipo)` y `actividadSvg(nombre, cuadro, escala)`.
 - El objeto que hoy elige `semilla` (taza, planta, papeles) pasa a ser decorado: solo se dibuja si la actividad deja lugar libre.
 
 ### 3. Robot con muchas emociones
@@ -133,8 +131,59 @@ P-4 y P-6 tocan el mismo archivo, por eso van en oleadas distintas. Lo mismo pas
 - **Peso de los SVG con muchas emociones:** se cubre con el tope de 150.000 caracteres y con el caché por emoción que ya existe (`register.tsx:1016`).
 - **12 colores que hay que distinguir en tema oscuro:** P-8 genera la leyenda para revisarla a ojo en P-9.
 
-## Preguntas abiertas para la usuaria
+## Respuestas de la usuaria (06/10/2026)
 
-1. ¿La actividad va por **equipo**, como en la tabla, o por **tipo** de agente? La propuesta: primero equipo y, si no hay, tipo.
-2. ¿Querés las emociones de «hora del día»? Dependen del reloj de la computadora.
-3. ¿El clic en el robot para que guiñe es un extra o va en esta tanda?
+1. **La actividad del patio va por equipo**, no por tipo de agente. Cada equipo nuevo tiene que tener su actividad pensada: no hay actividad automática por tipo.
+   - Los 12 equipos de hoy tienen la suya (tabla de abajo).
+   - Un equipo que no está en la tabla usa la actividad genérica (papeles y lapicera) y la pestaña Equipos avisa: «El equipo X no tiene actividad en el patio: hay que pensarla».
+   - Una prueba exige que cada equipo de `EQUIPOS_ESQUEMA` tenga actividad. Si se agrega un equipo sin actividad, la prueba falla.
+   - `kit/metodo/ESQUEMA-AGENTES.md` suma el paso «pensar su actividad en el patio» a la receta de equipo nuevo.
+2. **Sí a las emociones por hora del día**, con el reloj de la computadora:
+   - 08:00 a 09:59: café de la mañana.
+   - 12:00 a 13:59: **le da hambre**.
+   - 17:30 a 18:59: **empieza a decir que dentro de poco se va a casa**.
+   - Con nada corriendo, la emoción es la de la hora. Con agentes corriendo, la emoción es la de trabajo, pero la burbuja agrega la frase de la hora («…y me está dando hambre», «…y en un rato me voy a casa»).
+   - Fuera de esas franjas no hay emoción de la hora (no hay «noche»).
+3. **Sin guiño en el clic.** El clic en el robot queda afuera. El guiño aparece en otras cosas:
+   - en la rotación del ocio, como una emoción más (`guina`);
+   - al guardar un rol («orgullo»: termina guiñando, con «De nada.»);
+   - al saludar cuando se abre el panel (último cuadro del saludo).
+4. **Nuevo: uso de la sesión en el panel.** Se agrega la opción de ver:
+   - la ventana de **5 horas** y la **semanal** (porcentaje usado, barra y hora en que se renueva);
+   - el contexto de la conversación (porcentaje lleno), para saber cuándo compactar.
+   - Va en la vista Subagentes, en un desplegable «Uso de la sesión» que arranca abierto.
+   - Los datos salen del motor: `$.session.usage()` al abrir el panel y el evento `session.measure` después (llega solo tras cada turno o cuando una ventana se mueve un punto). Sin suscripción no hay ventanas y se avisa.
+5. **Nuevo: botón para compactar la sesión** desde el panel.
+   - «Compactar sesión…» pide confirmación («Sí, compactar» / «No»), como «Restaurar original…».
+   - Llama a `$.session.compact()`, lo mismo que `/compact`.
+   - Si Claude está en medio de un turno, el motor lo rechaza y el aviso dice que se pruebe al terminar.
+   - Al terminar avisa «Sesión compactada» con los tokens antes y después, si el motor los da.
+
+### Cambios al catálogo de emociones por las respuestas
+
+| Grupo | Emociones | Disparador |
+|---|---|---|
+| Ocio | aburrido, bostezo, estira, riega, diario, solitario, silba, guina, dormido | sin agentes. Los primeros 2 minutos, aburrido (café). Después rota cada 2 minutos sin repetir la anterior. A los 10 minutos (`DORMIR_MS`), dormido |
+| Hora del día | manana, hambre, casa | 08:00–09:59, 12:00–13:59, 17:30–18:59 (le gana al ocio, también a dormido) |
+| Trabajo | pensando, concentrado, tipea, multitarea, sospecha | 1 agente: pensando · uno corriendo hace más de 3 min: concentrado · 2 o 3: tipea · 4 o más: multitarea · uno hace más de 10 min: sospecha |
+| Eventos buenos | contento, festeja, aplaude, orgullo, alivio | termina uno y siguen otros: contento · 2 o más terminan juntos y siguen otros: aplaude · terminan todos: festeja · se guarda un rol: orgullo (con guiño) · termina uno mientras estaba molesto por una falla: alivio |
+| Eventos malos | molesto, bufido, ruge, panico, frustrado, chispazo | falla uno: ruge · fallan 2 o más juntos: panico · falla otro mientras seguía molesto: frustrado · frenan uno: bufido · un aviso de error del panel («No se pudo…»): chispazo · después de una falla: molesto |
+| Social | saluda, sorpresa | se abre el panel: saluda (termina con guiño) · entran 3 o más agentes juntos: sorpresa · entra uno: caceria (como hoy) |
+
+Son 31 emociones. Prioridad: eventos malos > eventos buenos > social > trabajo > molesto > hora del día > ocio.
+
+### Oleada extra
+
+| Oleada | Tarjeta | Qué | Archivos |
+|---|---|---|---|
+| D | P-10 | Uso de la sesión (5 h, semanal, contexto) y botón de compactar | `hooks/register.tsx`, `types/index.d.ts`, `tests/tablero-uso.test.ts` |
+
+## Cómo quedó (06/10/2026)
+
+- **Módulos nuevos, puros y sin imports:** `hooks/arte-actividades.ts` (11 actividades, una por equipo, y la genérica) y `hooks/emociones.ts` (`decidirEmocion`, franjas de la hora y rotación del ocio).
+- **Celda del patio:** recibe `acento` (color del equipo) y `actividad` (cuadros ya dibujados) en lugar de `matriz` y `paleta`. Sin actividad dibuja el monitor CRT con la pantalla vacía. El título de la celda nombra el equipo y debajo del patio hay una leyenda de colores con los equipos presentes.
+- **Robot:** 31 emociones. La cara se redibuja sola cuando cambia el paso del ocio o la franja de la hora (sin escrituras de más: una cada 2 minutos como mucho).
+- **Molesto:** ahora dura hasta que otro agente termina bien (alivio), no hasta que entra uno nuevo; si no, el alivio no podía pasar nunca.
+- **Uso de la sesión y compactar:** en la vista Subagentes, desplegable «Uso de la sesión».
+- **Pruebas:** `plugin validate mod` en 0. `plugin test mod`: en Linux 148 pass y los mismos 50 fail de antes, todos por las rutas de Windows del disco falso (`C:\home-falso`); con esas rutas pasadas a Linux en una copia, 200 pass y 0 fail. En Windows se esperan 200 pass.
+- **Vista previa:** 294 SVG, el más pesado 118.160 caracteres (tope 120.000).

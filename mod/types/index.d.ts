@@ -94,8 +94,9 @@ declare module 'claude-code' {
       /** `true` cuando el prompt completo está desplegado en la vista Editar; empieza cerrado. */
       promptAbierto: boolean
       /**
-       * Desplegables abiertos del panel. Claves: `grupo:<equipo>`, `agente:<name>`, `skill:<equipo>`, `errores`, `desc`, `fila:<id>`, `resumen`.
-       * Ausente = cerrado, salvo `resumen`, que arranca abierto (ausente = abierto).
+       * Desplegables abiertos del panel. Claves: `grupo:<equipo>`, `agente:<name>`, `skill:<equipo>`, `errores`, `desc`, `fila:<id>`, `resumen`,
+       * `uso`, `confirmar-restaurar` y `confirmar-compactar`.
+       * Ausente = cerrado, salvo `resumen` y `uso`, que arrancan abiertos (ausente = abierto).
        */
       abiertos: Record<string, boolean>
       /**
@@ -114,7 +115,35 @@ declare module 'claude-code' {
       /** `true` cuando el título animado ya se armó una vez en esta sesión: desde ahí se dibuja estático. */
       tituloArmado: boolean
       /** Reacción transitoria del jaguar y el instante (ms desde epoch) en que vence; `null` si no hay. */
-      reaccion: { tipo: 'caceria' | 'ruge' | 'contento' | 'bufido'; hasta: number; quien?: string } | null
+      reaccion: {
+        tipo:
+          | 'caceria'
+          | 'ruge'
+          | 'contento'
+          | 'bufido'
+          | 'guardado'
+          | 'panico'
+          | 'frustrado'
+          | 'chispazo'
+          | 'festeja'
+          | 'aplaude'
+          | 'orgullo'
+          | 'alivio'
+          | 'saluda'
+          | 'sorpresa'
+        hasta: number
+        quien?: string
+      } | null
+      /**
+       * Uso de la sesión según el motor (`$.session.usage()` y `session.measure`): ventanas de
+       * `five_hour`, `seven_day` (y `spend_limit`) con su porcentaje y su renovación, y el contexto lleno en %.
+       * `null` hasta la primera lectura. `medido` es el instante (ms desde epoch) de la lectura.
+       */
+      uso: {
+        limites: Array<{ kind: string; percentUsed: number; resetsAt?: string }>
+        contexto?: number
+        medido: number
+      } | null
       /**
        * Tarjeta (o id) del subagente que falló, desde que el jaguar rugió hasta que aparece uno nuevo corriendo;
        * vacío si no está molesto. Un `true` viejo guardado se trata como molesto sin nombre.

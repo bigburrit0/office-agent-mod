@@ -15,13 +15,32 @@ const JAGUAR_MARCO: Record<string, string> = {
   '5': 'width="210" height="170" viewBox="0 0 210 170"',
 }
 
-test('las 9 claves son las del jaguar, en el mismo orden, con texto alternativo', () => {
-  expect(EMOCIONES.join(',')).toBe('aburrido,dormido,pensando,caceria,sospecha,ruge,molesto,bufido,contento')
-  for (const e of EMOCIONES) expect(typeof EMOCION_ALT[e]).toBe('string')
+// Las 31 emociones del plan, escritas a mano: las 9 de siempre primero y en el mismo orden.
+const LAS_31 =
+  'aburrido,dormido,pensando,caceria,sospecha,ruge,molesto,bufido,contento,' +
+  'bostezo,estira,riega,diario,solitario,silba,guina,manana,hambre,casa,concentrado,tipea,multitarea,' +
+  'festeja,aplaude,orgullo,alivio,panico,frustrado,chispazo,saluda,sorpresa'
+
+test('las 31 claves: las 9 del jaguar primero y en el mismo orden, todas con texto alternativo', () => {
+  expect(EMOCIONES.join(',')).toBe(LAS_31)
+  for (const e of EMOCIONES) expect(typeof EMOCION_ALT[e] === 'string' && EMOCION_ALT[e].length > 0).toBe(true)
+  expect(new Set(Object.values(EMOCION_ALT)).size).toBe(31)
   expect(EMOCION_ALT.aburrido).toBe('tomando café')
+  expect(EMOCION_ALT.hambre).toBe('con hambre')
+  expect(EMOCION_ALT.casa).toBe('pensando en irse a casa')
 })
 
-test('las 9 emociones dan un SVG seguro y animado, y cada una es distinta', () => {
+test('el guiño está en el ocio, en el orgullo y en el saludo (y no hace falta un clic)', () => {
+  // Las tres llevan un cuadro con guiño, así que tienen al menos 3 cuadros animados y son distintas entre sí.
+  const tres = ['guina', 'orgullo', 'saluda'].map(e => caraRobotSvg(e, 1))
+  for (const s of tres) {
+    expect(s.includes('<animate')).toBe(true)
+    expect(s.split('<animate').length - 1 >= 3).toBe(true)
+  }
+  expect(new Set(tres).size).toBe(3)
+})
+
+test('las 31 emociones dan un SVG seguro y animado, y cada una es distinta', () => {
   const vistos = new Set<string>()
   for (const e of EMOCIONES) {
     const s = caraRobotSvg(e, 3)
@@ -31,10 +50,10 @@ test('las 9 emociones dan un SVG seguro y animado, y cada una es distinta', () =
     expect(s.includes('http')).toBe(true)
     vistos.add(s)
   }
-  expect(vistos.size).toBe(9)
+  expect(vistos.size).toBe(31)
   const quietos = new Set<string>()
   for (const e of EMOCIONES) quietos.add(caraRobotSvg(e, 3, { quieto: true }))
-  expect(quietos.size).toBe(9)
+  expect(quietos.size).toBe(31)
 })
 
 test('sin referencias externas más que el espacio de nombres', () => {

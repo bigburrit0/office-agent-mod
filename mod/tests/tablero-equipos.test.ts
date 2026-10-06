@@ -481,3 +481,33 @@ test('Equipos: «Cómo trabaja el equipo» va dentro de la tarjeta del equipo (c
   )
   expect(duena !== undefined).toBe(true)
 })
+
+test('Equipos: un equipo sin actividad en el patio avisa que hay que pensarla; uno con actividad no', async ($, on) => {
+  const { ui } = await montarEquipos($, on, {
+    ...DOS_EQUIPOS,
+    [`${RAIZ_FALSA}\\marketing\\gama.md`]: archivoAgente('gama', 'marketing', []),
+  })
+  const t = await textosDe(ui)
+  expect(t.some(x => x === '⚠ El equipo marketing no tiene actividad en el patio: hay que pensarla.')).toBe(true)
+  expect(t.some(x => /El equipo (base|dev-a1) no tiene actividad/.test(x))).toBe(false)
+})
+
+test('Equipos: /oficina abre el panel con el robot saludando', async ($, on) => {
+  fsFalso(on, { [`${RAIZ_FALSA}\\base\\alfa.md`]: archivoAgente('alfa', 'base', []) })
+  mock.clock(on, { now: 1_000_000 })
+  mock.store(on, {})
+  on('agent.list', () => ({ value: [] }))
+  on('ui.panes', () => ({ value: PANES }))
+  on('ui.open', () => ({ value: undefined }))
+  await $.command.run({ command: 'oficina' } as never)
+  const ui = await $.ui.mount({
+    plugin: 'tablero-oficina',
+    surface: 'desktop',
+    component: 'Pane',
+    props: PROPS as never,
+    requestId: PANE.id,
+    viewport: { columns: 100, rows: 60 },
+  })
+  expect((await altsSvg(ui)).includes('Oficina, robot saludando')).toBe(true)
+  expect((await textosDe(ui)).some(x => /¡Hola!/.test(x))).toBe(true)
+})

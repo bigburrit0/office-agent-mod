@@ -40,7 +40,7 @@ Los tres últimos los ignora Claude Code y los lee el panel.
 | `librarian` | pink | libros | Mantiene la wiki de `{{BIBLIOTECA}}` |
 | `dev-tablero` | blue | jaguar | El mod `/tablero` (`{{RAIZ}}\tablero-subagentes\mod`). Alta el 05/10/2026; el emblema en el panel llega con TAB-103 |
 
-Equipo nuevo: se agrega una fila acá, un emblema en el panel (`pixel.ts`) y una skill `skills\equipo-<nombre>\SKILL.md`.
+Equipo nuevo: se agrega una fila acá, un emblema en el panel (`pixel.ts`), su actividad en el patio (`arte-actividades.ts`: qué hace el oficinista en su escritorio, pensada para ese equipo) y una skill `skills\equipo-<nombre>\SKILL.md`.
 
 ## 4. Cuerpo (el prompt), en este orden
 

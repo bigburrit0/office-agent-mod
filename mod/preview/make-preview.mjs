@@ -9,6 +9,8 @@ import * as patio from '../hooks/arte-escritorios.ts'
 import * as glifos from '../hooks/arte-iconos.ts'
 import * as dioses from '../hooks/arte-iconos.ts'
 import * as templo from '../hooks/arte-edificio.ts'
+import * as actividades from '../hooks/arte-actividades.ts'
+import * as emociones from '../hooks/emociones.ts'
 
 const aca = dirname(fileURLToPath(import.meta.url))
 const todos = [] // { nombre, svg } para la verificación final
@@ -36,42 +38,67 @@ function bloqueEscalas(nombre, fabrica) {
     `<div><small>${nombre} 3x</small><br>${registrar(nombre + ' 3x', fabrica(3))}</div></div>`
 }
 
-// Sección «Cara del robot»: las 9 emociones, sin marco y con marco (si la opción ya existe).
-function seccionCara() {
-  let h = '<h2>Cara del robot (8 bits)</h2>'
-  h += '<h3>9 emociones, escala 3, sobre fondo selva</h3><div class="fila">'
-  for (const e of cara.EMOCIONES) {
-    h += `<div><small>${e}</small><br>${registrar('cara ' + e, cara.caraRobotSvg(e, 3, { fondo: '#0E4A22' }))}</div>`
-  }
-  h += '</div>'
-  h += '<h3>9 emociones con marco</h3><div class="fila">'
-  let hayMarco = false
-  for (const e of cara.EMOCIONES) {
-    const svg = cara.caraRobotSvg(e, 3, { fondo: '#0E4A22', marco: true })
-    if (svg !== cara.caraRobotSvg(e, 3, { fondo: '#0E4A22' })) hayMarco = true
-    h += `<div><small>${e}</small><br>${registrar('cara marco ' + e, svg)}</div>`
-  }
-  h += '</div>'
-  if (!hayMarco) h += '<p><small>(la opción marco todavía no existe: se ven iguales)</small></p>'
-  return h
-}
+// Grupos de emociones, para ordenar la vista previa (los mismos de emociones.ts).
+const GRUPOS_CARA = [
+  ['Ocio', ['aburrido', ...emociones.ROTACION_OCIO, 'dormido']],
+  ['Hora del día', emociones.FRANJAS_HORA.map(f => f.emocion)],
+  ['Trabajo', ['pensando', 'concentrado', 'tipea', 'multitarea', 'sospecha']],
+  ['Eventos buenos', ['contento', 'festeja', 'aplaude', 'orgullo', 'alivio']],
+  ['Eventos malos', ['molesto', 'bufido', 'ruge', 'panico', 'frustrado', 'chispazo']],
+  ['Social', ['saluda', 'sorpresa', 'caceria']],
+]
 
-// Sección «Patio»: 4 fases de la celda para un glifo de cada tipo, el piso y el dosel (si existe).
-function seccionPatio() {
-  let h = '<h2>Patio de agentes</h2>'
-  for (const tipo of glifos.TIPOS_GLIFO) {
-    h += `<h3>Celda de ${tipo} (entra, juega, sale, explota)</h3><div class="fila">`
-    for (const fase of ['entra', 'juega', 'sale', 'explota']) {
-      const svg = patio.celdaPatioSvg({ fase, matriz: glifos.glifoMatriz(tipo), paleta: glifos.glifoPaleta(EQUIPOS[0]), etiqueta: 'T-81' })
-      h += `<div><small>${fase}</small><br>${registrar(`celda ${tipo} ${fase}`, svg)}</div>`
+// Sección «Cara del robot»: las emociones por grupo, con marco, animadas y quietas.
+function seccionCara() {
+  let h = `<h2>Cara del robot (${cara.EMOCIONES.length} emociones)</h2>`
+  const vistas = new Set()
+  for (const [grupo, lista] of GRUPOS_CARA) {
+    h += `<h3>${grupo}</h3><div class="fila">`
+    for (const e of lista) {
+      vistas.add(e)
+      h += `<div><small>${e}: ${cara.EMOCION_ALT[e]}</small><br>${registrar('cara ' + e, cara.caraRobotSvg(e, 3, { fondo: '#0E4A22', marco: true }))}` +
+        ` ${registrar('cara quieta ' + e, cara.caraRobotSvg(e, 3, { fondo: '#0E4A22', marco: true, quieto: true }))}</div>`
     }
     h += '</div>'
   }
-  h += '<h3>Piso del patio</h3>' + registrar('piso patio', patio.pisoPatioSvg(360, 2, { fondo: '#0E4A22' }))
-  if (typeof patio.doselPatioSvg === 'function') {
-    h += '<h3>Dosel del patio</h3>' + registrar('dosel patio', patio.doselPatioSvg(360, 2))
-  }
+  const sueltas = cara.EMOCIONES.filter(e => !vistas.has(e))
+  if (sueltas.length) h += `<p><small>Sin grupo en la vista previa: ${sueltas.join(', ')}</small></p>`
   return h
+}
+
+// Sección «Patio»: por equipo, su actividad en las 4 fases (y quieta), más la genérica, el piso y el dosel.
+function seccionPatio() {
+  let h = '<h2>Patio de agentes: color y actividad por equipo</h2>'
+  const equipos = [...Object.keys(actividades.ACTIVIDAD_EQUIPO), 'equipo-nuevo']
+  for (const equipo of equipos) {
+    const { actividad, pensada } = actividades.actividadDe(equipo)
+    const acento = glifos.EQUIPO_ACENTO[equipo] ?? glifos.EQUIPO_ACENTO.base
+    const datos = actividades.actividadParaCelda(actividad, 2, acento[0])
+    h += `<h3>${equipo}: ${datos.texto}${pensada ? '' : ' (genérica: hay que pensarle una)'}</h3><div class="fila">`
+    for (const fase of ['entra', 'juega', 'sale', 'explota']) {
+      const svg = patio.celdaPatioSvg({ fase, acento, actividad: datos, semilla: 5, etiqueta: 'T-81', titulo: `T-81 · equipo ${equipo}` })
+      h += `<div><small>${fase}</small><br>${registrar(`celda ${equipo} ${fase}`, svg)}</div>`
+    }
+    datos.cuadros.forEach((_c, i) => {
+      const uno = { ...datos, cuadros: [datos.cuadros[i]], tiempos: [1] }
+      const svg = patio.celdaPatioSvg({ fase: 'juega', acento, actividad: uno, semilla: 5, etiqueta: 'T-81', quieto: true })
+      h += `<div><small>cuadro ${i + 1}</small><br>${registrar(`celda ${equipo} cuadro ${i + 1}`, svg)}</div>`
+    })
+    h += '</div>'
+  }
+  h += '<h3>Piso del patio</h3>' + registrar('piso patio', patio.pisoPatioSvg(360, 2, { fondo: '#0E4A22' }))
+  h += '<h3>Dosel del patio</h3>' + registrar('dosel patio', patio.doselPatioSvg(360, 2))
+  return h
+}
+
+// Sección «Leyenda de colores»: los 12 equipos como los muestra el panel (fondo oscuro del equipo, letra crema).
+function seccionLeyenda() {
+  let h = '<h2>Leyenda de colores del patio</h2><div class="fila">'
+  for (const [equipo, [claro, oscuro]] of Object.entries(glifos.EQUIPO_ACENTO)) {
+    h += `<div class="muestra" style="background:${oscuro};color:#FFF4DF;text-shadow:none">■ ${equipo}</div>` +
+      `<div class="muestra" style="background:${claro}">camisa</div>`
+  }
+  return h + '</div>'
 }
 
 // Sección «Glifos»: 5 tipos × 6 equipos.
@@ -143,7 +170,7 @@ function seccionTaller() {
   return '<h2>Pared del taller</h2>' + registrar('pared taller', templo.paredTallerSvg(300, 2))
 }
 
-const cuerpo = seccionCara() + seccionPatio() + seccionGlifos() + seccionDioses() + seccionTaller() + seccionTextoPixel() + seccionResto()
+const cuerpo = seccionCara() + seccionPatio() + seccionLeyenda() + seccionGlifos() + seccionDioses() + seccionTaller() + seccionTextoPixel() + seccionResto()
 const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Preview pixel</title>
 <style>
 body{margin:0;font-family:monospace}
@@ -160,11 +187,12 @@ h3{margin:14px 0 6px}
 const salida = join(aca, 'preview.html')
 writeFileSync(salida, html, 'utf8')
 
-// Verificación de cada SVG.
+// Verificación de cada SVG. Tope de peso por SVG (más estricto que los 150.000 del plan).
+const TOPE = 120000
 const prohibidos = ['<script', '<foreignObject', 'onload', 'href', 'javascript:']
 const fallas = []
 for (const { nombre, svg } of todos) {
-  if (svg.length >= 120000) fallas.push(`${nombre}: pesa ${svg.length}`)
+  if (svg.length >= TOPE) fallas.push(`${nombre}: pesa ${svg.length}`)
   if (!svg.startsWith('<svg')) fallas.push(`${nombre}: no empieza con <svg`)
   for (const p of prohibidos) if (svg.includes(p)) fallas.push(`${nombre}: contiene ${p}`)
   if (/\son[a-z]+=/i.test(svg)) fallas.push(`${nombre}: atributo on…=`)
@@ -193,7 +221,7 @@ for (const [nombre, svg] of [
   ['estado hostil', px.palabraEstadoSvg('<script>x</script>', 3)],
 ]) {
   registrar(nombre, svg)
-  if (svg.length >= 120000) fallas.push(`${nombre}: pesa ${svg.length}`)
+  if (svg.length >= TOPE) fallas.push(`${nombre}: pesa ${svg.length}`)
   if (!svg.startsWith('<svg') || svg.includes('<script') || svg.includes('href') || svg.includes('javascript:')) fallas.push(`${nombre}: contenido prohibido`)
 }
 
@@ -201,6 +229,6 @@ if (fallas.length) {
   console.error(fallas.join('\n'))
   process.exit(1)
 }
-const mayor = Math.max(...todos.map(t => t.svg.length))
-console.log(`SVGs verificados: ${todos.length}, el más pesado: ${mayor} caracteres`)
+const mayor = todos.reduce((a, b) => (b.svg.length > a.svg.length ? b : a))
+console.log(`SVGs verificados: ${todos.length}, el más pesado: ${mayor.nombre} con ${mayor.svg.length} caracteres (tope ${TOPE})`)
 console.log('OK')

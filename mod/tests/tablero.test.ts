@@ -181,14 +181,14 @@ test('ruge al fallar un subagente y vuelve a pensando a los ~5 s', async ($, on)
   expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
 })
 
-test('contento cuando terminan todos sin fallos y luego aburrido', async ($, on) => {
+test('festeja cuando terminan todos sin fallos y luego aburrido', async ($, on) => {
     fsFalso(on)
   let list: unknown[] = [D('r1', 'running')]
   const { ui, paso } = await montar($, on, () => list)
   await paso(2000)
   list = [D('r1', 'completed')]
   await paso(2000)
-  expect(await jaguarAlt(ui)).toBe('Oficina, robot feliz')
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot festejando')
   await paso(6000)
   expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
 })
@@ -202,7 +202,8 @@ test('al acecho con un subagente nuevo corriendo y luego pensando', async ($, on
   await paso(2000)
   expect(await jaguarAlt(ui)).toBe('Oficina, robot manos a la obra')
   await paso(4000)
-  expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
+  // Con dos corriendo, tipea rápido.
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot tipeando rápido')
 })
 
 test('un subagente visto por primera vez ya terminado no dispara reacción (queda aburrido)', async ($, on) => {
@@ -254,12 +255,19 @@ test('molesto después de rugir, hasta que aparece uno nuevo corriendo', async (
   expect(await jaguarAlt(ui)).toBe('Oficina, robot procesando')
 })
 
-test('dormido tras 2 minutos sin nada corriendo', async ($, on) => {
+test('ocio: café, a los 2 minutos otra cosa (sin parpadeo) y dormido tras 10 minutos', async ($, on) => {
     fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('c1', 'completed')])
   await paso(2000)
   expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
-  await paso(130000)
+  await paso(118000)
+  expect(await jaguarAlt(ui)).toBe('Oficina, robot tomando café')
+  await paso(4000)
+  const segundo = await jaguarAlt(ui)
+  expect(segundo === 'Oficina, robot tomando café' || segundo === 'Oficina, robot en ahorro de energía').toBe(false)
+  await paso(2000)
+  expect(await jaguarAlt(ui)).toBe(segundo)
+  for (let i = 0; i < 50; i++) await paso(10000)
   expect(await jaguarAlt(ui)).toBe('Oficina, robot en ahorro de energía')
 })
 

@@ -41,7 +41,10 @@ import {
 } from './arte-escritorios'
 import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
 import { DIOSES_EQUIPO, diosSvg } from './arte-iconos'
-import { EQUIPO_ACENTO, TIPO_NOMBRE, glifoMatriz, glifoPaleta, glifoSvg, tipoDeAgente } from './arte-iconos'
+import { EQUIPO_ACENTO, TIPO_NOMBRE, glifoSvg, tipoDeAgente } from './arte-iconos'
+import { actividadDe, actividadParaCelda } from './arte-actividades'
+import { DORMIR_MS, OCIO_PASO_MS, SOSPECHA_MS, decidirEmocion, franjaHora } from './emociones'
+import type { Grupo } from './emociones'
 import type { FilaTiempo } from './pixel'
 import {
   PALETTE,
@@ -91,6 +94,7 @@ const filtroAtom = atom({ plugin: 'tablero-oficina', key: 'filtro' } as const, '
 const flashAtom = atom({ plugin: 'tablero-oficina', key: 'flashHasta' } as const, 0)
 
 const reaccionAtom = atom({ plugin: 'tablero-oficina', key: 'reaccion' } as const, null)
+const usoAtom = atom({ plugin: 'tablero-oficina', key: 'uso' } as const, null)
 const molestoAtom = atom({ plugin: 'tablero-oficina', key: 'molesto' } as const, '')
 const patioAtom = atom({ plugin: 'tablero-oficina', key: 'patio' } as const, {})
 const quietoAtom = atom({ plugin: 'tablero-oficina', key: 'quieto' } as const, false)
@@ -106,10 +110,10 @@ const NARROW_COLUMNS = 70
 // Celdas que ocupan las columnas fijas de una fila de subagente (estado, tarjeta, modelo, rol).
 const FIXED_COLUMNS = 37
 const REACT_LONG_MS = 5000
+const REACT_MEDIO_MS = 3000
 const REACT_SHORT_MS = 2000
 const REACT_BUFIDO_MS = 1500
-const SOSPECHA_MS = 600000
-const DORMIR_MS = 120000
+const REACT_CHISPAZO_MS = 2500
 const FLASH_MS = 5000
 const SVG_MAX = 131072
 const BUCKET_MS = 10000
@@ -322,6 +326,32 @@ const PATIO_FILA_ALTO = PATIO_ALTO * 2
 // Instante fijo (variable de módulo) desde el que se cuenta el ocio si no hay ningún fin registrado.
 let ocioModulo = 0
 
+// Desde cuándo no hay nada que hacer: el último fin registrado o, si no hay ninguno, el instante del módulo.
+function ocioDesdeDe(rows: TableroFila[], ahora: number): number {
+  const lastEnded = rows.reduce((max, row) => Math.max(max, row.endedAt ?? 0), 0)
+  if (lastEnded > 0) return lastEnded
+  if (ocioModulo === 0 || ocioModulo > ahora) ocioModulo = ahora
+
+  return ocioModulo
+}
+
+// Minutos desde la medianoche, en la hora local de la computadora.
+function minutosDelDia(ms: number): number {
+  const d = new Date(ms)
+
+  return d.getHours() * 60 + d.getMinutes()
+}
+
+// Lo que hace cambiar la cara sin que cambie nada más: el paso del ocio y la franja de la hora.
+// Si cambia entre dos instantes (con el mismo inicio del ocio), hay que redibujar.
+function ritmoRobot(rows: TableroFila[], ocioDesde: number, ms: number): string {
+  if (rows.some(row => row.status === 'running')) return 'trabajo'
+  const ocio = Math.max(0, ms - ocioDesde)
+  const paso = Math.min(Math.floor(ocio / OCIO_PASO_MS), Math.ceil(DORMIR_MS / OCIO_PASO_MS))
+
+  return `${paso}|${franjaHora(minutosDelDia(ms))?.emocion ?? ''}`
+}
+
 // El timer vive en el módulo: una recarga en caliente lo cancela junto con
 // el entorno viejo, y el render lo vuelve a armar si el panel sigue abierto.
 let timer: Timer | undefined
@@ -370,35 +400,62 @@ function mergeAgents(
   return { rows: [...kept, ...fresh].sort((a, b) => a.firstSeen - b.firstSeen), finished }
 }
 
-type ReaccionTipo = 'caceria' | 'ruge' | 'contento' | 'bufido' | 'guardado'
+type ReaccionTipo =
+  | 'caceria'
+  | 'ruge'
+  | 'contento'
+  | 'bufido'
+  | 'guardado'
+  | 'panico'
+  | 'frustrado'
+  | 'chispazo'
+  | 'festeja'
+  | 'aplaude'
+  | 'orgullo'
+  | 'alivio'
+  | 'saluda'
+  | 'sorpresa'
 
-// Compara la lista anterior con la nueva. Prioridad: ruge > bufido > contento > caceria.
+// Compara la lista anterior con la nueva y elige UNA reacción, la más fuerte:
+// fallas (pánico si son varias, frustrado si ya estaba molesto, ruge) > frenado (bufido) >
+// terminados (alivio si estaba molesto, festeja si terminaron todos, aplaude si varios, contento si uno) >
+// nuevos (sorpresa si llegan 3 o más juntos, caceria si no).
 // Un subagente visto por primera vez ya terminado no dispara nada.
 function detectReaction(
   prev: TableroFila[],
   rows: TableroFila[],
   now: number,
+  molesto0 = '',
 ): { tipo: ReaccionTipo; hasta: number; quien?: string } | null {
   const prevById = new Map(prev.map(row => [row.id, row]))
-  const failedRow = rows.find(row => {
-    const old = prevById.get(row.id)
+  const paso = (status: string) =>
+    rows.filter(row => {
+      const old = prevById.get(row.id)
 
-    return row.status === 'failed' && old !== undefined && old.status !== 'failed'
-  })
-  if (failedRow) return { tipo: 'ruge', hasta: now + REACT_LONG_MS, quien: quienDe(failedRow) }
-  const killedRow = rows.find(row => {
-    const old = prevById.get(row.id)
-
-    return row.status === 'killed' && old !== undefined && old.status !== 'killed'
-  })
-  if (killedRow) return { tipo: 'bufido', hasta: now + REACT_BUFIDO_MS, quien: quienDe(killedRow) }
-  const wasRunning = prev.some(row => row.status === 'running')
-  const isRunning = rows.some(row => row.status === 'running')
-  if (wasRunning && !isRunning && rows.some(row => row.status === 'completed')) {
-    return { tipo: 'contento', hasta: now + REACT_LONG_MS }
+      return row.status === status && old !== undefined && old.status !== status
+    })
+  const fallaron = paso('failed')
+  if (fallaron.length >= 2) {
+    return { tipo: 'panico', hasta: now + REACT_LONG_MS, quien: fallaron.map(quienDe).slice(0, 3).join(', ') }
   }
-  const nuevaRow = rows.find(row => row.status === 'running' && !prevById.has(row.id))
-  if (nuevaRow) return { tipo: 'caceria', hasta: now + REACT_SHORT_MS, quien: quienDe(nuevaRow) }
+  if (fallaron.length === 1) {
+    return { tipo: molesto0 !== '' ? 'frustrado' : 'ruge', hasta: now + REACT_LONG_MS, quien: quienDe(fallaron[0]) }
+  }
+  const frenados = paso('killed')
+  if (frenados.length > 0) return { tipo: 'bufido', hasta: now + REACT_BUFIDO_MS, quien: quienDe(frenados[0]) }
+  const terminaron = paso('completed')
+  const isRunning = rows.some(row => row.status === 'running')
+  if (terminaron.length > 0) {
+    const quien = quienDe(terminaron[0])
+    if (molesto0 !== '') return { tipo: 'alivio', hasta: now + REACT_MEDIO_MS, quien }
+    if (!isRunning) return { tipo: 'festeja', hasta: now + REACT_LONG_MS, quien }
+    if (terminaron.length >= 2) return { tipo: 'aplaude', hasta: now + REACT_MEDIO_MS, quien: `${terminaron.length} agentes` }
+
+    return { tipo: 'contento', hasta: now + REACT_MEDIO_MS, quien }
+  }
+  const nuevos = rows.filter(row => row.status === 'running' && !prevById.has(row.id))
+  if (nuevos.length >= 3) return { tipo: 'sorpresa', hasta: now + REACT_SHORT_MS, quien: `${nuevos.length} agentes` }
+  if (nuevos.length > 0) return { tipo: 'caceria', hasta: now + REACT_SHORT_MS, quien: quienDe(nuevos[0]) }
 
   return null
 }
@@ -453,18 +510,18 @@ async function refresh($: EngineInterface): Promise<void> {
   const flashVisibleChanged = flash > storedNow !== flash > now
   // Reacción del robot: una nueva reemplaza a la anterior; al vencer se borra (una sola escritura).
   const react0 = await read($, reaccionAtom)
-  const reaction = detectReaction(prev, merged.rows, now)
-  const expired = reaction === null && react0 !== null && react0.hasta <= now
-  // Molesto: se enoja al rugir y se le pasa cuando aparece un subagente nuevo corriendo.
+  // Molesto: se enoja con una falla y se le pasa cuando otro subagente termina bien (alivio).
   // Guarda la tarjeta del que falló (vacío = no molesto; un `true` viejo cuenta como molesto sin nombre).
-  const molesto0 = await read($, molestoAtom)
-  const nuevoCorriendo = merged.rows.some(row => row.status === 'running' && !prev.some(p => p.id === row.id))
-  const molesto =
-    reaction !== null && reaction.tipo === 'ruge'
-      ? (reaction.quien ?? '')
-      : nuevoCorriendo
-        ? ''
-        : molesto0
+  const molestoRaw: unknown = await read($, molestoAtom)
+  const molesto0 = molestoRaw === true ? '?' : typeof molestoRaw === 'string' ? molestoRaw : ''
+  const reaction = detectReaction(prev, merged.rows, now, molesto0)
+  const expired = reaction === null && react0 !== null && react0.hasta <= now
+  const falla = reaction !== null && (reaction.tipo === 'ruge' || reaction.tipo === 'panico' || reaction.tipo === 'frustrado')
+  const molesto = falla
+    ? (reaction?.quien ?? '')
+    : reaction !== null && reaction.tipo === 'alivio'
+      ? ''
+      : (molestoRaw as string)
   // Patio de agentes que salen o explotan.
   const patio0 = await read($, patioAtom)
   const patio = nextPatio(prev, merged.rows, patio0 as Record<string, PatioEntrada>, now)
@@ -473,9 +530,21 @@ async function refresh($: EngineInterface): Promise<void> {
   if (flash !== flash0) await update($, flashAtom, () => flash)
   if (reaction !== null) await update($, reaccionAtom, () => reaction)
   else if (expired) await update($, reaccionAtom, () => null)
-  if (molesto !== molesto0) await update($, molestoAtom, () => molesto)
+  if (molesto !== molestoRaw) await update($, molestoAtom, () => molesto)
   if (patioChanged) await update($, patioAtom, () => patio)
-  if (changed || bucketChanged || flashVisibleChanged || flash !== flash0 || reaction !== null || expired || patioChanged) {
+  // Sin nada corriendo, la cara cambia sola con el paso del ocio y con la hora del día.
+  const ocioDesde = ocioDesdeDe(merged.rows, now)
+  const ritmoChanged = ritmoRobot(merged.rows, ocioDesde, storedNow) !== ritmoRobot(merged.rows, ocioDesde, now)
+  if (
+    changed ||
+    bucketChanged ||
+    flashVisibleChanged ||
+    flash !== flash0 ||
+    reaction !== null ||
+    expired ||
+    patioChanged ||
+    ritmoChanged
+  ) {
     await update($, nowAtom, () => now)
   }
 }
@@ -507,6 +576,10 @@ async function tick($: EngineInterface): Promise<void> {
 
       return
     }
+    if (!usoPedido) {
+      usoPedido = true
+      await pedirUso($)
+    }
     await refresh($)
   } catch {
     // Un tick fallido no debe tirar el panel: el próximo reintenta.
@@ -528,11 +601,126 @@ async function refreshQuietly($: EngineInterface): Promise<void> {
   }
 }
 
+// ---- Uso de la sesión: ventanas de 5 horas y semanal, contexto y compactar ----
+
+type UsoSesion = {
+  limites: Array<{ kind: string; percentUsed: number; resetsAt?: string }>
+  contexto?: number
+  medido: number
+}
+
+// Se pide `$.session.usage()` una vez por carga del módulo; después llegan los `session.measure`.
+let usoPedido = false
+
+// Lo que el panel guarda de `$.session.usage()` o de `session.measure`: solo números y textos simples.
+function normalizarUso(datos: unknown, medido: number): UsoSesion {
+  const d = (datos ?? {}) as { rateLimits?: unknown; context?: { percent?: unknown } }
+  const limites: UsoSesion['limites'] = []
+  for (const l of Array.isArray(d.rateLimits) ? d.rateLimits : []) {
+    const kind = String((l as { kind?: unknown })?.kind ?? '')
+    const percentUsed = Number((l as { percentUsed?: unknown })?.percentUsed)
+    if (kind === '' || !Number.isFinite(percentUsed)) continue
+    const resetsAt = (l as { resetsAt?: unknown }).resetsAt
+    limites.push(typeof resetsAt === 'string' && resetsAt !== '' ? { kind, percentUsed, resetsAt } : { kind, percentUsed })
+  }
+  const pct = Number(d.context?.percent)
+  const out: UsoSesion = { limites, medido }
+  if (d.context?.percent !== undefined && Number.isFinite(pct)) out.contexto = pct
+
+  return out
+}
+
+// Guarda el uso solo si cambió algo visible (no el instante de la medición). Nunca lanza.
+async function guardarUso($: EngineInterface, datos: unknown): Promise<void> {
+  try {
+    const ahora = await $.clock.now()
+    const nuevo = normalizarUso(datos, ahora)
+    const previo = (await read($, usoAtom)) as UsoSesion | null
+    const igual =
+      previo !== null &&
+      JSON.stringify(previo.limites) === JSON.stringify(nuevo.limites) &&
+      previo.contexto === nuevo.contexto
+    if (!igual) await update($, usoAtom, () => nuevo)
+  } catch {
+    // El uso es accesorio: sin datos, el panel lo dice.
+  }
+}
+
+async function pedirUso($: EngineInterface): Promise<void> {
+  try {
+    await guardarUso($, await $.session.usage())
+  } catch {
+    // Sin datos de uso: el próximo `session.measure` los trae.
+  }
+}
+
+// Compacta la conversación, lo mismo que `/compact`. El motor lo rechaza mientras Claude está en un turno.
+async function compactarSesion($: EngineInterface): Promise<void> {
+  await update($, abiertosAtom, v => ({ ...v, 'confirmar-compactar': false }))
+  await setNotice($, 'Compactando la sesión…')
+  try {
+    const resultado = await $.session.compact()
+    if (resultado.messages === undefined) {
+      await setNotice($, `No se compactó: ${clean(resultado.skip) || 'otro plugin lo frenó'}.`)
+
+      return
+    }
+    const antes = resultado.tokensBefore
+    const despues = resultado.tokensAfter
+    const cifras =
+      typeof antes === 'number' && typeof despues === 'number' ? `: de ${fmtNum(antes)} a ${fmtNum(despues)} tokens` : ''
+    await setNotice($, `Sesión compactada${cifras}.`)
+    await pedirUso($)
+  } catch (error) {
+    await setNotice(
+      $,
+      `No se pudo compactar: ${errorText(error)}. Si Claude está respondiendo, probá cuando termine el turno.`,
+    )
+  }
+}
+
+const NOMBRE_LIMITE: Record<string, string> = { five_hour: '5 horas', seven_day: 'Semanal', spend_limit: 'Gasto' }
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+
+// «hoy 15:30» o «lun 09:00», en la hora local; vacío si la fecha no se entiende.
+function cuandoRenueva(iso: string | undefined, ahora: number): string {
+  if (!iso) return ''
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return ''
+  const d = new Date(t)
+  const hoy = new Date(ahora)
+  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const mismoDia =
+    d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate()
+
+  return `${mismoDia ? 'hoy' : DIAS[d.getDay()]} ${hhmm}`
+}
+
+// Barra de texto de `ancho` celdas: llenas y vacías según el porcentaje (acotado a 0..100).
+function barraUso(pct: number, ancho: number): { llena: string; vacia: string } {
+  const n = Math.round((Math.max(0, Math.min(100, pct)) / 100) * ancho)
+
+  return { llena: '█'.repeat(n), vacia: '░'.repeat(ancho - n) }
+}
+
+function colorUso(pct: number): string {
+  if (pct >= 80) return '#e8402a'
+  if (pct >= 50) return PALETTE.oro
+
+  return '#4fe08a'
+}
+
 // ---- Roles: estado, store y registro -------------------------------------
 
 async function setNotice($: EngineInterface, text: string): Promise<void> {
   try {
     await update($, noticeAtom, () => text)
+    // Un aviso de error hace saltar chispas al robot.
+    if (text.startsWith('No se pudo')) {
+      const ahora = await $.clock.now()
+      await update($, reaccionAtom, () => ({ tipo: 'chispazo' as const, hasta: ahora + REACT_CHISPAZO_MS }))
+      await update($, nowAtom, () => ahora)
+    }
   } catch {
     // Un aviso que no se puede guardar no debe romper nada.
   }
@@ -809,7 +997,7 @@ async function saveDraft($: EngineInterface): Promise<void> {
     )
     if (ok) {
       const ahora = await $.clock.now()
-      await update($, reaccionAtom, () => ({ tipo: 'guardado', hasta: ahora + 3000, quien: draft.name }))
+      await update($, reaccionAtom, () => ({ tipo: 'orgullo' as const, hasta: ahora + REACT_MEDIO_MS, quien: draft.name }))
       await update($, nowAtom, () => ahora)
     }
   } catch (error) {
@@ -852,6 +1040,18 @@ export const register: Register = on => {
     // Relee el catálogo (y, solo si falla, vuelve a registrar los roles de siempre).
     await cargarCatalogo($)
     await refresh($)
+    // Al abrir el panel el robot saluda (y guiña al final), salvo que ya esté reaccionando a algo.
+    try {
+      const ahora = await $.clock.now()
+      const vigente = await read($, reaccionAtom)
+      if (vigente === null || vigente.hasta <= ahora) {
+        await update($, reaccionAtom, () => ({ tipo: 'saluda' as const, hasta: ahora + REACT_MEDIO_MS }))
+        await update($, nowAtom, () => ahora)
+      }
+    } catch {
+      // El saludo es accesorio.
+    }
+    await pedirUso($)
     startTimer($)
 
     return { text: 'Tablero de subagentes abierto.' }
@@ -903,6 +1103,14 @@ export const register: Register = on => {
         void refreshQuietly($)
       })
     }
+
+    return result
+  })
+
+  // El motor avisa cuando cambia el uso (tras cada turno o cuando una ventana se mueve un punto).
+  on('session.measure', async ($, e, next) => {
+    const result = await next(e)
+    await guardarUso($, e)
 
     return result
   })
@@ -974,33 +1182,28 @@ export const register: Register = on => {
         draftComun.model !== editadoComun.model ||
         draftComun.effort !== editadoComun.effort ||
         JSON.stringify(draftComun.tools) !== JSON.stringify(editadoComun.tools))
-    // Emoción del robot: la reacción vigente manda; si no, la base según lo que pasa.
+    // Emoción del robot: la decide emociones.ts con lo que pasa ahora (ver sus prioridades).
     const nowReal = await $.clock.now()
-    const emocionDe = (): { emocion: string; ocioDesde: number; dormirEn?: number } => {
-      const tipo = reaccion && reaccion.hasta > now ? String(reaccion.tipo) : ''
-      if (tipo === 'ruge') return { emocion: 'ruge', ocioDesde: 0 }
-      if (tipo === 'bufido') return { emocion: 'bufido', ocioDesde: 0 }
-      if (tipo === 'contento' || tipo === 'festeja' || tipo === 'guardado') return { emocion: 'contento', ocioDesde: 0 }
-      if (tipo === 'caceria' || tipo === 'salta') return { emocion: 'caceria', ocioDesde: 0 }
-      if (running > 0) {
-        const largo = rows.some(row => row.status === 'running' && now - row.firstSeen > SOSPECHA_MS)
-
-        return { emocion: largo ? 'sospecha' : 'pensando', ocioDesde: 0 }
-      }
-      if (molesto) return { emocion: 'molesto', ocioDesde: 0 }
-      const lastEnded = rows.reduce((max, row) => Math.max(max, row.endedAt ?? 0), 0)
-      if (lastEnded === 0 && (ocioModulo === 0 || ocioModulo > nowReal)) ocioModulo = nowReal
-      const ocioDesde = lastEnded > 0 ? lastEnded : ocioModulo
-      if (nowReal - ocioDesde >= DORMIR_MS) return { emocion: 'dormido', ocioDesde }
-
-      return { emocion: 'aburrido', ocioDesde, dormirEn: Math.round((ocioDesde + DORMIR_MS - nowReal) / 1000) }
-    }
-    const estadoBase = emocionDe()
-    // Editar con cambios sin guardar: la cara sospecha, salvo que haya una reacción fuerte.
-    const sospechaPorCambios =
-      hayCambios && (estadoBase.emocion === 'aburrido' || estadoBase.emocion === 'dormido' || estadoBase.emocion === 'pensando')
-    const estado = sospechaPorCambios ? { emocion: 'sospecha', ocioDesde: 0 } : estadoBase
-    const guardadoVigente = reaccion !== null && reaccion.tipo === 'guardado' && reaccion.hasta > nowReal
+    const reaccionVigente = reaccion && reaccion.hasta > now ? String(reaccion.tipo) : ''
+    const corriendoRows = rows.filter(row => row.status === 'running')
+    const masLargoMs = corriendoRows.reduce((max, row) => Math.max(max, now - row.firstSeen), 0)
+    const ocioDesde = ocioDesdeDe(rows, nowReal)
+    const minutosHoy = minutosDelDia(nowReal)
+    const franja = franjaHora(minutosHoy)
+    const estado: { emocion: string; grupo: Grupo } = decidirEmocion({
+      reaccion: reaccionVigente,
+      corriendo: running,
+      masLargoMs,
+      molesto,
+      cambiosSinGuardar: hayCambios,
+      ocioMs: nowReal - ocioDesde,
+      minutosDelDia: minutosHoy,
+      semilla: ocioDesde,
+    })
+    // Ocio, hora del día o cambios sin guardar: cada vista pone su propia frase en la burbuja.
+    const tranquilo = estado.grupo === 'ocio' || estado.grupo === 'hora'
+    const orgulloVigente =
+      reaccion !== null && (reaccion.tipo === 'orgullo' || reaccion.tipo === 'guardado') && reaccion.hasta > nowReal
 
     let caraSvg = ''
     let caraAlt = ''
@@ -1011,10 +1214,8 @@ export const register: Register = on => {
     if (hasSvg) {
       caraAlt = `Oficina, robot ${EMOCION_ALT[estado.emocion] ?? estado.emocion}`
       // La firma no lleva `now`: el string queda idéntico entre redibujos y la animación no reinicia.
-      caraSvg = cachedSvg(
-        'cara',
-        estado.emocion === 'aburrido' ? `aburrido|${estado.ocioDesde}|${quieto}` : `${estado.emocion}|${quieto}`,
-        () => caraRobotSvg(estado.emocion, 3, { dormirEn: estado.dormirEn, quieto, fondo, marco: true }),
+      caraSvg = cachedSvg('cara', `${estado.emocion}|${quieto}`, () =>
+        caraRobotSvg(estado.emocion, 3, { quieto, fondo, marco: true }),
       )
       const anchoCara = svgSize(caraSvg).width || CARA_ANCHO
       disponible = Math.max(PATIO_ANCHO * 2, W - anchoCara)
@@ -1028,37 +1229,88 @@ export const register: Register = on => {
         nombre !== '' ? `${antes}${nombre}${despues}` : ''
       const quienReaccion = reaccion && typeof reaccion.quien === 'string' ? reaccion.quien : ''
       const minutos = (ms: number): number => Math.max(0, Math.floor(ms / 60000))
-      if (guardadoVigente) return `¡Guardado! ${quienReaccion} estrena rol en la próxima sesión. De nada.`
+      // Trabajando en una franja de la hora del día, la burbuja lo comenta al final.
+      const conHora = (texto: string): string => (franja ? `${texto} ${franja.frase}` : texto)
+      const laburando = (extra: string): string => {
+        const tarjetas = corriendoRows.map(row => parse(row.description, roleNames, row.type).card).filter(c => c !== '')
+        const lista =
+          tarjetas.length > 0 ? `: ${tarjetas.slice(0, 4).join(', ')}${tarjetas.length > 4 ? '…' : ''}.` : '.'
+
+        return conHora(`Laburando con ${plural(corriendoRows.length, 'agente', 'agentes')}${lista} ${extra}`)
+      }
+      if (orgulloVigente) return `¡Guardado! ${quienReaccion} estrena rol en la próxima sesión. De nada.`
       switch (estado.emocion) {
         case 'dormido':
-          return `Modo ahorro de energía hace ${minutos(nowReal - estado.ocioDesde)} min. Despertame si pasa algo interesante.`
-        case 'pensando': {
-          const corriendo = rows.filter(row => row.status === 'running')
-          const tarjetas = corriendo.map(row => parse(row.description, roleNames, row.type).card).filter(c => c !== '')
-          const lista =
-            tarjetas.length > 0 ? `: ${tarjetas.slice(0, 4).join(', ')}${tarjetas.length > 4 ? '…' : ''}.` : '.'
-
-          return `Laburando con ${plural(corriendo.length, 'agente', 'agentes')}${lista} No me distraigas.`
-        }
-        case 'sospecha': {
-          const largo = rows
-            .filter(row => row.status === 'running')
-            .sort((a, b) => a.firstSeen - b.firstSeen)[0]
-          const mins = largo ? minutos(now - largo.firstSeen) : 0
+          return `Modo ahorro de energía hace ${minutos(nowReal - ocioDesde - DORMIR_MS)} min. Despertame si pasa algo interesante.`
+        case 'pensando':
+          return laburando('No me distraigas.')
+        case 'tipea':
+          return laburando('Tecleo a dos manos.')
+        case 'multitarea':
+          return laburando('¡Mil cosas a la vez!')
+        case 'concentrado': {
+          const largo = [...corriendoRows].sort((a, b) => a.firstSeen - b.firstSeen)[0]
           const nombre = largo ? parse(largo.description, roleNames, largo.type).card : ''
 
-          return `${nombre !== '' ? nombre : 'Un agente'} lleva ${mins} min… ¿se fue a almorzar?`
+          return conHora(
+            `${nombre !== '' ? nombre : 'El agente'} lleva ${minutos(masLargoMs)} min. Auriculares puestos: no me hablen.`,
+          )
+        }
+        case 'sospecha': {
+          if (estado.grupo === 'cambios' || (hayCambios && masLargoMs <= SOSPECHA_MS)) {
+            return 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
+          }
+          const largo = [...corriendoRows].sort((a, b) => a.firstSeen - b.firstSeen)[0]
+          const nombre = largo ? parse(largo.description, roleNames, largo.type).card : ''
+
+          return `${nombre !== '' ? nombre : 'Un agente'} lleva ${minutos(masLargoMs)} min… ¿se fue a almorzar?`
         }
         case 'caceria':
           return `¡Llegó${con(quienReaccion, ' ', '')}! A trabajar, que el café no se paga solo.`
+        case 'sorpresa':
+          return `¡Uy! Llegaron ${quienReaccion || 'varios'} de golpe. ¿Quién organizó esta fiesta?`
+        case 'saluda':
+          return '¡Hola! Pasá, que la oficina está abierta.'
         case 'ruge':
           return `¡ERROR! Falló${con(quienReaccion, ' ', '')}. A mí no me mires.`
+        case 'panico':
+          return `¡Fallaron varios a la vez${con(quienReaccion, ' (', ')')}! ¡No es un simulacro!`
+        case 'frustrado':
+          return `¿Otra falla?${con(quienReaccion, ' ', '.')} Esto ya es personal.`
+        case 'chispazo':
+          return 'Chispazo: algo no salió. El aviso de arriba dice qué.'
         case 'molesto':
-          return `Falló${con(molestoQuien, ' ', '')}. Estoy ofendido hasta que despaches otra.`
+          return `Falló${con(molestoQuien, ' ', '')}. Estoy ofendido hasta que algo salga bien.`
         case 'bufido':
           return `¿Frenaron${con(quienReaccion, ' ', '')}? Ok. Ok. Respiro.`
         case 'contento':
+          return `¡Terminó${con(quienReaccion, ' ', '')}! Siguen los demás.`
+        case 'aplaude':
+          return `¡Terminaron ${quienReaccion || 'varios'} juntos! Aplausos.`
+        case 'festeja':
           return '¡Listo! Oleada terminada sin fallas. Obvio.'
+        case 'alivio':
+          return `${quienReaccion !== '' ? quienReaccion : 'Eso'} salió bien. Uf, ya se me pasó el enojo.`
+        case 'manana':
+          return 'Buen día. Primero el café, después los agentes.'
+        case 'hambre':
+          return '¿Ya es mediodía? Me está dando hambre.'
+        case 'casa':
+          return 'Ya son más de las cinco y media: dentro de poco me voy a casa.'
+        case 'bostezo':
+          return 'Aaaah… ¿Nadie tiene trabajo para mí?'
+        case 'estira':
+          return 'Estirando los circuitos. Sin agentes no hay vida.'
+        case 'riega':
+          return 'Riego la planta mientras nadie labura.'
+        case 'diario':
+          return 'Leyendo el diario. Ninguna noticia de agentes.'
+        case 'solitario':
+          return 'Solitario: voy ganando. Nadie me necesita.'
+        case 'silba':
+          return 'Fiu, fiu… la oficina está tranquila.'
+        case 'guina':
+          return 'Todo en orden por acá. Guiño, guiño.'
         default:
           return 'Tomando café. Avisame cuando alguien trabaje.'
       }
@@ -1235,7 +1487,7 @@ export const register: Register = on => {
           editHeader = <Text bold>{`Editando el rol «${draft.name}» (equipo ${equipo})`}</Text>
         }
         const burbujaEditar =
-          (estado.emocion !== 'aburrido' && estado.emocion !== 'dormido' && !sospechaPorCambios) || guardadoVigente
+          orgulloVigente || !(tranquilo || estado.grupo === 'cambios')
             ? burbujaEstado()
             : hayCambios
               ? 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
@@ -1558,12 +1810,19 @@ export const register: Register = on => {
       }
 
       const cantEquipos = new Set(catalogo.agentes.map(a => a.equipos[0] ?? 'sin equipo')).size
-      const burbujaEquipos =
-        estado.emocion !== 'aburrido' && estado.emocion !== 'dormido'
+      const burbujaEquipos = !tranquilo
           ? burbujaEstado()
           : catalogo.agentes.length === 0
             ? 'No encuentro agentes. Creá uno con + Nuevo agente.'
             : `${plural(cantEquipos, 'equipo', 'equipos')} y ${plural(catalogo.agentes.length, 'agente', 'agentes')}. Abrí un equipo para ver quién hace qué.`
+
+      // Un equipo sin actividad en el patio se marca: hay que pensarle una (arte-actividades.ts).
+      const sinActividad = (equipo: string) =>
+        equipo !== 'sin equipo' && !actividadDe(equipo).pensada ? (
+          <Text key={`sin-actividad-${equipo}`} color={PALETTE.oro} wrap="wrap">
+            {`⚠ El equipo ${equipo} no tiene actividad en el patio: hay que pensarla.`}
+          </Text>
+        ) : null
 
       const skillGrupo = (equipo: string, abierto: boolean) =>
         abierto ? (
@@ -1593,6 +1852,7 @@ export const register: Register = on => {
                   />
                 </Box>
               </Box>
+              {sinActividad(equipo)}
               {skillGrupo(equipo, abierto)}
             </Box>
           )
@@ -1643,6 +1903,7 @@ export const register: Register = on => {
                   {subtitulo}
                 </Text>
               )}
+              {sinActividad(equipo)}
               {skillGrupo(equipo, abierto)}
             </Box>
           </Box>
@@ -1711,6 +1972,79 @@ export const register: Register = on => {
     const abiertosSub = await read($, abiertosAtom)
     const informes = await read($, informesAtom)
     const resumenAbierto = abiertosSub.resumen !== false
+
+    // Uso de la sesión: ventanas de 5 h y semanal, contexto y el botón de compactar. Arranca abierto.
+    const uso = (await read($, usoAtom)) as UsoSesion | null
+    const usoAbierto = abiertosSub.uso !== false
+    const confirmandoCompactar = abiertosSub['confirmar-compactar'] === true
+    const anchoBarra = narrow ? 10 : 20
+    const filaUso = (clave: string, nombre: string, pct: number, renueva: string) => {
+      const barra = barraUso(pct, anchoBarra)
+
+      return (
+        <Box key={`uso-${clave}`} flexDirection="row" flexWrap="wrap">
+          <Text>{pad(nombre, 10)}</Text>
+          <Text color={colorUso(pct)}>{barra.llena}</Text>
+          <Text dimColor>{barra.vacia}</Text>
+          <Text bold>{` ${pct.toLocaleString('es-UY', { maximumFractionDigits: 1 })} %`}</Text>
+          {renueva !== '' && <Text dimColor>{` · se renueva ${renueva}`}</Text>}
+        </Box>
+      )
+    }
+    const limitesUso = (uso?.limites ?? []).slice().sort(
+      (a, b) =>
+        (a.kind === 'five_hour' ? 0 : a.kind === 'seven_day' ? 1 : 2) -
+        (b.kind === 'five_hour' ? 0 : b.kind === 'seven_day' ? 1 : 2),
+    )
+    const panelUso = (
+      <Box key="uso-sesion" flexDirection="column">
+        <Button
+          key="abrir-uso"
+          label={`${usoAbierto ? '▾' : '▸'} Uso de la sesión`}
+          onPress={() => alternar($, 'uso', true)}
+        />
+        {usoAbierto && (
+          <Box flexDirection="column" paddingLeft={2}>
+            {limitesUso.map(l =>
+              filaUso(l.kind, NOMBRE_LIMITE[l.kind] ?? l.kind, l.percentUsed, cuandoRenueva(l.resetsAt, nowReal)),
+            )}
+            {limitesUso.length === 0 && (
+              <Text dimColor wrap="wrap">
+                Sin datos de las ventanas de 5 horas y semanal: aparecen con una suscripción, después de la primera respuesta.
+              </Text>
+            )}
+            {uso?.contexto !== undefined && filaUso('contexto', 'Contexto', uso.contexto, '')}
+            <Box flexDirection="row">
+              <Button
+                key="compactar"
+                label="Compactar sesión…"
+                onPress={() => alternar($, 'confirmar-compactar')}
+              />
+            </Box>
+            {confirmandoCompactar && (
+              <Box flexDirection="column">
+                <Text wrap="wrap">
+                  ¿Compactar la conversación ahora? Claude resume lo hablado y libera contexto, igual que /compact.
+                </Text>
+                <Box flexDirection="row">
+                  <Button key="compactar-si" label="Sí, compactar" onPress={() => compactarSesion($)} />
+                  <Text> </Text>
+                  <Button
+                    key="compactar-no"
+                    label="No"
+                    onPress={() => update($, abiertosAtom, v => ({ ...v, 'confirmar-compactar': false }))}
+                  />
+                </Box>
+              </Box>
+            )}
+          </Box>
+        )}
+      </Box>
+    )
+    // Líneas que ocupa el bloque de uso (para no tapar la lista con poco espacio).
+    const lineasUso = usoAbierto
+      ? 2 + Math.max(1, limitesUso.length) + (uso?.contexto !== undefined ? 1 : 0) + (confirmandoCompactar ? 3 : 0)
+      : 1
     const sorted = orderTree(rows)
 
     const count = (status: string) => rows.filter(row => row.status === status).length
@@ -1738,6 +2072,8 @@ export const register: Register = on => {
     let pisoSvg = ''
     type Celda = { id: string; fase: string; svg: string; alt: string; titulo: string }
     const celdas: Celda[] = []
+    // Equipos que hay en el patio, en orden de aparición: la leyenda de colores.
+    const equiposPatio: string[] = []
     let celdasPorFila = 1
     let filasPatio = 1
     let wordSvg = ''
@@ -1749,14 +2085,15 @@ export const register: Register = on => {
         const fase = row.status === 'running' ? 'entra' : entrada && entrada.hasta > now ? entrada.fase : ''
         if (fase === '') continue
         const info = parse(row.description, roleNames, row.type)
-        const { tipo, equipo } = glifoDe(info.base, info.role, catalogo.agentes)
+        const { equipo } = glifoDe(info.base, info.role, catalogo.agentes)
+        const acento = EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base
         const etiqueta = info.card
-        const titulo = [info.card, info.model, info.role, info.text].filter(part => part !== '').join(SEP)
-        const svg = cachedSvg(`celda-${row.id}`, `${fase}|${tipo}|${equipo}|${etiqueta}|${quieto}|${titulo}`, () =>
+        const titulo = [info.card, info.model, info.role, info.text, `equipo ${equipo}`].filter(part => part !== '').join(SEP)
+        const svg = cachedSvg(`celda-${row.id}`, `${fase}|${equipo}|${etiqueta}|${quieto}|${titulo}`, () =>
           celdaPatioSvg({
             fase,
-            matriz: glifoMatriz(tipo),
-            paleta: glifoPaleta(equipo),
+            acento,
+            actividad: actividadParaCelda(actividadDe(equipo).actividad, 2, acento[0]),
             semilla: semillaDe(row.id),
             escala: 2,
             etiqueta,
@@ -1765,6 +2102,7 @@ export const register: Register = on => {
             titulo,
           }),
         )
+        if (svg !== '' && !equiposPatio.includes(equipo)) equiposPatio.push(equipo)
         if (svg === '') continue
         const accion = fase === 'explota' ? 'explotando' : fase === 'sale' ? 'saliendo' : 'trabajando'
         celdas.push({ id: row.id, fase, svg, alt: `Agente ${etiqueta} ${accion}`, titulo })
@@ -1830,7 +2168,7 @@ export const register: Register = on => {
 
       return base + Math.max(1, Math.ceil((full.length + 2 + depth * 2) / Math.max(10, textCols - 2)))
     }
-    let budget = Math.max(1, termRows - 8)
+    let budget = Math.max(1, termRows - 8 - lineasUso)
     let showSummarySvg = false
     let showLine = false
     let showHeader = false
@@ -1838,7 +2176,7 @@ export const register: Register = on => {
       // Se reservan pestañas, aviso, texto del resumen y la línea de «y N más».
       const reserved = sorted.slice(0, 5).reduce((sum, item) => sum + rowLines(item), 0)
       // Se suma la línea del botón «Resumen visual».
-      let spare = termRows - 6 - Math.max(1, reserved) - (narrow ? 1 : 0)
+      let spare = termRows - 6 - lineasUso - Math.max(1, reserved) - (narrow ? 1 : 0)
       const summaryCost = linesOf(wordSvg)
       if (summaryCost > 0 && spare >= summaryCost) {
         showSummarySvg = true
@@ -1851,15 +2189,16 @@ export const register: Register = on => {
       }
       const headerPx = Math.max(CARA_ALTO, DOSEL_ALTO + PATIO_FILA_ALTO * filasPatio)
       // Se suman la franja de greca y la línea de la burbuja del robot.
+      // También la línea de la leyenda de colores del patio.
       const headerCost =
-        resumenAbierto && caraSvg !== '' ? Math.ceil(headerPx / 20) + 2 : 0
+        resumenAbierto && caraSvg !== '' ? Math.ceil(headerPx / 20) + 2 + (equiposPatio.length > 0 ? 1 : 0) : 0
       if (headerCost > 0 && spare >= headerCost) {
         showHeader = true
         spare -= headerCost
       }
       const used =
         (showSummarySvg ? summaryCost : 0) + (showLine ? lineCost : 0) + (showHeader ? headerCost : 0)
-      budget = Math.max(1, termRows - 6 - used)
+      budget = Math.max(1, termRows - 6 - lineasUso - used)
     }
     // Cuántas filas entran en `budget` líneas; como mínimo una, así la lista nunca desaparece.
     let room = 0
@@ -1884,6 +2223,17 @@ export const register: Register = on => {
         ))}
         {pisoSvg !== '' && (
           <Svg key="piso-patio" source={pisoSvg} alt="Patio de agentes vacío" {...sizeProps(pisoSvg)} isInteractive />
+        )}
+        {equiposPatio.length > 0 && (
+          <Box key="leyenda-patio" flexDirection="row" flexWrap="wrap" width="100%" columnGap={1}>
+            {equiposPatio.map(equipo => (
+              <Text
+                key={`leyenda-${equipo}`}
+                backgroundColor={(EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base)[1]}
+                color={PALETTE.crema}
+              >{` ■ ${equipo} `}</Text>
+            ))}
+          </Box>
         )}
       </Box>
     )
@@ -1945,6 +2295,7 @@ export const register: Register = on => {
           />
         )}
         </Box>
+        {panelUso}
         {sorted.length === 0 &&
           (hasSvg && e.surface !== 'terminal' ? (
             <Box borderStyle="round" borderColor="#3a453a" paddingX={1} flexDirection="column">
