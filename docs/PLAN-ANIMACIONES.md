@@ -185,5 +185,5 @@ Son 31 emociones. Prioridad: eventos malos > eventos buenos > social > trabajo >
 - **Robot:** 31 emociones. La cara se redibuja sola cuando cambia el paso del ocio o la franja de la hora (sin escrituras de más: una cada 2 minutos como mucho).
 - **Molesto:** ahora dura hasta que otro agente termina bien (alivio), no hasta que entra uno nuevo; si no, el alivio no podía pasar nunca.
 - **Uso de la sesión y compactar:** en la vista Subagentes, desplegable «Uso de la sesión».
-- **Pruebas:** `plugin validate mod` en 0. `plugin test mod`: en Linux 148 pass y los mismos 50 fail de antes, todos por las rutas de Windows del disco falso (`C:\home-falso`); con esas rutas pasadas a Linux en una copia, 200 pass y 0 fail. En Windows se esperan 200 pass.
+- **Pruebas:** `plugin validate mod` en 0. `plugin test mod`: en Linux 148 pass y 52 fail (los 50 de antes y 2 pruebas nuevas de Equipos), todos por las rutas de Windows del disco falso (`C:\home-falso`). Con esas rutas pasadas a Linux en una copia: 200 pass y 0 fail. En Windows se esperan 200 pass.
 - **Vista previa:** 294 SVG, el más pesado 118.160 caracteres (tope 120.000).
