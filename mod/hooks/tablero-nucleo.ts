@@ -10,6 +10,7 @@ import { PATIO_EXPLOTA_MS, PATIO_SALE_MS } from './arte-escritorios'
 import { EQUIPO_ACENTO, tipoDeAgente } from './arte-iconos'
 import { DORMIR_MS, franjaHora, OCIO_PASO_MS } from './emociones'
 import { PALETTE } from './pixel'
+import { CLARO } from './tema'
 
 export const TAREA_EQUIPO: Record<string, string> = {
   base: 'roles genéricos para cualquier proyecto',
@@ -41,7 +42,7 @@ export const fmtNum = (n: number): string => Math.round(Number.isFinite(n) ? n :
 export const totalTokens = (t: Record<string, number>): number =>
   Object.values(t).reduce((sum, n) => sum + (typeof n === 'number' && Number.isFinite(n) ? n : 0), 0)
 
-export const DESIGN_WIDTH = 420
+export const DESIGN_WIDTH = 640
 export const NARROW_COLUMNS = 70
 // Celdas que ocupan las columnas fijas de una fila de subagente (estado, tarjeta, modelo, rol).
 export const FIXED_COLUMNS = 37
@@ -291,9 +292,9 @@ export function semillaDe(id: string): number {
 export const CARA_ALTO = 102
 export const CARA_ANCHO = 126
 export const DOSEL_ALTO = 18
-export const FONDO_BURBUJA = '#0a2414'
-export const FONDOS_FILA = ['#10261a', '#0c1f15']
-export const FONDO_HOVER = '#1f4a30'
+export const FONDO_BURBUJA = CLARO.burbuja
+export const FONDOS_FILA = [...CLARO.filas]
+export const FONDO_HOVER = CLARO.filaHover
 // Instante fijo (variable de módulo) desde el que se cuenta el ocio si no hay ningún fin registrado.
 let ocioModulo = 0
 

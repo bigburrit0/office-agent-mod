@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { STATUS_COLORS } from '../hooks/pixel'
+import { CLARO, contrasteHex, legibleSobre } from '../hooks/tema'
 import { RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, AGENTS, rotulo, PANES, D, montar, celdasAlt, montarAncho, todos, textosDe, montarSub, USO, turnoSub, textos, glifoAlts, burbuja, altsSvg } from './ayuda-tablero'
 
 // Alias local: el ayudante compartido (ayuda-tablero.ts) todavía busca el texto viejo del robot.
@@ -38,7 +39,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const estadoWeird = todosTextos.filter(t => String(t.text ?? '').trim().startsWith('weird'))
     expect(estadoWeird.length).toBe(1)
     expect(/^(corre|lista|falló|frenada)/.test(String(estadoWeird[0].text ?? '').trim())).toBe(false)
-    expect(estadoWeird[0].props.color).toBe(STATUS_COLORS.otro)
+    // El color «otro» pasa por legibleSobre contra los fondos claros de la fila.
+    const fondosFila = [CLARO.filas[0], CLARO.filas[1], CLARO.filaHover]
+    expect(estadoWeird[0].props.color).toBe(fondosFila.reduce((c, f) => legibleSobre(c, f), STATUS_COLORS.otro))
+    for (const f of fondosFila) expect(contrasteHex(String(estadoWeird[0].props.color), f) >= 4.5).toBe(true)
     expect(todosTextos.some(t => String(t.text ?? '').includes('texto raro'))).toBe(true)
 
     const svgs = await ui.findAll({ type: 'Svg' })
@@ -591,13 +595,13 @@ test('encabezado: la cara mide 126 de ancho y existe el dosel', async ($, on) =>
 })
 
 test('patio: con más agentes que el máximo se muestra «Y N agentes más»', async ($, on) => {
-  const lista = Array.from({ length: 15 }, (_, i) => D(`m${i}`, 'running'))
+  const lista = Array.from({ length: 25 }, (_, i) => D(`m${i}`, 'running'))
   const { ui, paso } = await montar($, on, () => lista)
   await paso(2000)
   const alts = await altsSvg(ui)
-  // 100 columnas: 6 celdas por fila, máximo 12, se muestran 11 y la celda «+N».
-  expect(alts.includes('Y 4 agentes más')).toBe(true)
-  expect(alts.filter(a => /^Agente /.test(a)).length).toBe(11)
+  // 100 columnas (arte de 600 px, 474 de patio): 10 celdas por fila a escala 2, máximo 20, se muestran 19 y la celda «+N».
+  expect(alts.includes('Y 6 agentes más')).toBe(true)
+  expect(alts.filter(a => /^Agente /.test(a)).length).toBe(19)
 })
 
 test('barra común: el primer botón es la pestaña Subagentes y sin hotkey (desktop)', async ($, on) => {

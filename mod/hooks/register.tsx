@@ -67,9 +67,6 @@ import {
   detectReaction,
   DOSEL_ALTO,
   fmtNum,
-  FONDO_BURBUJA,
-  FONDO_HOVER,
-  FONDOS_FILA,
   glifoDe,
   INFORME_MAX,
   isKnown,
@@ -105,6 +102,7 @@ import {
   TITLE,
   totalTokens,
 } from './tablero-nucleo'
+import { CLARO, colorUsoClaro, legibleSobre, PASTILLAS_CLARO } from './tema'
 import type { Ordered, PatioEntrada, UsoSesion } from './tablero-nucleo'
 
 // ---- Estado del panel (átomos de $.state) ----------------------------------
@@ -740,7 +738,7 @@ export const register: Register = on => {
         : undefined)
     const W =
       columns !== undefined
-        ? Math.min(DESIGN_WIDTH, Math.max(200, Math.round(columns * 8)))
+        ? Math.min(DESIGN_WIDTH, Math.max(200, Math.round(columns * 6)))
         : DESIGN_WIDTH
     // Panel angosto: menos de 70 celdas útiles. Si no se sabe el ancho, se asume ancho.
     const narrow = bodyColumns !== undefined && bodyColumns < NARROW_COLUMNS
@@ -760,7 +758,13 @@ export const register: Register = on => {
     const molestoRaw: unknown = await read($, molestoAtom)
     const molestoQuien = typeof molestoRaw === 'string' ? molestoRaw : ''
     const molesto = molestoRaw === true || molestoQuien !== ''
-    const fondo = PALETTE.selva
+    const fondo = CLARO.escena
+    // Tema claro del panel en el escritorio; en la terminal el texto sin fondo propio sigue con el color del terminal.
+    const claro = hasSvg && e.surface !== 'terminal'
+    const tx = claro ? CLARO.texto : undefined
+    const suave: { color?: string; dimColor?: boolean } = claro ? { color: CLARO.textoSuave } : { dimColor: true }
+    const acentoTxt = claro ? CLARO.acento : PALETTE.oro
+    const legibleEn = (color: string, fondos: string[]): string => fondos.reduce((acc, f) => legibleSobre(acc, f), color)
     const running = rows.filter(row => row.status === 'running').length
     const reaccion = await read($, reaccionAtom)
     const draftComun = view === 'roles' ? await read($, draftAtom) : null
@@ -909,7 +913,9 @@ export const register: Register = on => {
 
     const frisoCierre =
       frisoArte !== '' ? (
-        <Svg key="svg-friso-cierre" source={frisoArte} alt="Cornisa del edificio" {...sizeProps(frisoArte)} />
+        <Box key="caja-friso-cierre" width="100%" backgroundColor="#E8DCC0">
+          <Svg key="svg-friso-cierre" source={frisoArte} alt="Cornisa del edificio" {...sizeProps(frisoArte)} />
+        </Box>
       ) : null
 
     // Cabecera común: cara grande a la izquierda, escena de la vista a la derecha, burbuja y greca debajo.
@@ -918,9 +924,9 @@ export const register: Register = on => {
 
       return (
         <Box flexDirection="column">
-          <Box flexDirection="row" alignItems="flex-end" backgroundColor={PALETTE.selva}>
+          <Box flexDirection="row" alignItems="flex-end" backgroundColor={CLARO.escena}>
             <Svg key="svg-pista" source={caraSvg} {...sizeProps(caraSvg)} alt={caraAlt} isInteractive />
-            <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0} backgroundColor={PALETTE.selva}>
+            <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0} backgroundColor={CLARO.escena}>
               {doselSvg !== '' && (
                 <Svg key="svg-dosel" source={doselSvg} alt="Cielorraso de la oficina" {...sizeProps(doselSvg)} />
               )}
@@ -928,14 +934,16 @@ export const register: Register = on => {
             </Box>
           </Box>
           {burbuja !== '' && (
-            <Box backgroundColor={FONDO_BURBUJA} paddingX={1}>
-              <Text color={PALETTE.crema} wrap="wrap">
+            <Box backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
+              <Text color={CLARO.texto} wrap="wrap">
                 {burbuja}
               </Text>
             </Box>
           )}
           {grecaSvg !== '' && (
-            <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
+            <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
+              <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
+            </Box>
           )}
         </Box>
       )
@@ -947,25 +955,34 @@ export const register: Register = on => {
     const barraSuperior = () => {
       const numMaya = hasSvg
         ? cachedSvg(`dia-maya-${diaMaya.numero}`, `${diaMaya.numero}`, () =>
-            numeroMayaSvg(diaMaya.numero, 1, PALETTE.oro),
+            numeroMayaSvg(diaMaya.numero, 1, CLARO.acento),
           )
         : ''
 
       return (
-        <Box flexDirection="row" alignItems="center" flexWrap="wrap" backgroundColor="#141a12" paddingX={1}>
-          <Button
-            key="tab-subagentes"
-            label="Subagentes"
-            variant={view === 'subagentes' ? 'primary' : 'secondary'}
-            onPress={() => showView($, 'subagentes')}
-          />
-          <Text> </Text>
-          <Button
-            key="tab-roles"
-            label="Equipos"
-            variant={view === 'roles' ? 'primary' : 'secondary'}
-            onPress={() => showView($, 'roles')}
-          />
+        <Box
+          flexDirection="row"
+          alignItems="center"
+          flexWrap="wrap"
+          backgroundColor={CLARO.barra}
+          paddingX={1}
+          paddingY={1}
+          columnGap={2}
+        >
+          <Box flexDirection="row" columnGap={2}>
+            <Button
+              key="tab-subagentes"
+              label="Subagentes"
+              variant={view === 'subagentes' ? 'primary' : 'secondary'}
+              onPress={() => showView($, 'subagentes')}
+            />
+            <Button
+              key="tab-roles"
+              label="Equipos"
+              variant={view === 'roles' ? 'primary' : 'secondary'}
+              onPress={() => showView($, 'roles')}
+            />
+          </Box>
           <Box flexGrow={1} />
           {numMaya !== '' ? (
             <Svg
@@ -976,14 +993,14 @@ export const register: Register = on => {
             />
           ) : null}
           {numMaya !== '' ? (
-            <Text color={PALETTE.oro}>{` ${diaMaya.texto} `}</Text>
+            <Text color={CLARO.acento}>{` ${diaMaya.texto} `}</Text>
           ) : (
-            <Text dimColor>{`${diaMaya.texto} `}</Text>
+            <Text color={CLARO.textoSuave}>{`${diaMaya.texto} `}</Text>
           )}
           {hasSvg && e.surface !== 'terminal' && (
             <Button
               key="quieto"
-              label={quieto ? 'Animar' : 'Frenar animaciones'}
+              label={quieto ? 'Animar' : 'Quieto'}
               onPress={() => update($, quietoAtom, v => !v)}
             />
           )}
@@ -1092,7 +1109,7 @@ export const register: Register = on => {
             {noticeLine}
             {cabecera(escenaEditar, burbujaEditar)}
             <Box flexDirection="column">
-              <Box flexDirection="row">
+              <Box flexDirection="row" columnGap={1}>
                 <Button key="volver-equipos" label="← Equipos" onPress={() => cancelEdit($)} />
                 <Text dimColor>{` / ${equipo} / `}</Text>
                 <Text bold>{draft.name}</Text>
@@ -1139,18 +1156,22 @@ export const register: Register = on => {
                   <Text wrap="wrap">{draft.description}</Text>
                 </Box>
               )}
-              <Button
-                key="rol-ver-desc"
-                label={abiertos.desc === true ? 'Listo' : 'Cambiar descripción'}
-                hotkey="d"
-                onPress={() => alternar($, 'desc')}
-              />
-              <Button
-                key="rol-ver-prompt"
-                label={promptAbierto ? '▾ Ocultar prompt' : `▸ Prompt (${draft.prompt.length} caracteres)`}
-                hotkey="p"
-                onPress={() => update($, promptAtom, v => !v)}
-              />
+              <Box marginTop={1}>
+                <Button
+                  key="rol-ver-desc"
+                  label={abiertos.desc === true ? 'Listo' : 'Cambiar descripción'}
+                  hotkey="d"
+                  onPress={() => alternar($, 'desc')}
+                />
+              </Box>
+              <Box marginTop={1}>
+                <Button
+                  key="rol-ver-prompt"
+                  label={promptAbierto ? '▾ Ocultar prompt' : `▸ Prompt (${draft.prompt.length} caracteres)`}
+                  hotkey="p"
+                  onPress={() => update($, promptAtom, v => !v)}
+                />
+              </Box>
               {promptAbierto && (
                 <Box flexDirection="column">
                   <Box borderStyle="round" paddingX={1} flexDirection="column">
@@ -1169,17 +1190,18 @@ export const register: Register = on => {
                   </Text>
                 </Box>
               )}
-              {hayCambios && <Text color={PALETTE.oro}>● Cambios sin guardar</Text>}
-              <Box flexDirection="row">
-                <Button
-                  key="rol-guardar"
-                  label="Guardar"
-                  hotkey="g"
-                  variant="primary"
-                  onPress={() => saveDraft($)}
-                />
-                <Text> </Text>
-                <Button key="rol-cancelar" label="Cancelar" hotkey="c" onPress={() => cancelEdit($)} />
+              {hayCambios && <Text color={acentoTxt}>● Cambios sin guardar</Text>}
+              <Box flexDirection="row" columnGap={2} marginTop={1}>
+                <Box flexDirection="row" columnGap={2}>
+                  <Button
+                    key="rol-guardar"
+                    label="Guardar"
+                    hotkey="g"
+                    variant="primary"
+                    onPress={() => saveDraft($)}
+                  />
+                  <Button key="rol-cancelar" label="Cancelar" hotkey="c" onPress={() => cancelEdit($)} />
+                </Box>
                 <Box flexGrow={1} />
                 {DEFAULT_ROLES[draft.name] !== undefined && (
                   <Button
@@ -1193,7 +1215,7 @@ export const register: Register = on => {
               {confirmando && DEFAULT_ROLES[draft.name] !== undefined && (
                 <Box flexDirection="column">
                   <Text wrap="wrap">¿Volver a los valores originales? Se pierde lo que cambiaste.</Text>
-                  <Box flexDirection="row">
+                  <Box flexDirection="row" columnGap={2} marginTop={1}>
                     <Button
                       key="rol-restaurar-si"
                       label="Sí, restaurar"
@@ -1202,7 +1224,6 @@ export const register: Register = on => {
                         await restoreDraft($)
                       }}
                     />
-                    <Text> </Text>
                     <Button
                       key="rol-restaurar-no"
                       label="No"
@@ -1245,9 +1266,8 @@ export const register: Register = on => {
               value={nuevo.equipo}
               onSelect={value => update($, nuevoAtom, v => (v ? { ...v, equipo: value } : v))}
             />
-            <Box flexDirection="row">
+            <Box flexDirection="row" columnGap={2}>
               <Button key="nuevo-crear" label="Crear" onPress={() => crearAgente($)} />
-              <Text> </Text>
               <Button key="nuevo-cancelar" label="Cancelar" onPress={() => update($, nuevoAtom, () => null)} />
             </Box>
           </Box>
@@ -1279,11 +1299,11 @@ export const register: Register = on => {
         const avisos = validarAgente(agente)
         const avisoCerrado =
           avisos.length > 0 ? (
-            <Text key={`aviso-${name}`} color={PALETTE.oro}>{` ⚠ ${avisos.length}`}</Text>
+            <Text key={`aviso-${name}`} color={acentoTxt}>{` ⚠ ${avisos.length}`}</Text>
           ) : null
         const listaAvisos = abierto
           ? avisos.map((a, i) => (
-              <Text key={`aviso-${name}-${i}`} color={PALETTE.oro} wrap="wrap">{`⚠ ${a}`}</Text>
+              <Text key={`aviso-${name}-${i}`} color={acentoTxt} wrap="wrap">{`⚠ ${a}`}</Text>
             ))
           : []
         const copiar = abierto ? (
@@ -1322,9 +1342,8 @@ export const register: Register = on => {
                   {etiquetas !== '' && <Text dimColor wrap="wrap">{etiquetas}</Text>}
                   <Text dimColor wrap="wrap">{agente.ruta}</Text>
                   {listaAvisos}
-                  <Box flexDirection="row">
+                  <Box flexDirection="row" columnGap={2}>
                     {edit}
-                    {copiar !== null && <Text> </Text>}
                     {copiar}
                   </Box>
                 </Box>
@@ -1335,8 +1354,8 @@ export const register: Register = on => {
 
         const colorEquipo = EQUIPO_ACENTO[equipoAg]?.[0] ?? EQUIPO_ACENTO.base[0]
         const fondoTarjeta = {
-          backgroundColor: pos % 2 === 0 ? '#20251b' : '#1a1e16',
-          hover: { backgroundColor: '#2c3424' },
+          backgroundColor: pos % 2 === 0 ? CLARO.tarjeta : CLARO.tarjetaAlt,
+          hover: { backgroundColor: CLARO.tarjetaHover },
         }
         const icon =
           iconSvg !== '' ? (
@@ -1357,11 +1376,11 @@ export const register: Register = on => {
           >
             {icon}
             <Box paddingX={1}>
-              <Text color={roleColor(name)} bold>
+              <Text color={legibleEn(roleColor(name), [CLARO.tarjeta, CLARO.tarjetaAlt, CLARO.tarjetaHover])} bold>
                 {name}
               </Text>
             </Box>
-            <Text backgroundColor={PALETTE.negro} color={PALETTE.crema}>{` ${agente.model} `}</Text>
+            <Text backgroundColor={CLARO.chip.fondo} color={CLARO.chip.letra}>{` ${agente.model} `}</Text>
             {avisoCerrado}
             <Box flexGrow={1} />
             {toggle}
@@ -1377,20 +1396,19 @@ export const register: Register = on => {
                   {agente.description}
                 </Text>
                 <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
-                  <Text backgroundColor={PALETTE.negro} color={PALETTE.crema}>{` ${agente.effort} `}</Text>
-                  <Text backgroundColor={PALETTE.negro} color={PALETTE.crema} wrap="wrap">
+                  <Text backgroundColor={CLARO.chip.fondo} color={CLARO.chip.letra}>{` ${agente.effort} `}</Text>
+                  <Text backgroundColor={CLARO.chip.fondo} color={CLARO.chip.letra} wrap="wrap">
                     {` ${toolsLabel(agente.tools)} `}
                   </Text>
                 </Box>
                 {etiquetas !== '' && (
-                  <Text color={PALETTE.oro} wrap="wrap">
+                  <Text color={acentoTxt} wrap="wrap">
                     {etiquetas}
                   </Text>
                 )}
                 {listaAvisos}
-                <Box flexDirection="row" flexWrap="wrap">
+                <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
                   {edit}
-                  {copiar !== null && <Text> </Text>}
                   {copiar}
                 </Box>
                 <Text dimColor wrap="wrap">
@@ -1412,7 +1430,7 @@ export const register: Register = on => {
       // Un equipo sin actividad en el patio se marca: hay que pensarle una (arte-actividades.ts).
       const sinActividad = (equipo: string) =>
         equipo !== 'sin equipo' && !actividadDe(equipo).pensada ? (
-          <Text key={`sin-actividad-${equipo}`} color={PALETTE.oro} wrap="wrap">
+          <Text key={`sin-actividad-${equipo}`} color={acentoTxt} wrap="wrap">
             {`⚠ El equipo ${equipo} no tiene actividad en el patio: hay que pensarla.`}
           </Text>
         ) : null
@@ -1420,14 +1438,16 @@ export const register: Register = on => {
       const skillGrupo = (equipo: string, abierto: boolean) =>
         abierto ? (
           <Box key={`skill-${equipo}`} flexDirection="column">
-            <Button
-              key={`abrir-skill-${equipo}`}
-              label={`${abiertos[`skill:${equipo}`] === true ? '▾' : '▸'} Cómo trabaja el equipo`}
-              dimColor
-              onPress={() => alternarSkill($, equipo)}
-            />
+            <Box marginTop={1}>
+              <Button
+                key={`abrir-skill-${equipo}`}
+                label={`${abiertos[`skill:${equipo}`] === true ? '▾' : '▸'} Cómo trabaja el equipo`}
+                dimColor
+                onPress={() => alternarSkill($, equipo)}
+              />
+            </Box>
             {abiertos[`skill:${equipo}`] === true && (
-              <Text wrap="wrap">{skills[equipo] ?? 'Este equipo no tiene skill todavía.'}</Text>
+              <Text color={tx} wrap="wrap">{skills[equipo] ?? 'Este equipo no tiene skill todavía.'}</Text>
             )}
           </Box>
         ) : null
@@ -1467,8 +1487,8 @@ export const register: Register = on => {
             borderStyle="round"
             borderColor={acento[0]}
             paddingX={1}
-            backgroundColor="#2a2f24"
-            hover={{ backgroundColor: '#3a4232' }}
+            backgroundColor={CLARO.tarjeta}
+            hover={{ backgroundColor: CLARO.tarjetaHover }}
           >
             <Svg
               key={`svg-grupo-${equipo}`}
@@ -1476,12 +1496,14 @@ export const register: Register = on => {
               alt={dios !== '' ? `Placa ${dios} del equipo ${equipo}` : `Placa del equipo ${equipo}`}
               {...sizeProps(diosArte)}
             />
-            <Box flexDirection="column" flexGrow={1} minWidth={0} paddingX={1}>
-              <Button
-                key={`abrir-grupo-${equipo}`}
-                label={`${abierto ? '▾' : '▸'} ${equipo}`}
-                onPress={() => alternar($, `grupo:${equipo}`)}
-              />
+            <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0} paddingX={1}>
+              <Text
+                color={legibleEn(acento[0], [CLARO.tarjeta, CLARO.tarjetaHover])}
+                bold
+                wrap="wrap"
+              >
+                {equipo}
+              </Text>
               <Box flexDirection="row" alignItems="center">
                 <Svg
                   key={`svg-maya-${equipo}`}
@@ -1489,15 +1511,22 @@ export const register: Register = on => {
                   alt={`${cantidad} en el contador`}
                   {...sizeProps(numArte)}
                 />
-                <Text>{cantidad === 1 ? ' 1 agente' : ` ${cantidad} agentes`}</Text>
+                <Text color={CLARO.texto}>{cantidad === 1 ? ' 1 agente' : ` ${cantidad} agentes`}</Text>
               </Box>
               {subtitulo !== '' && (
-                <Text dimColor wrap="wrap">
+                <Text color={CLARO.textoSuave} wrap="wrap">
                   {subtitulo}
                 </Text>
               )}
               {sinActividad(equipo)}
               {skillGrupo(equipo, abierto)}
+            </Box>
+            <Box alignSelf="center">
+              <Button
+                key={`abrir-grupo-${equipo}`}
+                label={`${abierto ? '▾' : '▸'} ${equipo}`}
+                onPress={() => alternar($, `grupo:${equipo}`)}
+              />
             </Box>
           </Box>
         )
@@ -1514,7 +1543,7 @@ export const register: Register = on => {
             burbujaEquipos,
           )}
           <Box flexDirection="column">
-          <Box flexDirection="row" flexWrap="wrap" alignItems="center">
+          <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2}>
             {formNuevo}
             <Select
               key="filtro-etiqueta"
@@ -1545,7 +1574,7 @@ export const register: Register = on => {
               <Text dimColor wrap="wrap">
                 {`No hay agentes en ${catalogo.raiz}. Lo mejor es instalar los del kit (kit/agentes). Si no, podés crear los 4 roles base o uno nuevo con + Nuevo agente.`}
               </Text>
-              <Box flexDirection="row">
+              <Box flexDirection="row" marginTop={1}>
                 <Button
                   key="roles-base"
                   label="Crear los 4 roles base…"
@@ -1557,9 +1586,8 @@ export const register: Register = on => {
                   <Text wrap="wrap">
                     {`¿Crear implementador, corrector, investigador y revisor en ${catalogo.raiz}${catalogo.raiz.includes('/') ? '/' : '\\'}base? No se pisa ningún archivo.`}
                   </Text>
-                  <Box flexDirection="row">
+                  <Box flexDirection="row" columnGap={2} marginTop={1}>
                     <Button key="roles-base-si" label="Sí, crearlos" onPress={() => crearRolesBase($)} />
-                    <Text> </Text>
                     <Button
                       key="roles-base-no"
                       label="No"
@@ -1603,11 +1631,11 @@ export const register: Register = on => {
 
       return (
         <Box key={`uso-${clave}`} flexDirection="row" flexWrap="wrap">
-          <Text>{pad(nombre, 10)}</Text>
-          <Text color={colorUso(pct)}>{barra.llena}</Text>
-          <Text dimColor>{barra.vacia}</Text>
-          <Text bold>{` ${pct.toLocaleString('es-UY', { maximumFractionDigits: 1 })} %`}</Text>
-          {renueva !== '' && <Text dimColor>{` · se renueva ${renueva}`}</Text>}
+          <Text color={tx}>{pad(nombre, 10)}</Text>
+          <Text color={claro ? colorUsoClaro(pct) : colorUso(pct)}>{barra.llena}</Text>
+          <Text {...suave}>{barra.vacia}</Text>
+          <Text color={tx} bold>{` ${pct.toLocaleString('es-UY', { maximumFractionDigits: 1 })} %`}</Text>
+          {renueva !== '' && <Text {...suave}>{` · se renueva ${renueva}`}</Text>}
         </Box>
       )
     }
@@ -1618,11 +1646,13 @@ export const register: Register = on => {
     )
     const panelUso = (
       <Box key="uso-sesion" flexDirection="column">
-        <Button
-          key="abrir-uso"
-          label={`${usoAbierto ? '▾' : '▸'} Uso de la sesión`}
-          onPress={() => alternar($, 'uso', true)}
-        />
+        <Box marginTop={1}>
+          <Button
+            key="abrir-uso"
+            label={`${usoAbierto ? '▾' : '▸'} Uso de la sesión`}
+            onPress={() => alternar($, 'uso', true)}
+          />
+        </Box>
         {usoAbierto && (
           <Box flexDirection="column" paddingLeft={2}>
             {limitesUso.map(l =>
@@ -1630,18 +1660,18 @@ export const register: Register = on => {
             )}
             {limitesUso.length === 0 && uso?.costo !== undefined && (
               <Box key="uso-costo" flexDirection="row" flexWrap="wrap">
-                <Text>{pad('Costo', 10)}</Text>
-                <Text bold>{`US$ ${uso.costo.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</Text>
-                <Text dimColor> en esta sesión</Text>
+                <Text color={tx}>{pad('Costo', 10)}</Text>
+                <Text color={tx} bold>{`US$ ${uso.costo.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</Text>
+                <Text {...suave}> en esta sesión</Text>
               </Box>
             )}
             {limitesUso.length === 0 && (
-              <Text dimColor wrap="wrap">
+              <Text {...suave} wrap="wrap">
                 Sin datos de las ventanas de 5 horas y semanal: aparecen con una suscripción, después de la primera respuesta.
               </Text>
             )}
             {uso?.contexto !== undefined && filaUso('contexto', 'Contexto', uso.contexto, '')}
-            <Box flexDirection="row">
+            <Box flexDirection="row" marginTop={1}>
               <Button
                 key="compactar"
                 label="Compactar sesión…"
@@ -1650,12 +1680,11 @@ export const register: Register = on => {
             </Box>
             {confirmandoCompactar && (
               <Box flexDirection="column">
-                <Text wrap="wrap">
+                <Text color={tx} wrap="wrap">
                   ¿Compactar la conversación ahora? Claude resume lo hablado y libera contexto, igual que /compact.
                 </Text>
-                <Box flexDirection="row">
+                <Box flexDirection="row" columnGap={2} marginTop={1}>
                   <Button key="compactar-si" label="Sí, compactar" onPress={() => compactarSesion($)} />
-                  <Text> </Text>
                   <Button
                     key="compactar-no"
                     label="No"
@@ -1856,7 +1885,7 @@ export const register: Register = on => {
     }
 
     const escenaPatio = (
-      <Box flexDirection="row" flexWrap="wrap" backgroundColor={PALETTE.selva}>
+      <Box flexDirection="row" flexWrap="wrap" backgroundColor={CLARO.escena}>
         {celdas.map(celda => (
           <Svg
             key={`celda-${celda.id}`}
@@ -1889,12 +1918,12 @@ export const register: Register = on => {
       </Text>
     )
     const pastillas: Array<{ texto: string; fondo: string; color: string }> = []
-    if (running > 0) pastillas.push({ texto: ` ${running} corriendo `, fondo: '#1e4a6b', color: '#bfe3ff' })
-    if (done > 0) pastillas.push({ texto: ` ${plural(done, 'lista', 'listas')} `, fondo: '#1f4a2b', color: '#bff0c8' })
+    if (running > 0) pastillas.push({ texto: ` ${running} corriendo `, ...PASTILLAS_CLARO.corre })
+    if (done > 0) pastillas.push({ texto: ` ${plural(done, 'lista', 'listas')} `, ...PASTILLAS_CLARO.lista })
     if (failed > 0) {
-      pastillas.push({ texto: ` ${failed} ${failed === 1 ? 'falló' : 'fallaron'} `, fondo: '#5a1f17', color: '#ffc9bd' })
+      pastillas.push({ texto: ` ${failed} ${failed === 1 ? 'falló' : 'fallaron'} `, ...PASTILLAS_CLARO.fallo })
     }
-    if (stopped > 0) pastillas.push({ texto: ` ${plural(stopped, 'frenada', 'frenadas')} `, fondo: '#3a3a3a', color: '#dddddd' })
+    if (stopped > 0) pastillas.push({ texto: ` ${plural(stopped, 'frenada', 'frenadas')} `, ...PASTILLAS_CLARO.frenada })
     const bigStatus = bigWord === 'corre' ? 'running' : bigWord === 'lista' ? 'completed' : 'failed'
 
     return (
@@ -1919,7 +1948,7 @@ export const register: Register = on => {
                 {item.texto}
               </Text>
             ))}
-            {tokensVistos > 0 && <Text dimColor>{`${fmtNum(tokensVistos)} tokens`}</Text>}
+            {tokensVistos > 0 && <Text {...suave}>{`${fmtNum(tokensVistos)} tokens`}</Text>}
             <Box flexGrow={1} />
             <Button
               key="abrir-resumen"
@@ -1943,12 +1972,14 @@ export const register: Register = on => {
         {panelUso}
         {sorted.length === 0 &&
           (hasSvg && e.surface !== 'terminal' ? (
-            <Box borderStyle="round" borderColor="#3a453a" paddingX={1} flexDirection="column">
-              <Text bold>Todavía no corrió ningún subagente.</Text>
-              <Text dimColor wrap="wrap">
+            <Box borderStyle="round" borderColor={CLARO.borde} paddingX={1} flexDirection="column">
+              <Text color={tx} bold>Todavía no corrió ningún subagente.</Text>
+              <Text {...suave} wrap="wrap">
                 Cuando el orquestador despache una tarjeta, el agente aparece en el patio con un poof.
               </Text>
-              <Button key="ir-equipos" label="Ver equipos" onPress={() => showView($, 'roles')} />
+              <Box marginTop={1}>
+                <Button key="ir-equipos" label="Ver equipos" onPress={() => showView($, 'roles')} />
+              </Box>
             </Box>
           ) : (
             <Text bold>Todavía no corrió ningún subagente.</Text>
@@ -1964,6 +1995,8 @@ export const register: Register = on => {
           const indent = '  '.repeat(Math.min(depth, 8))
           const isFailed = status === 'failed'
           const isDone = status === 'completed'
+          const colFilas = [CLARO.filas[0], CLARO.filas[1], CLARO.filaHover]
+          const colTexto = isDone ? CLARO.textoSuave : CLARO.texto
           const filaAbierta = abiertosSub[`fila:${row.id}`] === true
           const filaToggle = (
             <Button
@@ -1984,8 +2017,8 @@ export const register: Register = on => {
             <Box
               key={row.id}
               flexDirection="column"
-              backgroundColor={FONDOS_FILA[index % 2]}
-              hover={{ backgroundColor: FONDO_HOVER }}
+              backgroundColor={CLARO.filas[index % 2]}
+              hover={{ backgroundColor: CLARO.filaHover }}
             >
             <Box flexDirection={narrow ? 'column' : 'row'}>
               <Box flexDirection="row" flexShrink={0}>
@@ -1997,23 +2030,23 @@ export const register: Register = on => {
                     {...sizeProps(iconSvg)}
                   />
                 )}
-                <Text color={statusColor(normalizeStatus(status))} bold={isFailed} dimColor={isDone}>
+                <Text color={legibleEn(statusColor(normalizeStatus(status)), colFilas)} bold={isFailed}>
                   {`${indent}${pad(statusWord(status), 8)}`}
                 </Text>
                 {(info.card !== '' || info.model !== '') && (
-                  <Text dimColor={isDone}>
+                  <Text color={colTexto}>
                     {`${info.card !== '' ? pad(info.card, 7) : ''}${info.model !== '' ? pad(info.model, 8) : ''}`}
                   </Text>
                 )}
                 {info.role !== '' && (
-                  <Text color={roleColor(info.base)} dimColor={isDone}>
+                  <Text color={legibleEn(roleColor(info.base), colFilas)}>
                     {pad(nombreRol, Math.max(14, nombreRol.length + 1))}
                   </Text>
                 )}
               </Box>
               <Box flexDirection="row" flexGrow={1} flexShrink={1} minWidth={0}>
                 <Box flexGrow={1} flexShrink={1} minWidth={0}>
-                  <Text wrap="truncate" bold={isFailed} dimColor={isDone}>
+                  <Text color={colTexto} wrap="truncate" bold={isFailed}>
                     {`${narrow ? '  ' : ''}${text}  ${duration}`}
                   </Text>
                 </Box>
@@ -2021,17 +2054,17 @@ export const register: Register = on => {
               </Box>
             </Box>
             {filaAbierta && (
-              <Text wrap="wrap" bold={isFailed} dimColor={isDone}>
+              <Text color={colTexto} wrap="wrap" bold={isFailed}>
                 {`  ${text}`}
               </Text>
             )}
             {filaAbierta && (
-              <Text wrap="wrap" dimColor={isDone}>
+              <Text color={colTexto} wrap="wrap">
                 {`  Informe: ${informes[row.id] ? informes[row.id].texto || '(sin texto)' : 'todavía no llegó'}`}
               </Text>
             )}
             {filaAbierta && informes[row.id] && (
-              <Text wrap="wrap" dimColor>
+              <Text color={CLARO.textoSuave} wrap="wrap">
                 {`  Tokens: entrada ${fmtNum(informes[row.id].tokens.input_tokens ?? 0)} · salida ${fmtNum(informes[row.id].tokens.output_tokens ?? 0)} · total ${fmtNum(totalTokens(informes[row.id].tokens))}`}
               </Text>
             )}
@@ -2039,7 +2072,7 @@ export const register: Register = on => {
           )
         })}
         {sorted.length > room && (
-          <Text dimColor>… y {sorted.length - room} más (agrandá la ventana).</Text>
+          <Text {...suave}>… y {sorted.length - room} más (agrandá la ventana).</Text>
         )}
         {frisoCierre}
       </Box>
