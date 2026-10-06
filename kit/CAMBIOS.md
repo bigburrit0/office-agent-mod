@@ -2,7 +2,7 @@
 
 ## 06/10/2026: preparación para la compu del trabajo
 
-Cambios hechos en el repo, no en una exportación desde casa. **Hay que llevarlos a las fuentes de casa** (columna «Fuente»), o la próxima exportación los pisa.
+Cambios hechos directamente en el repo. **Desde el 06/10/2026 el repo es la fuente de verdad del kit**: las fuentes de casa ya no existen, así que el kit se edita acá (la columna «Fuente» queda como referencia de dónde venía cada archivo). `MANIFIESTO.md` es el de la primera exportación y no se regenera.
 
 | Archivo del kit | Fuente en casa | Qué cambió |
 |---|---|---|

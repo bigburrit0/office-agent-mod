@@ -118,4 +118,4 @@ Escribile a la usuaria, corto:
 
 ## Actualizar
 
-El kit se regenera desde casa y no se edita a mano. Para actualizar, hacé `git pull`; Claude lee `CAMBIOS.md` y repite solo los pasos que correspondan. El mod se actualiza solo con el `git pull`, porque el enlace apunta al repo: alcanza con abrir una sesión nueva.
+El kit se edita en este repo (es su fuente de verdad). Para actualizar, hacé `git pull`; Claude lee `CAMBIOS.md` y repite solo los pasos que correspondan. El mod se actualiza solo con el `git pull`, porque el enlace apunta al repo: alcanza con abrir una sesión nueva.
