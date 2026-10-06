@@ -157,3 +157,19 @@ test('leyenda: cada chip tiene contraste de 4,5:1 o más (mantenimiento usa el t
   expect(s.props.backgroundColor).toBe('#8a2a20')
   expect(s.props.color).toBe('#FFF4DF')
 })
+
+test('patio: con pocos agentes las celdas van a escala 3; si no entran en una fila, a escala 2', async ($, on) => {
+  let list: unknown[] = [D('r1', 'running'), D('r2', 'running')]
+  const { ui, paso } = await montar($, on, () => list)
+  await paso(2000)
+  const anchos = async () =>
+    (await ui.findAll({ type: 'Svg' }))
+      .filter((s: any) => /^Agente /.test(String(s.props.alt ?? '')))
+      .map((s: any) => Number(s.props.width))
+  expect(await anchos()).toEqual([66, 66])
+  list = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'].map(id => D(id, 'running'))
+  await paso(2000)
+  const seis = await anchos()
+  expect(seis.length).toBe(6)
+  for (const a of seis) expect(a).toBe(44)
+})

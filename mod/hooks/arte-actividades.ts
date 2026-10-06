@@ -22,13 +22,13 @@ export const ACTIVIDADES: Record<string, Actividad> = {
   papeles: { texto: 'escribe en papeles con una lapicera', tiempos: [0.4, 0.4, 0.4, 1.2], libre: true },
   cuaderno: { texto: 'anota en un cuaderno y mira con binoculares', tiempos: [0.5, 0.5, 1.2, 0.9, 0.9], libre: true },
   laptop: { texto: 'programa en una laptop', tiempos: [0.25, 0.25, 0.25, 0.25, 1.4], libre: true },
-  tablas: { texto: 'arma tablas y gráficos', tiempos: [1.0, 0.5, 0.5, 1.2], libre: true },
+  tablas: { texto: 'arma tablas y gráficos en su monitor', tiempos: [1.0, 0.5, 0.5, 1.2], libre: true },
   libros: { texto: 'hojea libros y los apila', tiempos: [1.0, 0.4, 0.4, 1.0], libre: false },
   pizarra: { texto: 'dibuja flechas en una pizarra', tiempos: [0.5, 0.5, 0.5, 1.4], libre: true },
   camaras: { texto: 'vigila las cámaras y habla por el walkie', tiempos: [0.6, 0.6, 1.4], libre: false },
   foco: { texto: 'cambia el foco de la lámpara', tiempos: [0.4, 0.4, 1.4], libre: false },
   carrito: { texto: 'limpia el escritorio con su carrito', tiempos: [0.3, 0.3, 0.3, 1.0], libre: false },
-  llaves: { texto: 'revisa el plano y hace sonar el llavero', tiempos: [1.2, 0.3, 0.3], libre: true },
+  llaves: { texto: 'ordena el tablero de llaves y hace sonar el llavero', tiempos: [1.2, 0.3, 0.3], libre: true },
   escuadra: { texto: 'traza líneas con la escuadra', tiempos: [0.5, 0.5, 0.5, 1.2], libre: true },
 }
 
@@ -178,18 +178,17 @@ function laptop(s: number, n: number, camisa: string): string {
 }
 
 function tablas(s: number, n: number, camisa: string): string {
-  // Tablero blanco parado sobre el escritorio: a la izquierda una tabla, a la derecha barras.
-  let c = r(s, 4, 9, 14, 9, PAPEL) + r(s, 4, 9, 14, 1, PAPEL_SOMBRA)
-  for (let y = 11; y <= 15; y += 2) c += r(s, 5, y, 5, 1, RENGLON)
-  c += r(s, 7, 10, 1, 7, RENGLON)
+  // Monitor ancho de pantalla oscura: a la izquierda una tabla con celdas, a la derecha barras que crecen.
+  let c = r(s, 4, 9, 14, 8, GRIS_OSCURO) + r(s, 5, 10, 12, 6, PANTALLA) + r(s, 9, 17, 4, 1, GRIS)
+  for (let y = 11; y <= 15; y += 2) c += r(s, 6, y, 4, 1, CELESTE)
+  c += r(s, 8, 10, 1, 6, GRIS)
   const alturas = n === 0 ? [1, 2, 1] : n === 1 ? [2, 3, 2] : [3, 5, 4]
-  const colores = [AZUL, VERDE, AMARILLO]
-  for (let i = 0; i < 3; i++) c += r(s, 11 + i * 2, 17 - alturas[i], 1, alturas[i], colores[i])
-  c += r(s, 10, 17, 7, 1, GRIS)
+  const colores = [VERDE, AMARILLO, CELESTE]
+  for (let i = 0; i < 3; i++) c += r(s, 11 + i * 2, 16 - alturas[i], 1, alturas[i], colores[i])
   if (n === 3) {
     // Señala un dato: la mano derecha apunta a la barra más alta, que se marca en rojo.
-    c += r(s, 12, 11, 2, 1, ROJO)
-    c += brazo(s, -1, 4, 16, camisa) + brazo(s, 1, 14, 11, camisa)
+    c += r(s, 13, 10, 1, 1, ROJO)
+    c += brazo(s, -1, 4, 16, camisa) + brazo(s, 1, 14, 10, camisa)
     return c
   }
   c += brazo(s, -1, 4, 16, camisa) + brazo(s, 1, 17, 16, camisa)
@@ -276,16 +275,21 @@ function carrito(s: number, n: number, camisa: string): string {
 }
 
 function llaves(s: number, n: number, camisa: string): string {
-  // Plano del edificio (azul con líneas claras) sobre el escritorio.
-  let c = r(s, 5, 13, 10, 5, PLANO) + r(s, 6, 14, 8, 1, PLANO_LINEA) + r(s, 6, 14, 1, 3, PLANO_LINEA)
-  c += r(s, 10, 14, 1, 3, PLANO_LINEA) + r(s, 6, 16, 4, 1, PLANO_LINEA) + r(s, 13, 15, 1, 2, PLANO_LINEA)
-  // Llavero en la mano derecha; en los cuadros 2 y 3 se balancea y suena.
+  // Tablero de llaves de madera parado sobre el escritorio: tres ganchos con llaves de colores.
+  let c = r(s, 4, 10, 9, 8, MADERA) + r(s, 5, 11, 7, 6, '#a8743f')
+  const colores = [AMARILLO, ROJO, CELESTE]
+  for (let i = 0; i < 3; i++) {
+    c += r(s, 6 + i * 2, 12, 1, 1, GRIS_CLARO)
+    // En el primer cuadro la llave del medio está en la mano (falta del gancho).
+    if (!(n === 0 && i === 1)) c += r(s, 6 + i * 2, 13, 1, 2, colores[i]) + r(s, 6 + i * 2, 15, 1, 1, AMARILLO_OSCURO)
+  }
+  // Llavero grande en la mano derecha; en los cuadros 2 y 3 se balancea y suena.
   const lado = n === 0 ? 0 : n === 1 ? -1 : 1
   const kx = 16 + lado
-  c += r(s, 16, 9, 2, 2, GRIS_CLARO) + r(s, 16, 10, 1, 1, PIEL)
-  c += r(s, kx, 11, 1, 3, AMARILLO) + r(s, kx + 1, 11, 1, 2, GRIS_CLARO) + r(s, kx, 14, 1, 1, AMARILLO_OSCURO)
-  if (n > 0) c += r(s, kx + 3, 10, 1, 1, AMARILLO) + r(s, kx - 2, 12, 1, 1, AMARILLO)
-  return c + brazo(s, -1, 7, 16, camisa) + brazo(s, 1, 16, 10, camisa)
+  c += r(s, 15, 9, 3, 3, GRIS_CLARO) + r(s, 16, 10, 1, 1, PIEL)
+  c += r(s, kx - 1, 12, 1, 3, AMARILLO) + r(s, kx + 1, 12, 1, 4, ROJO) + r(s, kx, 12, 1, 2, GRIS_CLARO) + r(s, kx + 1, 16, 1, 1, AMARILLO_OSCURO)
+  if (n > 0) c += r(s, kx + 3, 11, 1, 1, AMARILLO) + r(s, kx - 3, 13, 1, 1, AMARILLO)
+  return c + brazo(s, -1, 8, 14, camisa) + brazo(s, 1, 16, 10, camisa)
 }
 
 function escuadra(s: number, n: number, camisa: string): string {

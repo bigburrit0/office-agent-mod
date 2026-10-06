@@ -8,12 +8,16 @@ import {
   plantillaAgente,
   rolAAgente,
   rolesBaseEsquema,
+  EQUIPOS_ESQUEMA,
   serializeAgente,
   validarAgente,
   type AgenteCatalogo,
   type FsMin,
 } from '../hooks/catalogo'
 import { DEFAULT_ROLES, PREAMBLE, presetTools, toolsKind, toolsLabel } from '../hooks/roles'
+import { DIOSES_EQUIPO, EQUIPO_ACENTO } from '../hooks/arte-iconos'
+import { EQUIPOS_EMBLEMA } from '../hooks/pixel'
+import { ACTIVIDAD_EQUIPO } from '../hooks/arte-actividades'
 
 const RAIZ = 'C:\\x\\agents'
 
@@ -317,4 +321,12 @@ test('el editor reconoce los juegos pruebas y documentos', async () => {
   expect(toolsKind(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'Skill'])).toBe('documentos')
   expect(toolsLabel(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'Skill'])).toBe('documentos (lectura, web y escritura)')
   expect(presetTools('documentos')).toEqual(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'Skill'])
+})
+
+test('las tablas por equipo tienen los mismos 12 equipos (esquema, color, emblema, placa y actividad)', async () => {
+  const esquema = Object.keys(EQUIPOS_ESQUEMA).sort().join(',')
+  expect(Object.keys(EQUIPO_ACENTO).sort().join(',')).toBe(esquema)
+  expect(Object.keys(DIOSES_EQUIPO).sort().join(',')).toBe(esquema)
+  expect(Object.keys(EQUIPOS_EMBLEMA).sort().join(',')).toBe(esquema)
+  expect(Object.keys(ACTIVIDAD_EQUIPO).sort().join(',')).toBe(esquema)
 })

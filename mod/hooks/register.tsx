@@ -363,7 +363,6 @@ const DOSEL_ALTO = 18
 const FONDO_BURBUJA = '#0a2414'
 const FONDOS_FILA = ['#10261a', '#0c1f15']
 const FONDO_HOVER = '#1f4a30'
-const PATIO_FILA_ALTO = PATIO_ALTO * 2
 // Instante fijo (variable de módulo) desde el que se cuenta el ocio si no hay ningún fin registrado.
 let ocioModulo = 0
 
@@ -2184,10 +2183,19 @@ export const register: Register = on => {
     const equiposPatio: string[] = []
     let celdasPorFila = 1
     let filasPatio = 1
+    // Escala del patio: 3 si todos los agentes del patio entran en una fila a escala 3 (se ven
+    // mejor las actividades); si no, 2. A escala 3 la fila mide 81 px: con el cielorraso no pasa la cara.
+    let escalaPatio = 2
     let wordSvg = ''
     let lineSvg = ''
     if (hasSvg) {
-      celdasPorFila = Math.max(1, Math.floor(disponible / (PATIO_ANCHO * 2)))
+      const enPatio = rows.filter(row => {
+        const entrada = patioEstado[row.id]
+
+        return row.status === 'running' || (entrada !== undefined && entrada.hasta > now)
+      }).length
+      escalaPatio = enPatio > 0 && enPatio <= Math.floor(disponible / (PATIO_ANCHO * 3)) ? 3 : 2
+      celdasPorFila = Math.max(1, Math.floor(disponible / (PATIO_ANCHO * escalaPatio)))
       podarCeldas(new Set(rows.map(row => row.id)))
       for (const row of [...rows].sort((x, y) => (x.firstSeen ?? 0) - (y.firstSeen ?? 0))) {
         const entrada = patioEstado[row.id]
@@ -2198,13 +2206,13 @@ export const register: Register = on => {
         const acento = EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base
         const etiqueta = info.card
         const titulo = [info.card, info.model, info.role, info.text, `equipo ${equipo}`].filter(part => part !== '').join(SEP)
-        const svg = cachedSvg(`celda-${row.id}`, `${fase}|${equipo}|${etiqueta}|${quieto}|${titulo}`, () =>
+        const svg = cachedSvg(`celda-${row.id}`, `${fase}|${equipo}|${etiqueta}|${quieto}|${titulo}|${escalaPatio}`, () =>
           celdaPatioSvg({
             fase,
             acento,
-            actividad: actividadParaCelda(actividadDe(equipo).actividad, 2, acento[0]),
+            actividad: actividadParaCelda(actividadDe(equipo).actividad, escalaPatio, acento[0]),
             semilla: semillaDe(row.id),
-            escala: 2,
+            escala: escalaPatio,
             etiqueta,
             quieto,
             fondo,
@@ -2233,8 +2241,12 @@ export const register: Register = on => {
       }
       filasPatio = Math.max(1, Math.ceil(celdas.length / celdasPorFila))
       if (celdas.length < celdasPorFila) {
-        const resto = disponible - celdas.length * PATIO_ANCHO * 2
-        if (resto > 0) pisoSvg = cachedSvg(`piso-${resto}`, `${resto}`, () => pisoPatioSvg(resto, 2, { fondo }))
+        const resto = disponible - celdas.length * PATIO_ANCHO * escalaPatio
+        if (resto > 0) {
+          pisoSvg = cachedSvg(`piso-${resto}-${escalaPatio}`, `${resto}|${escalaPatio}`, () =>
+            pisoPatioSvg(resto, escalaPatio, { fondo }),
+          )
+        }
       }
       wordSvg = bigWord ? cachedSvg('palabra', bigWord, () => palabraEstadoSvg(bigWord, 3, { fondo })) : ''
       const lineRows: FilaTiempo[] = [...rows]
@@ -2296,7 +2308,7 @@ export const register: Register = on => {
         showLine = true
         spare -= lineCost
       }
-      const headerPx = Math.max(CARA_ALTO, DOSEL_ALTO + PATIO_FILA_ALTO * filasPatio)
+      const headerPx = Math.max(CARA_ALTO, DOSEL_ALTO + PATIO_ALTO * escalaPatio * filasPatio)
       // Se suman la franja de greca y la línea de la burbuja del robot.
       // También la línea de la leyenda de colores del patio.
       const headerCost =

@@ -57,14 +57,14 @@ La actividad se busca **solo por equipo** (respuesta 1). Un equipo sin actividad
 |---|---|---|
 | research | cuaderno y binoculares | 1: escribe en el cuaderno · 2: levanta los binoculares · 3: mira a los costados |
 | dev-a1, dev-tablero | laptop programando | 1: tipea · 2: líneas de código que suben en la pantalla · 3: toma un sorbo de café |
-| datos | tablas y gráficos | 1: hoja con celdas · 2: un gráfico de barras que crece · 3: señala un dato |
+| datos | monitor con tabla y gráfico | 1: tabla con celdas · 2: un gráfico de barras que crece · 3: señala un dato |
 | librarian | libros | 1: pila de libros · 2: hojea uno · 3: lo acomoda en la pila |
 | direccion | pizarra con flechas | 1: dibuja una flecha · 2: encierra algo en un círculo |
 | base | papeles y lapicera | 1: escribe · 2: da vuelta la hoja |
 | seguridad | cámara y walkie | 1: mira el monitor de cámaras · 2: habla por el walkie |
 | mantenimiento | escalera y foco | 1: cambia un foco · 2: se prende |
 | limpieza | carrito | 1: pasa el trapo · 2: brilla |
-| facilities | plano y llaves | 1: revisa el plano · 2: hace sonar el llavero |
+| facilities | tablero de llaves y llavero | 1: saca una llave del tablero · 2: hace sonar el llavero |
 | arquitectura | escuadra y plano | 1: traza una línea · 2: mide |
 | (sin actividad) | genérica: papeles y lapicera | igual que base, con aviso en Equipos |
 
