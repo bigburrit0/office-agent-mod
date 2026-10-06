@@ -7,6 +7,7 @@ import {
   parseAgente,
   plantillaAgente,
   rolAAgente,
+  rolesBaseEsquema,
   serializeAgente,
   validarAgente,
   type AgenteCatalogo,
@@ -291,4 +292,15 @@ test('plantilla: serializar, parsear y validar sigue en vacio', async () => {
   const r = parseAgente(serializeAgente(a), a.ruta)
   expect(r.ok).toBe(true)
   if (r.ok) expect(validarAgente(r.agente)).toEqual([])
+})
+
+test('rolesBaseEsquema: los 4 roles base cumplen el esquema y van a base', async () => {
+  const roles = rolesBaseEsquema(DEFAULT_ROLES, RAIZ)
+  expect(roles.map(a => a.name).join(',')).toBe('implementador,corrector,investigador,revisor')
+  for (const a of roles) {
+    expect(validarAgente(a)).toEqual([])
+    expect(a.ruta).toBe(`${RAIZ}\\base\\${a.name}.md`)
+    const r = parseAgente(serializeAgente(a), a.ruta)
+    expect(r.ok && validarAgente(r.agente).length).toBe(0)
+  }
 })

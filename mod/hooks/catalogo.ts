@@ -440,6 +440,59 @@ export function plantillaAgente(nombre: string, equipo: string, raiz: string): A
   }
 }
 
+// Los 4 roles base en versión que cumple el esquema (descripción con «Usalo para» y «No lo uses para»,
+// las 5 secciones, color y emblema de base). Es lo que crea el botón «Crear los 4 roles base» en una
+// compu sin agentes; la versión completa de cada uno es la del kit (kit/agentes/base).
+const ROLES_BASE_TEXTO: Record<string, { usalo: string; noLoUses: string; rol: string; como: string; limites: string }> = {
+  implementador: {
+    usalo: 'tarjetas de código cuando el proyecto no tiene especialista',
+    noLoUses: 'investigar ni revisar',
+    rol: 'Sos el implementador: escribís código según la tarjeta, sin salirte de lo que pide.',
+    como: '1. La tarjeta es tu única especificación.\n2. Tocá solo los archivos permitidos.\n3. Seguí el estilo del código existente.\n4. Corré solo la aceptación de la tarjeta.',
+    limites: '- No tocás archivos que la tarjeta no permita.\n- No hacés push, deploy ni instalaciones.',
+  },
+  corrector: {
+    usalo: 'tarjetas de corrección',
+    noLoUses: 'funciones nuevas ni refactors',
+    rol: 'Sos el corrector: arreglás solo lo que la tarjeta de corrección describe.',
+    como: '1. Reproducí la falla antes de tocar nada.\n2. Hacé el cambio mínimo que la arregla.\n3. Corré la aceptación de la tarjeta.',
+    limites: '- No ampliás el alcance.\n- No hacés push, deploy ni instalaciones.',
+  },
+  investigador: {
+    usalo: 'buscar y leer, en solo lectura',
+    noLoUses: 'editar ni crear archivos',
+    rol: 'Sos el investigador: buscás y leés, sin editar.',
+    como: '1. Buscá en los archivos y fuentes que nombra la tarjeta.\n2. Separá lo verificado (con archivo, comando o fuente) de lo supuesto.',
+    limites: '- Solo lectura: no editás ni creás archivos.',
+  },
+  revisor: {
+    usalo: 'revisar código en solo lectura y reportar hallazgos reales',
+    noLoUses: 'arreglar lo que encuentra',
+    rol: 'Sos el revisor: revisás en solo lectura y reportás hallazgos reales.',
+    como: '1. Leé el cambio y su contexto.\n2. Reportá cada hallazgo con línea, qué pasa y cómo se arregla.\n3. Si no hay ninguno, decilo.',
+    limites: '- Solo lectura: no editás archivos.',
+  },
+}
+
+export function rolesBaseEsquema(roles: Record<string, RolSpec>, raiz: string): AgenteCatalogo[] {
+  const eq = EQUIPOS_ESQUEMA.base
+  return Object.entries(ROLES_BASE_TEXTO)
+    .filter(([nombre]) => roles[nombre] !== undefined)
+    .map(([nombre, t]) => {
+      const spec = roles[nombre]
+      const base = spec.description.replace(/\.\s*$/, '')
+      return {
+        ...rolAAgente(nombre, spec, raiz),
+        description: `${base}. Usalo para ${t.usalo}. No lo uses para ${t.noLoUses}.`,
+        prompt:
+          `${PREAMBLE}\n\n## Rol\n${t.rol}\n\n## Antes de empezar\nLeé la tarjeta completa y los archivos que nombra.\n\n` +
+          `## Cómo trabajás\n${t.como}\n\n## Límites\n${t.limites}\n\n## Entrega\nInforme corto: qué hiciste, la salida filtrada de la aceptación y qué no pudiste verificar.`,
+        color: eq.color,
+        emblema: eq.emblema,
+      }
+    })
+}
+
 export function nombreTarjeta(a: AgenteCatalogo): string {
   const principal = a.equipos[0]
   if (!principal) return a.name

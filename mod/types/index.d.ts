@@ -95,7 +95,7 @@ declare module 'claude-code' {
       promptAbierto: boolean
       /**
        * Desplegables abiertos del panel. Claves: `grupo:<equipo>`, `agente:<name>`, `skill:<equipo>`, `errores`, `desc`, `fila:<id>`, `resumen`,
-       * `uso`, `confirmar-restaurar` y `confirmar-compactar`.
+       * `uso`, `confirmar-restaurar`, `confirmar-compactar` y `confirmar-roles-base`.
        * Ausente = cerrado, salvo `resumen` y `uso`, que arrancan abiertos (ausente = abierto).
        */
       abiertos: Record<string, boolean>

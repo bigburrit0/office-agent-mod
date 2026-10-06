@@ -10,6 +10,7 @@ import {
   nombreTarjeta,
   plantillaAgente,
   rolAAgente,
+  rolesBaseEsquema,
   serializeAgente,
   validarAgente,
 } from './catalogo'
@@ -785,7 +786,9 @@ async function cargarCatalogo($: EngineInterface): Promise<void> {
     }
     await update($, rolesAtom, () => saved)
     const fs = fsAdapter($)
-    await migrarRoles(fs, raiz, mergeRoles(saved))
+    // Solo se migra si hay roles guardados por la versión vieja del panel (la compu de casa).
+    // En una compu nueva no se escribe nada en la carpeta de agentes sin que la usuaria lo pida.
+    if (Object.keys(saved).length > 0) await migrarRoles(fs, raiz, mergeRoles(saved))
     const { agentes, errores } = await listarCatalogo(fs, raiz)
     await update($, catalogoAtom, () => ({ agentes, errores, cargado: true, raiz }))
     ok = agentes.length > 0
@@ -793,6 +796,33 @@ async function cargarCatalogo($: EngineInterface): Promise<void> {
     await setNotice($, `No se pudo leer el catálogo de agentes: ${errorText(error)}. Se usan los roles de siempre.`)
   }
   if (!ok) await syncRoles($)
+}
+
+// Botón «Crear los 4 roles base»: los escribe en <agentes>\base, en la versión que cumple el esquema.
+// Nunca pisa un archivo ni un nombre que ya exista. Nunca lanza.
+async function crearRolesBase($: EngineInterface): Promise<void> {
+  try {
+    await update($, abiertosAtom, v => ({ ...v, 'confirmar-roles-base': false }))
+    const catalogo = await read($, catalogoAtom)
+    if (!catalogo.raiz) throw new Error('no se sabe dónde está la carpeta de agentes')
+    const existentes = new Set(catalogo.agentes.map(a => a.name))
+    const creados: string[] = []
+    for (const agente of rolesBaseEsquema(DEFAULT_ROLES, catalogo.raiz)) {
+      if (existentes.has(agente.name) || (await $.fs.exists(agente.ruta))) continue
+      await $.fs.write(agente.ruta, serializeAgente(agente))
+      creados.push(agente.name)
+    }
+    await cargarCatalogo($)
+    await update($, abiertosAtom, v => ({ ...v, 'grupo:base': true }))
+    await setNotice(
+      $,
+      creados.length > 0
+        ? `Creados ${creados.join(', ')} en ${catalogo.raiz}. Claude Code los toma en unos segundos.`
+        : 'Los 4 roles base ya existían: no se escribió nada.',
+    )
+  } catch (error) {
+    await setNotice($, `No se pudo crear los roles base (${errorText(error)}).`)
+  }
 }
 
 // Abre o cierra un desplegable. Ausente = cerrado, salvo `porDefecto` (el resumen arranca abierto).
@@ -1948,7 +1978,34 @@ export const register: Register = on => {
               </Text>
             ))}
           {catalogo.cargado && catalogo.agentes.length === 0 && (
-            <Text dimColor wrap="wrap">{`No hay agentes en ${catalogo.raiz}.`}</Text>
+            <Box flexDirection="column">
+              <Text dimColor wrap="wrap">
+                {`No hay agentes en ${catalogo.raiz}. Lo mejor es instalar los del kit (kit/agentes). Si no, podés crear los 4 roles base o uno nuevo con + Nuevo agente.`}
+              </Text>
+              <Box flexDirection="row">
+                <Button
+                  key="roles-base"
+                  label="Crear los 4 roles base…"
+                  onPress={() => alternar($, 'confirmar-roles-base')}
+                />
+              </Box>
+              {abiertos['confirmar-roles-base'] === true && (
+                <Box flexDirection="column">
+                  <Text wrap="wrap">
+                    {`¿Crear implementador, corrector, investigador y revisor en ${catalogo.raiz}${catalogo.raiz.includes('/') ? '/' : '\\'}base? No se pisa ningún archivo.`}
+                  </Text>
+                  <Box flexDirection="row">
+                    <Button key="roles-base-si" label="Sí, crearlos" onPress={() => crearRolesBase($)} />
+                    <Text> </Text>
+                    <Button
+                      key="roles-base-no"
+                      label="No"
+                      onPress={() => update($, abiertosAtom, v => ({ ...v, 'confirmar-roles-base': false }))}
+                    />
+                  </Box>
+                </Box>
+              )}
+            </Box>
           )}
           {[...grupos.entries()].map(([equipo, lista]) => {
             // Con un filtro que deja un solo grupo, ese grupo se muestra abierto.

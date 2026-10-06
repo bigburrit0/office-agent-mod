@@ -1,11 +1,21 @@
 import { expect, mock } from 'claude-code/testing'
 
-import { plantillaAgente, serializeAgente } from '../hooks/catalogo'
+import { plantillaAgente, rolAAgente, serializeAgente } from '../hooks/catalogo'
+import { DEFAULT_ROLES } from '../hooks/roles'
 import type { AgenteCatalogo } from '../hooks/catalogo'
 
 // ---- Disco falso: ninguna prueba toca el disco real ----
 export const HOME_FALSO = 'C:\\home-falso'
 export const RAIZ_FALSA = `${HOME_FALSO}\\.claude\\agents`
+
+// Los 4 roles tal como los dejó la migración de la versión vieja en la compu de casa.
+// El disco falso arranca con ellos, salvo que la prueba pida `{ vacio: true }` (una compu nueva).
+export const ROLES_MIGRADOS: Record<string, string> = Object.fromEntries(
+  Object.entries(DEFAULT_ROLES).map(([nombre, spec]) => {
+    const a = rolAAgente(nombre, spec, `${HOME_FALSO}\\.claude\\agents`)
+    return [a.ruta, serializeAgente(a)]
+  }),
+)
 
 export type DiscoFalso = { archivos: Map<string, string>; escrituras: string[]; fuera: string[] }
 export const discos = new WeakMap<object, DiscoFalso>()
@@ -13,17 +23,25 @@ export const discos = new WeakMap<object, DiscoFalso>()
 // Responde env.get y todo fs.* desde un Map en memoria. Una ruta fuera de
 // C:\home-falso se anota en `fuera` y falla. Llamarlo dos veces con el mismo
 // `on` devuelve el mismo disco (el primero manda).
-export function fsFalso(on: any, archivos: Record<string, string> = {}): DiscoFalso {
+// Fuera de Windows el motor toma `C:\home-falso\…` como ruta relativa y le antepone la
+// carpeta actual («/repo/mod/C:\home-falso\…»): se recorta desde `C:\home-falso`, así
+// las mismas pruebas corren en Windows, Linux y macOS.
+export function fsFalso(on: any, archivos: Record<string, string> = {}, opts: { vacio?: boolean } = {}): DiscoFalso {
   const previo = discos.get(on)
   if (previo) return previo
-  const disco: DiscoFalso = { archivos: new Map(Object.entries(archivos)), escrituras: [], fuera: [] }
+  const inicial = opts.vacio ? archivos : { ...ROLES_MIGRADOS, ...archivos }
+  const disco: DiscoFalso = { archivos: new Map(Object.entries(inicial)), escrituras: [], fuera: [] }
   discos.set(on, disco)
   const revisar = (path: string): string => {
-    if (!String(path).startsWith(HOME_FALSO)) {
-      disco.fuera.push(String(path))
+    const ruta = String(path)
+    const desde = ruta.indexOf(HOME_FALSO)
+    const antes = desde > 0 ? ruta.slice(0, desde) : ''
+    // Solo vale el prefijo de la carpeta actual (una ruta absoluta que termina en separador).
+    if (desde < 0 || (desde > 0 && !/^(\/|[A-Za-z]:\\).*[\\/]$/.test(antes))) {
+      disco.fuera.push(ruta)
       throw new Error(`ruta fuera del disco falso: ${path}`)
     }
-    return String(path)
+    return ruta.slice(desde)
   }
   const hijos = (dir: string) => {
     const pref = `${dir.replace(/\\+$/, '')}\\`
@@ -212,8 +230,14 @@ export const disposicion = async ($: any, on: any, cols: number) => {
 
 export const FIN_PROMPT = 'Tu rol: implementador. Escribís código según la tarjeta.'
 
-export async function montarEquipos($: any, on: any, archivos: Record<string, string>, store: Record<string, unknown> = {}) {
-  const disco = fsFalso(on, archivos)
+export async function montarEquipos(
+  $: any,
+  on: any,
+  archivos: Record<string, string>,
+  store: Record<string, unknown> = {},
+  opts: { vacio?: boolean } = {},
+) {
+  const disco = fsFalso(on, archivos, opts)
   const clock = mock.clock(on, { now: 1_000_000 })
   mock.store(on, store)
   on('agent.list', () => ({ value: [] }))

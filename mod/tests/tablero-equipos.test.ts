@@ -124,7 +124,7 @@ test('emblemaSvg: los 12 equipos y uno desconocido dan un SVG seguro', async () 
   expect(Object.keys(EQUIPOS_EMBLEMA).length).toBe(12)
 })
 
-test('Equipos: primera carga con catálogo vacío migra los 4 roles a base (con lo guardado)', async ($, on) => {
+test('Equipos: compu de casa con roles guardados de la versión vieja: migra los 4 a base (con lo guardado)', async ($, on) => {
   const guardado = {
     implementador: {
       description: 'Descripción editada por la usuaria',
@@ -134,7 +134,7 @@ test('Equipos: primera carga con catálogo vacío migra los 4 roles a base (con 
       effort: 'high',
     },
   }
-  const { ui, disco, registros } = await montarEquipos($, on, {}, { roles: guardado })
+  const { ui, disco, registros } = await montarEquipos($, on, {}, { roles: guardado }, { vacio: true })
   for (const nombre of ['implementador', 'corrector', 'investigador', 'revisor']) {
     expect(disco.archivos.has(`${RAIZ_FALSA}\\base\\${nombre}.md`)).toBe(true)
   }
@@ -510,4 +510,55 @@ test('Equipos: /oficina abre el panel con el robot saludando', async ($, on) => 
   })
   expect((await altsSvg(ui)).includes('Oficina, robot saludando')).toBe(true)
   expect((await textosDe(ui)).some(x => /¡Hola!/.test(x))).toBe(true)
+})
+
+test('compu nueva: abrir /oficina y Equipos no escribe nada en la carpeta de agentes', async ($, on) => {
+  const disco = fsFalso(on, {}, { vacio: true })
+  mock.clock(on, { now: 1_000_000 })
+  mock.store(on, {})
+  on('agent.list', () => ({ value: [] }))
+  on('ui.panes', () => ({ value: PANES }))
+  on('ui.open', () => ({ value: undefined }))
+  on('agent.register', () => ({ value: undefined }))
+  await $.command.run({ command: 'oficina' } as never)
+  const ui = await $.ui.mount({
+    plugin: 'tablero-oficina',
+    surface: 'desktop',
+    component: 'Pane',
+    props: PROPS as never,
+    requestId: PANE.id,
+    viewport: { columns: 200, rows: 80 },
+  })
+  await ui.press({ key: 'tab-roles' })
+  expect(disco.escrituras).toEqual([])
+  expect((await textosDe(ui)).some(x => /^No hay agentes en .*Lo mejor es instalar los del kit/.test(x))).toBe(true)
+  expect((await ui.find({ type: 'Button', key: 'roles-base' })) !== undefined).toBe(true)
+})
+
+test('compu nueva: «Crear los 4 roles base» pide confirmación y los crea cumpliendo el esquema', async ($, on) => {
+  const { ui, disco } = await montarEquipos($, on, {}, {}, { vacio: true })
+  await ui.press({ key: 'roles-base' })
+  await ui.press({ key: 'roles-base-no' })
+  expect(disco.escrituras).toEqual([])
+  await ui.press({ key: 'roles-base' })
+  await ui.press({ key: 'roles-base-si' })
+  for (const nombre of ['implementador', 'corrector', 'investigador', 'revisor']) {
+    expect(disco.archivos.has(`${RAIZ_FALSA}\\base\\${nombre}.md`)).toBe(true)
+  }
+  expect(disco.escrituras.length).toBe(4)
+  // Cumplen el esquema: ningún ⚠ en la lista.
+  await ui.press({ key: 'abrir-grupo-base' })
+  expect((await textosDe(ui)).filter(x => /^ ⚠ \d+$/.test(x)).length).toBe(0)
+  expect((await textosDe(ui)).some(x => /^Creados implementador, corrector, investigador, revisor en /.test(x))).toBe(true)
+  expect(disco.fuera.length).toBe(0)
+})
+
+test('crear los roles base no pisa un archivo que ya existe, aunque el catálogo no lo lea', async ($, on) => {
+  const roto = 'sin frontmatter: lo escribió otra persona'
+  const { ui, disco } = await montarEquipos($, on, { [`${RAIZ_FALSA}\\base\\revisor.md`]: roto }, {}, { vacio: true })
+  await ui.press({ key: 'roles-base' })
+  await ui.press({ key: 'roles-base-si' })
+  expect(disco.archivos.get(`${RAIZ_FALSA}\\base\\revisor.md`)).toBe(roto)
+  expect(disco.escrituras.length).toBe(3)
+  expect((await textosDe(ui)).some(x => /^Creados implementador, corrector, investigador en /.test(x))).toBe(true)
 })
