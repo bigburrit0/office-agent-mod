@@ -28,6 +28,7 @@ const ESCENARIOS = [
   ['subagentes-3', 'Subagentes · 3 corriendo'],
   ['equipos', 'Equipos · grupo base y agente abiertos'],
   ['editar', 'Editar un agente'],
+  ['editar-secciones', 'Editar · por secciones, con cambios'],
 ]
 
 // ---- Leer los árboles ----

@@ -11,7 +11,7 @@ Mod de Claude Code: panel de subagentes estilo oficina 8 bits (comando `/oficina
 - `claude plugin validate mod` → código 0 (el aviso «No author information» es normal).
 - `claude plugin test mod` → 0 fail, en Windows, Linux o macOS.
 - `node mod/preview/make-preview.mjs` → `OK` (Node 22.18 o más nuevo; genera `mod/preview/preview.html`).
-- `node mod/preview/maqueta.mjs --nueva` → escribe `mod/tests/salida/maqueta.html`: el panel dibujado en el navegador a 378 px (Subagentes, Equipos y Editar), para revisarlo sin la app.
+- `node mod/preview/maqueta.mjs --nueva` → escribe `mod/tests/salida/maqueta.html`: el panel dibujado en el navegador a 378 px (Subagentes, Equipos, Editar y Editar por secciones), para revisarlo sin la app.
 - Buscar `command: 'tablero'` en `mod/hooks/register.tsx` → sin resultados (el comando es `/oficina`).
 
 ## Cuando cambia un agente del kit

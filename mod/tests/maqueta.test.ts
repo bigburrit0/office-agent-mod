@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { PANES, PANE, PROPS, abrirAgente, fsFalso, turnoSub } from './ayuda-tablero'
+import { PANES, PANE, PROPS, RAIZ_FALSA, abrirAgente, agenteValido, fsFalso, turnoSub } from './ayuda-tablero'
 
 // Maqueta: monta el panel a 48 columnas y emite el árbol de cada escenario. Un módulo de hooks no puede importar node:fs, así que el
 // JSON sale por consola entre marcadores <<<MAQUETA nombre>>> … <<<FIN>>> y
@@ -52,8 +52,8 @@ async function raiz(ui: any): Promise<any> {
   return cajas[0]
 }
 
-async function montarMaqueta($: any, on: any, agentes: unknown[], uso?: unknown) {
-  fsFalso(on)
+async function montarMaqueta($: any, on: any, agentes: unknown[], uso?: unknown, archivos: Record<string, string> = {}) {
+  fsFalso(on, archivos)
   const clock = mock.clock(on, { now: 1_000_000 })
   mock.store(on, {})
   on('agent.list', () => ({ value: agentes }))
@@ -109,4 +109,19 @@ test('maqueta: editar un agente', async ($, on) => {
   await ui.redraw()
   guardar('editar', serializar(await raiz(ui)))
   expect((await ui.find({ type: 'Button', key: 'rol-guardar' })) !== undefined).toBe(true)
+})
+
+test('maqueta: editar por secciones, con cambios', async ($, on) => {
+  const ui = await montarMaqueta($, on, [], undefined, { [`${RAIZ_FALSA}\\base\\revisor-web.md`]: agenteValido('revisor-web', 'base') })
+  await ui.press({ key: 'tab-roles' })
+  await ui.redraw()
+  await abrirAgente(ui, 'revisor-web')
+  await ui.press({ key: 'editar-revisor-web' })
+  await ui.select({ plugin: 'tablero-oficina', key: 'rol-model', value: 'haiku' })
+  await ui.press({ key: 'rol-ver-prompt' })
+  await ui.press({ key: 'rol-ver-seccion-1' })
+  await ui.press({ key: 'rol-cambiar-seccion-1' })
+  await ui.redraw()
+  guardar('editar-secciones', serializar(await raiz(ui)))
+  expect((await ui.find({ type: 'Input', key: 'rol-seccion-input-1' })) !== undefined).toBe(true)
 })

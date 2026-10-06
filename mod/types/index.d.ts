@@ -72,6 +72,8 @@ export type RolBorrador = RolSpec & {
   name: string
   /** Ruta del archivo del agente que se reescribe al guardar. */
   ruta?: string
+  /** Texto del archivo antes del último Guardar desde el panel (para «Volver a la versión anterior»); ausente si no hay copia. */
+  anterior?: string
 }
 
 declare module 'claude-code' {
@@ -95,7 +97,8 @@ declare module 'claude-code' {
       promptAbierto: boolean
       /**
        * Desplegables abiertos del panel. Claves: `grupo:<equipo>`, `agente:<name>`, `skill:<equipo>`, `errores`, `desc`, `fila:<id>`, `resumen`,
-       * `uso`, `confirmar-restaurar`, `confirmar-compactar` y `confirmar-roles-base`.
+       * `uso`, `confirmar-restaurar`, `confirmar-anterior`, `seccion:<n>` (sección n del prompt en Editar),
+       * `confirmar-compactar` y `confirmar-roles-base`.
        * Ausente = cerrado, salvo `resumen` y `uso`, que arrancan abiertos (ausente = abierto).
        */
       abiertos: Record<string, boolean>

@@ -56,6 +56,11 @@ import {
   BUCKET_MS,
   bucketOf,
   cachedSvg,
+  cambiosBorrador,
+  partirSecciones,
+  reemplazarSeccion,
+  textoSeccion,
+  tituloSeccion,
   datosUsoDe,
   CARA_ALTO,
   CARA_ANCHO,
@@ -98,6 +103,7 @@ import {
   SEP,
   sizeProps,
   statusWord,
+  STORE_ANTERIORES,
   STORE_ROLES,
   svgSize,
   TAREA_EQUIPO,
@@ -489,8 +495,14 @@ async function cerrarEquipos($: EngineInterface): Promise<void> {
   })
 }
 
+// Cierra lo desplegable de la vista Editar: descripción, secciones del prompt y confirmaciones.
 async function cerrarDesc($: EngineInterface): Promise<void> {
-  await update($, abiertosAtom, v => ({ ...v, desc: false, 'confirmar-restaurar': false }))
+  await update($, abiertosAtom, v => {
+    const out: Record<string, boolean> = {}
+    for (const [clave, valor] of Object.entries(v)) if (!clave.startsWith('seccion:') && !clave.startsWith('cambiar-seccion:')) out[clave] = valor as boolean
+
+    return { ...out, desc: false, 'confirmar-restaurar': false, 'confirmar-anterior': false }
+  })
 }
 
 async function showView($: EngineInterface, view: 'subagentes' | 'roles'): Promise<void> {
@@ -506,13 +518,25 @@ async function showView($: EngineInterface, view: 'subagentes' | 'roles'): Promi
   }
 }
 
-async function startEdit($: EngineInterface, name: string): Promise<void> {
-  const agente = (await read($, catalogoAtom)).agentes.find(a => a.name === name)
-  if (!agente) return
-  await update($, noticeAtom, () => '')
-  await update($, promptAtom, () => false)
-  await cerrarDesc($)
-  await update($, draftAtom, () => ({
+// Copias guardadas antes de cada Guardar (ruta → texto). Nunca lanza.
+async function leerAnteriores($: EngineInterface): Promise<Record<string, string>> {
+  try {
+    const crudo: unknown = await $.store.get(STORE_ANTERIORES)
+    if (!crudo || typeof crudo !== 'object') return {}
+    const out: Record<string, string> = {}
+    for (const [ruta, texto] of Object.entries(crudo as Record<string, unknown>)) if (typeof texto === 'string') out[ruta] = texto
+
+    return out
+  } catch {
+    return {}
+  }
+}
+
+// Arma el borrador con lo que dice el archivo (ya leído en el catálogo) y su copia anterior, si hay.
+async function borradorDe($: EngineInterface, agente: AgenteCatalogo): Promise<RolBorrador> {
+  const anterior = (await leerAnteriores($))[agente.ruta]
+
+  return {
     name: agente.name,
     description: agente.description,
     prompt: agente.prompt,
@@ -520,7 +544,75 @@ async function startEdit($: EngineInterface, name: string): Promise<void> {
     model: agente.model,
     effort: agente.effort,
     ruta: agente.ruta,
-  }))
+    ...(anterior !== undefined ? { anterior } : {}),
+  }
+}
+
+async function startEdit($: EngineInterface, name: string): Promise<void> {
+  const agente = (await read($, catalogoAtom)).agentes.find(a => a.name === name)
+  if (!agente) return
+  await update($, noticeAtom, () => '')
+  await update($, promptAtom, () => false)
+  await cerrarDesc($)
+  const borrador = await borradorDe($, agente)
+  await update($, draftAtom, () => borrador)
+}
+
+// Botón «Releer archivo»: vuelve a leer la carpeta y rearma el borrador desde el archivo (descarta lo no guardado).
+async function releerArchivo($: EngineInterface): Promise<void> {
+  const draft = await read($, draftAtom)
+  if (!draft) return
+  await cargarCatalogo($)
+  const agente = (await read($, catalogoAtom)).agentes.find(a => a.ruta === draft.ruta)
+  if (!agente) {
+    await setNotice($, `No se pudo releer: ${draft.ruta ?? draft.name} ya no está en la carpeta de agentes.`)
+
+    return
+  }
+  await cerrarDesc($)
+  const borrador = await borradorDe($, agente)
+  await update($, draftAtom, () => borrador)
+  await setNotice($, `Releído desde ${agente.ruta}.`)
+}
+
+async function copiarRuta($: EngineInterface, ruta: string, surface: any, motivo = ''): Promise<void> {
+  try {
+    const res: any = await $.ui.copy({ text: ruta, surface })
+    if (res && res.ok === false) throw new Error(String(res.error ?? 'la superficie no lo aceptó'))
+    await setNotice($, `${motivo}Ruta copiada: ${ruta}`)
+  } catch (error) {
+    await setNotice($, `${motivo}No se pudo copiar (${errorText(error)}). Ruta: ${ruta}`)
+  }
+}
+
+// Botón «Abrir en el editor». El motor no abre archivos por sí mismo: se prueba el comando `code`
+// (VS Code), directo y por cmd (en Windows `code` es un .cmd). Si ninguno anda se copia la ruta.
+async function abrirEnEditor($: EngineInterface, surface: any): Promise<void> {
+  const draft = await read($, draftAtom)
+  const ruta = draft?.ruta
+  if (!ruta) return
+  const intentos: string[][] = [
+    ['code', ruta],
+    ['cmd', '/c', 'code', ruta],
+  ]
+  for (const argv of intentos) {
+    try {
+      const res = await $.process.run(argv, { timeoutMs: 15000 })
+      if (res.exitCode === 0) {
+        await setNotice($, `Abierto en el editor: ${ruta}. Cuando lo guardes ahí, tocá «Releer archivo».`)
+
+        return
+      }
+    } catch {
+      // Se prueba el siguiente.
+    }
+  }
+  await copiarRuta($, ruta, surface, 'No encontré el editor (comando «code»). ')
+}
+
+// Cambia el texto de una sección del prompt (n según partirSecciones).
+async function patchSeccion($: EngineInterface, indice: number, texto: string): Promise<void> {
+  await update($, draftAtom, draft => (draft ? { ...draft, prompt: reemplazarSeccion(draft.prompt, indice, texto) } : draft))
 }
 
 async function cancelEdit($: EngineInterface): Promise<void> {
@@ -546,19 +638,42 @@ async function pickTools($: EngineInterface, kind: string): Promise<void> {
 async function escribirAgente(
   $: EngineInterface,
   agente: AgenteCatalogo,
+  texto = serializeAgente(agente),
 ): Promise<boolean> {
+  // Copia de lo que hay en el disco antes de pisarlo: «Volver a la versión anterior».
+  let previo: string | undefined
   try {
-    await $.fs.write(agente.ruta, serializeAgente(agente))
+    if (await $.fs.exists(agente.ruta)) previo = String(await $.fs.read(agente.ruta))
+  } catch {
+    // Sin copia se guarda igual.
+  }
+  try {
+    await $.fs.write(agente.ruta, texto)
   } catch (error) {
     await setNotice($, `No se pudo guardar: ${errorText(error)}`)
 
     return false
   }
+  if (previo !== undefined && previo !== texto) {
+    try {
+      const anteriores = await leerAnteriores($)
+      await $.store.set(STORE_ANTERIORES, { ...anteriores, [agente.ruta]: previo })
+    } catch {
+      // La copia es una ayuda: si no se puede guardar, lo escrito vale igual.
+    }
+  }
   await update($, draftAtom, () => null)
   await update($, promptAtom, () => false)
   await cerrarDesc($)
   await cargarCatalogo($)
-  await setNotice($, `Guardado en ${agente.ruta}. Claude Code lo toma en unos segundos.`)
+  const guardado = (await read($, catalogoAtom)).agentes.find(a => a.ruta === agente.ruta)
+  const avisos = guardado ? validarAgente(guardado).length : 0
+  await setNotice(
+    $,
+    avisos > 0
+      ? `Guardado en ${agente.ruta} con ${plural(avisos, 'aviso', 'avisos')} para revisar. Claude Code lo toma en unos segundos.`
+      : `Guardado en ${agente.ruta}. Claude Code lo toma en unos segundos.`,
+  )
   await refreshQuietly($)
 
   return true
@@ -597,6 +712,20 @@ async function saveDraft($: EngineInterface): Promise<void> {
       await update($, reaccionAtom, () => ({ tipo: 'orgullo' as const, hasta: ahora + REACT_MEDIO_MS, quien: draft.name }))
       await update($, nowAtom, () => ahora)
     }
+  } catch (error) {
+    await setNotice($, `No se pudo guardar: ${errorText(error)}`)
+  }
+}
+
+// «Volver a la versión anterior»: escribe la copia guardada antes del último Guardar.
+// Lo que estaba queda a su vez como copia, así que se puede deshacer.
+async function volverAnterior($: EngineInterface): Promise<void> {
+  try {
+    const draft = await read($, draftAtom)
+    if (!draft?.ruta || draft.anterior === undefined) return
+    const original = (await read($, catalogoAtom)).agentes.find(a => a.ruta === draft.ruta)
+    if (!original) return
+    await escribirAgente($, original, draft.anterior)
   } catch (error) {
     await setNotice($, `No se pudo guardar: ${errorText(error)}`)
   }
@@ -1132,15 +1261,38 @@ export const register: Register = on => {
         const equipo = editado?.equipos[0] ?? 'base'
         const acento = EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base
         const dios = DIOSES_EQUIPO[equipo]?.dios ?? ''
+        const tarea = TAREA_EQUIPO[equipo]
         const confirmando = abiertos['confirmar-restaurar'] === true
+        const confirmandoAnterior = abiertos['confirmar-anterior'] === true
+        const fondosTarjeta = [CLARO.tarjeta, CLARO.panel]
+        const colorEquipo = acento[0]
         const etiqueta = (texto: string) => (
           <Box width={14}>
-            <Text>{texto}</Text>
+            <Text color={tx}>{texto}</Text>
           </Box>
         )
-        let editHeader: any
-        let escenaEditar: any = null
+        // Tarjeta con el borde del color del equipo, como las de Equipos.
+        const tarjeta = (clave: string, titulo: string, extra: any, ...hijos: any[]) => (
+          <Box
+            key={clave}
+            flexDirection="column"
+            borderStyle="round"
+            borderColor={colorEquipo}
+            paddingX={1}
+            marginTop={1}
+            {...(claro ? { backgroundColor: CLARO.tarjeta } : {})}
+          >
+            <Box flexDirection="row" columnGap={1} flexWrap="wrap">
+              <Text bold color={claro ? legibleEn(colorEquipo, fondosTarjeta) : colorEquipo}>
+                {titulo}
+              </Text>
+              {extra}
+            </Box>
+            {hijos}
+          </Box>
+        )
         let cuadrosEditar: string[] = []
+        let escenaEditar: any = null
         if (hasSvg) {
           if (!claro) {
             const paredArte = cachedSvg(`pared-${disponible}`, `${disponible}|${quieto}`, () =>
@@ -1164,41 +1316,115 @@ export const register: Register = on => {
             glifoSvg(editGlifo.tipo, equipo, 3),
           )
           cuadrosEditar = [roleIcon, diosArte].filter(q => q !== '')
-          editHeader = (
-            <Box flexDirection="row" alignItems="center" flexWrap="wrap">
-              {roleIcon !== '' && (
-                <Svg
-                  key="svg-icono-editar"
-                  source={roleIcon}
-                  alt={`Ícono del rol ${draft.name}`}
-                  {...sizeProps(roleIcon)}
-                />
-              )}
-              {diosArte !== '' && (
-                <Svg
-                  key="svg-dios-equipo"
-                  source={diosArte}
-                  alt={`Placa ${dios} del equipo ${equipo}`}
-                  {...sizeProps(diosArte)}
-                />
-              )}
-              <Box paddingX={1} flexDirection="column">
-                <Text color={roleColor(draft.name)} bold wrap="wrap">
-                  {draft.name}
-                </Text>
-                <Text color={acento[0]} wrap="wrap">{`equipo ${equipo} · ${dios}`}</Text>
+          if (!claro && diosArte !== '') {
+            // Sin escena clara la placa no se ve arriba: va una sola vez acá.
+            escenaEditar = (
+              <Box flexDirection="column">
+                {escenaEditar}
+                <Svg key="svg-dios-equipo" source={diosArte} alt={`Placa ${dios} del equipo ${equipo}`} {...sizeProps(diosArte)} />
               </Box>
-            </Box>
-          )
-        } else {
-          editHeader = <Text bold>{`Editando el rol «${draft.name}» (equipo ${equipo})`}</Text>
+            )
+          }
         }
+        // Encabezado: la escena ya muestra ícono y placa; abajo de la ruta (con el nombre legible) van el equipo y su tarea.
+        const subtituloEquipo = [`equipo ${equipo}`, dios, tarea].filter(x => x !== undefined && x !== '').join(' · ')
+        const editHeader = <Text {...suave} wrap="wrap">{subtituloEquipo}</Text>
         const burbujaEditar =
           orgulloVigente || !(tranquilo || estado.grupo === 'cambios')
             ? burbujaEstado()
             : hayCambios
               ? 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
               : `Editando ${draft.name}. Lo que guardes vale en una sesión nueva.`
+
+        // Avisos del esquema calculados sobre el borrador (no sobre el archivo).
+        const avisosBorrador = editado
+          ? validarAgente({
+              ...editado,
+              description: draft.description.trim(),
+              prompt: draft.prompt.trim(),
+              tools: draft.tools,
+              model: draft.model,
+              effort: draft.effort,
+            })
+          : []
+        const cajaAvisos =
+          avisosBorrador.length > 0 ? (
+            <Box key="rol-avisos" flexDirection="column" borderStyle="round" borderColor={acentoTxt} paddingX={1} marginTop={1}>
+              <Text bold color={acentoTxt}>{`Para revisar (${avisosBorrador.length})`}</Text>
+              {avisosBorrador.map((a, i) => (
+                <Text key={`rol-aviso-${i}`} color={acentoTxt} wrap="wrap">{`⚠ ${a}`}</Text>
+              ))}
+            </Box>
+          ) : (
+            <Box key="rol-avisos" marginTop={1}>
+              <Text color={claro ? legibleEn('#2E7D32', [CLARO.panel]) : 'green'}>✓ Cumple el esquema</Text>
+            </Box>
+          )
+
+        // Ficha en solo lectura: equipo, etiquetas y líneas extra del frontmatter.
+        const ficha = [
+          editado && editado.etiquetas.length > 0 ? `etiquetas: ${editado.etiquetas.join(', ')}` : '',
+          ...Object.entries(editado?.extra ?? {}).map(([k, v]) => `${k}: ${v}`),
+        ].filter(x => x !== '')
+
+        const largoDesc = draft.description.trim().length
+        const contador = (
+          <Text key="rol-desc-largo" color={largoDesc > 200 ? acentoTxt : undefined} {...(largoDesc > 200 ? {} : suave)}>
+            {`${largoDesc}/200`}
+          </Text>
+        )
+
+        const secciones = partirSecciones(draft.prompt)
+        const unica = secciones.length === 1
+        const bloquesPrompt = secciones.map((s, i) => {
+          const titulo = tituloSeccion(s, unica)
+          const abiertaSec = unica || abiertos[`seccion:${i}`] === true
+          const cambiando = abiertos[`cambiar-seccion:${i}`] === true
+          const cuerpo = s.cuerpo.trim()
+
+          return (
+            <Box key={`rol-seccion-${i}`} flexDirection="column">
+              {unica ? (
+                <Text bold color={tx}>{`${titulo} (${plural(cuerpo.length, 'carácter', 'caracteres')})`}</Text>
+              ) : (
+                <Box flexDirection="row">
+                  <Button
+                    key={`rol-ver-seccion-${i}`}
+                    label={`${abiertaSec ? '▾' : '▸'} ${titulo} (${plural(cuerpo.length, 'carácter', 'caracteres')})`}
+                    onPress={() => alternar($, `seccion:${i}`)}
+                  />
+                </Box>
+              )}
+              {abiertaSec && (
+                <Box flexDirection="column" paddingLeft={unica ? 0 : 2}>
+                  <Box borderStyle="round" borderColor={claro ? CLARO.borde : undefined} paddingX={1} flexDirection="column">
+                    <Text color={tx} wrap="wrap">{cuerpo === '' ? '(vacía)' : cuerpo}</Text>
+                  </Box>
+                  {cambiando ? (
+                    <Input
+                      key={`rol-seccion-input-${i}`}
+                      label={`${titulo}: `}
+                      placeholder="Texto de la sección"
+                      value={textoSeccion(s)}
+                      onInput={value => patchSeccion($, i, value)}
+                      onSubmit={value => patchSeccion($, i, value)}
+                    />
+                  ) : null}
+                  <Box flexDirection="row">
+                    <Button
+                      key={`rol-cambiar-seccion-${i}`}
+                      label={cambiando ? 'Listo' : 'Cambiar esta sección'}
+                      onPress={() => alternar($, `cambiar-seccion:${i}`)}
+                    />
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          )
+        })
+
+        const cambios = editado ? cambiosBorrador(editado, draft) : []
+        const tieneAnterior = draft.anterior !== undefined
 
         return (
           <Box flexDirection="column">
@@ -1210,87 +1436,92 @@ export const register: Register = on => {
             <Box flexDirection="column">
               <Box flexDirection="row" columnGap={1}>
                 <Button key="volver-equipos" label="← Equipos" onPress={() => cancelEdit($)} />
-                <Text dimColor>{` / ${equipo} / `}</Text>
-                <Text bold>{draft.name}</Text>
+                <Text {...suave}>{` / ${equipo} / `}</Text>
+                <Text bold color={claro ? legibleEn(roleColor(draft.name), [CLARO.panel]) : roleColor(draft.name)} wrap="wrap">
+                  {draft.name}
+                </Text>
               </Box>
               {editHeader}
-              <Box flexDirection="row">
-                {etiqueta('Modelo')}
-                <Select
-                  key="rol-model"
-                  options={MODELS.map(value => ({ value }))}
-                  value={draft.model}
-                  onSelect={value => patchDraft($, { model: value })}
-                />
-              </Box>
-              <Box flexDirection="row">
-                {etiqueta('Esfuerzo')}
-                <Select
-                  key="rol-effort"
-                  options={EFFORTS.map(value => ({ value }))}
-                  value={draft.effort}
-                  onSelect={value => patchDraft($, { effort: value })}
-                />
-              </Box>
-              <Box flexDirection="row">
-                {etiqueta('Herramientas')}
-                <Select
-                  key="rol-tools"
-                  options={toolOptions}
-                  value={kind}
-                  onSelect={value => pickTools($, value)}
-                />
-              </Box>
-              <Text bold>Descripción</Text>
-              {abiertos.desc === true ? (
-                <Input
-                  key="rol-description"
-                  placeholder="Cuándo delegar a este rol"
-                  value={draft.description}
-                  onInput={value => patchDraft($, { description: value })}
-                  onSubmit={value => patchDraft($, { description: value })}
-                />
-              ) : (
-                <Box borderStyle="round" paddingX={1} flexDirection="column">
-                  <Text wrap="wrap">{draft.description}</Text>
-                </Box>
-              )}
-              <Box marginTop={1}>
-                <Button
-                  key="rol-ver-desc"
-                  label={abiertos.desc === true ? 'Listo' : 'Cambiar descripción'}
-                  hotkey="d"
-                  onPress={() => alternar($, 'desc')}
-                />
-              </Box>
-              <Box marginTop={1}>
-                <Button
-                  key="rol-ver-prompt"
-                  label={promptAbierto ? '▾ Ocultar prompt' : `▸ Prompt (${draft.prompt.length} caracteres)`}
-                  hotkey="p"
-                  onPress={() => update($, promptAtom, v => !v)}
-                />
-              </Box>
-              {promptAbierto && (
-                <Box flexDirection="column">
-                  <Box borderStyle="round" paddingX={1} flexDirection="column">
-                    <Text wrap="wrap">{draft.prompt}</Text>
-                  </Box>
-                  <Input
-                    key="rol-prompt"
-                    label="Cambiar prompt: "
-                    placeholder="System prompt completo del rol"
-                    value={draft.prompt}
-                    onInput={value => patchDraft($, { prompt: value })}
-                    onSubmit={value => patchDraft($, { prompt: value })}
+              {cajaAvisos}
+              {tarjeta(
+                'rol-tarjeta-trabaja',
+                'Cómo trabaja',
+                null,
+                <Box key="fila-modelo" flexDirection="row">
+                  {etiqueta('Modelo')}
+                  <Select
+                    key="rol-model"
+                    options={MODELS.map(value => ({ value }))}
+                    value={draft.model}
+                    onSelect={value => patchDraft($, { model: value })}
                   />
-                  <Text dimColor wrap="wrap">
-                    Arriba ves el texto completo. Para cambiar un prompt largo, pronto vas a poder editar el archivo del agente.
-                  </Text>
-                </Box>
+                </Box>,
+                <Box key="fila-esfuerzo" flexDirection="row">
+                  {etiqueta('Esfuerzo')}
+                  <Select
+                    key="rol-effort"
+                    options={EFFORTS.map(value => ({ value }))}
+                    value={draft.effort}
+                    onSelect={value => patchDraft($, { effort: value })}
+                  />
+                </Box>,
+                <Box key="fila-herramientas" flexDirection="row">
+                  {etiqueta('Herramientas')}
+                  <Select
+                    key="rol-tools"
+                    options={toolOptions}
+                    value={kind}
+                    onSelect={value => pickTools($, value)}
+                  />
+                </Box>,
+                ...(ficha.length > 0 ? [<Text key="rol-ficha" {...suave} wrap="wrap">{ficha.join(' · ')}</Text>] : []),
+              )}
+              {tarjeta(
+                'rol-tarjeta-cuando',
+                'Cuándo usarlo',
+                contador,
+                abiertos.desc === true ? (
+                  <Input
+                    key="rol-description"
+                    placeholder="Cuándo delegar a este rol"
+                    value={draft.description}
+                    onInput={value => patchDraft($, { description: value })}
+                    onSubmit={value => patchDraft($, { description: value })}
+                  />
+                ) : (
+                  <Text key="rol-desc-texto" color={tx} wrap="wrap">{draft.description}</Text>
+                ),
+                <Box key="fila-desc" flexDirection="row">
+                  <Button
+                    key="rol-ver-desc"
+                    label={abiertos.desc === true ? 'Listo' : 'Cambiar descripción'}
+                    hotkey="d"
+                    onPress={() => alternar($, 'desc')}
+                  />
+                </Box>,
+              )}
+              {tarjeta(
+                'rol-tarjeta-instrucciones',
+                'Instrucciones',
+                <Text key="rol-prompt-largo" {...suave}>{`${draft.prompt.length} caracteres`}</Text>,
+                <Box key="fila-prompt" flexDirection="row" flexWrap="wrap" columnGap={2}>
+                  <Button
+                    key="rol-ver-prompt"
+                    label={promptAbierto ? '▾ Ocultar' : unica ? '▸ Ver el prompt' : `▸ Ver por secciones (${secciones.length})`}
+                    hotkey="p"
+                    onPress={() => update($, promptAtom, v => !v)}
+                  />
+                  <Button key="rol-abrir-editor" label="Abrir en el editor" onPress={() => abrirEnEditor($, e.surface)} />
+                  <Button key="rol-releer" label="Releer archivo" onPress={() => releerArchivo($)} />
+                </Box>,
+                ...(promptAbierto ? bloquesPrompt : []),
+                <Text key="rol-ruta" {...suave} wrap="wrap">{draft.ruta ?? ''}</Text>,
               )}
               {hayCambios && <Text color={acentoTxt}>● Cambios sin guardar</Text>}
-              <Box flexDirection="row" columnGap={2} marginTop={1}>
+              {cambios.length > 0 && (
+                <Text key="rol-cambios" color={tx} wrap="wrap">{`Vas a cambiar: ${cambios.join(' · ')}`}</Text>
+              )}
+              <Box flexDirection="row" columnGap={2} marginTop={1} flexWrap="wrap">
                 <Box flexDirection="row" columnGap={2}>
                   <Button
                     key="rol-guardar"
@@ -1302,6 +1533,14 @@ export const register: Register = on => {
                   <Button key="rol-cancelar" label="Cancelar" hotkey="c" onPress={() => cancelEdit($)} />
                 </Box>
                 <Box flexGrow={1} />
+                {tieneAnterior && (
+                  <Button
+                    key="rol-anterior"
+                    label="Volver a la versión anterior…"
+                    hotkey="v"
+                    onPress={() => alternar($, 'confirmar-anterior')}
+                  />
+                )}
                 {DEFAULT_ROLES[draft.name] !== undefined && (
                   <Button
                     key="rol-restaurar"
@@ -1311,6 +1550,28 @@ export const register: Register = on => {
                   />
                 )}
               </Box>
+              {confirmandoAnterior && tieneAnterior && (
+                <Box flexDirection="column">
+                  <Text color={tx} wrap="wrap">
+                    ¿Volver al archivo como estaba antes del último Guardar? Lo de ahora queda como copia, así que se puede deshacer.
+                  </Text>
+                  <Box flexDirection="row" columnGap={2} marginTop={1}>
+                    <Button
+                      key="rol-anterior-si"
+                      label="Sí, volver"
+                      onPress={async () => {
+                        await update($, abiertosAtom, v => ({ ...v, 'confirmar-anterior': false }))
+                        await volverAnterior($)
+                      }}
+                    />
+                    <Button
+                      key="rol-anterior-no"
+                      label="No"
+                      onPress={() => update($, abiertosAtom, v => ({ ...v, 'confirmar-anterior': false }))}
+                    />
+                  </Box>
+                </Box>
+              )}
               {confirmando && DEFAULT_ROLES[draft.name] !== undefined && (
                 <Box flexDirection="column">
                   <Text wrap="wrap">¿Volver a los valores originales? Se pierde lo que cambiaste.</Text>
@@ -1721,7 +1982,7 @@ export const register: Register = on => {
               </Box>
             )
           })}
-          <Text dimColor>Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
+          <Text dimColor wrap="wrap">Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
           </Box>
           {pieCierre((termRows - 30) * 20)}
           {frisoCierre}

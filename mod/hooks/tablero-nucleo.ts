@@ -6,7 +6,7 @@
 
 import type { AgenteTablero, TableroFila } from '../types/index'
 import type { DatosUso } from './arte-uso'
-import { DEFAULT_ROLES } from './roles'
+import { DEFAULT_ROLES, toolsLabel } from './roles'
 import { PATIO_EXPLOTA_MS, PATIO_SALE_MS } from './arte-escritorios'
 import { EQUIPO_ACENTO, tipoDeAgente } from './arte-iconos'
 import { DORMIR_MS, franjaHora, OCIO_PASO_MS } from './emociones'
@@ -36,6 +36,8 @@ export const SEP = ' · '
 export const DASH = '—'
 
 export const STORE_ROLES = 'roles'
+// Copia de cada archivo de agente antes del último Guardar desde el panel: ruta → texto.
+export const STORE_ANTERIORES = 'anteriores'
 
 export const INFORME_MAX = 4000
 export const MAX_INFORMES = 100
@@ -563,4 +565,83 @@ export function datosUsoDe(uso: UsoSesion | null, tokens: TokensSesion, ahora: n
   if (uso?.costo !== undefined) d.costo = uso.costo
 
   return d
+}
+
+// ---- Vista Editar: qué cambia al guardar y el prompt por secciones ----
+
+/** Los campos que el borrador puede cambiar. */
+export type CamposEditables = { description: string; prompt: string; model: string; effort: string; tools: string[] | null }
+
+const diferenciaLargo = (antes: string, despues: string): string => {
+  const d = despues.length - antes.length
+  if (d === 0) return 'mismo largo'
+
+  return `${d > 0 ? '+' : '−'}${plural(Math.abs(d), 'carácter', 'caracteres')}`
+}
+
+// Lista corta de lo que cambia entre el archivo y el borrador, en el orden del formulario; vacía si nada cambió.
+export function cambiosBorrador(original: CamposEditables, borrador: CamposEditables): string[] {
+  const out: string[] = []
+  if (original.model !== borrador.model) out.push(`modelo ${original.model} → ${borrador.model}`)
+  if (original.effort !== borrador.effort) out.push(`esfuerzo ${original.effort} → ${borrador.effort}`)
+  if (JSON.stringify(original.tools) !== JSON.stringify(borrador.tools)) {
+    out.push(`herramientas ${toolsLabel(original.tools)} → ${toolsLabel(borrador.tools)}`)
+  }
+  if (original.description !== borrador.description) {
+    out.push(`descripción (${diferenciaLargo(original.description, borrador.description)})`)
+  }
+  if (original.prompt !== borrador.prompt) out.push(`instrucciones (${diferenciaLargo(original.prompt, borrador.prompt)})`)
+
+  return out
+}
+
+/** Un trozo del prompt: la línea del título `## …` (con su salto, vacía antes del primer título) y el texto que le sigue. */
+export type SeccionPrompt = { encabezado: string; cuerpo: string }
+
+// Parte el prompt en sus títulos `## `. Unir las secciones devuelve el texto exacto.
+export function partirSecciones(prompt: string): SeccionPrompt[] {
+  const inicios: number[] = []
+  const re = /^## /gm
+  let m: RegExpExecArray | null
+  while ((m = re.exec(prompt)) !== null) inicios.push(m.index)
+  if (inicios[0] !== 0) inicios.unshift(0)
+  const out: SeccionPrompt[] = []
+  for (let i = 0; i < inicios.length; i++) {
+    const trozo = prompt.slice(inicios[i], inicios[i + 1] ?? prompt.length)
+    if (!trozo.startsWith('## ')) {
+      out.push({ encabezado: '', cuerpo: trozo })
+      continue
+    }
+    const salto = trozo.indexOf('\n')
+    out.push(salto < 0 ? { encabezado: trozo, cuerpo: '' } : { encabezado: trozo.slice(0, salto + 1), cuerpo: trozo.slice(salto + 1) })
+  }
+
+  return out
+}
+
+export function unirSecciones(secciones: SeccionPrompt[]): string {
+  return secciones.map(s => s.encabezado + s.cuerpo).join('')
+}
+
+// Texto editable de una sección: su cuerpo sin los saltos finales (los espacios que se tipean se respetan).
+export function textoSeccion(s: SeccionPrompt): string {
+  return s.cuerpo.replace(/\n\s*$/, '')
+}
+
+// Cambia el texto de una sección y conserva los saltos que la separaban de la siguiente.
+export function reemplazarSeccion(prompt: string, indice: number, texto: string): string {
+  const secciones = partirSecciones(prompt)
+  const s = secciones[indice]
+  if (!s) return prompt
+  const cola = /\n\s*$/.exec(s.cuerpo)?.[0] ?? (indice < secciones.length - 1 ? '\n\n' : '')
+  secciones[indice] = { ...s, cuerpo: texto.replace(/\n\s*$/, '') + cola }
+
+  return unirSecciones(secciones)
+}
+
+// Título visible de una sección: el `## …` sin los numerales, o «Preámbulo» para el texto antes del primer título.
+export function tituloSeccion(s: SeccionPrompt, unica: boolean): string {
+  if (s.encabezado === '') return unica ? 'Texto completo' : 'Preámbulo'
+
+  return s.encabezado.replace(/^##\s*/, '').trim()
 }

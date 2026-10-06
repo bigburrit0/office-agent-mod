@@ -2,7 +2,7 @@
 
 **Fecha:** 06/10/2026. **Pedido de Nimai** (con las capturas de la versión «pieza única»): «Quedó casi perfecto, me gusta mucho el resultado. Solo falta completar la sección de "editar" agente. Pero quiero que solo creemos las instrucciones».
 
-Este documento es solo el plan: **no se escribió código**. Nimai respondió las preguntas de la sección 4 el 06/10/2026 (ver «Decisiones de Nimai»). Falta su aprobación para empezar a implementar.
+Nimai respondió las preguntas de la sección 4 el 06/10/2026 (ver «Decisiones de Nimai») y pidió seguir: **la oleada G está implementada** (ver sección 6). Falta la captura de Nimai en la app para cerrarla.
 
 **Evidencia:** `docs/capturas/2026-10-06-editar-pieza-unica.png` (Editar `apps-script`), con `docs/capturas/2026-10-06-subagentes-pieza-unica.png` y `docs/capturas/2026-10-06-equipos-pieza-unica.png` como referencia del estilo que ya le gusta a Nimai. Código: `mod/hooks/register.tsx` (vista `roles` con `draft`, ~líneas 1060-1290), `mod/hooks/catalogo.ts` (`AgenteCatalogo`, `validarAgente`), `mod/types/index.d.ts` (`RolBorrador`).
 
@@ -73,3 +73,24 @@ Orden sugerido: G-1 y G-3 primero (son chicas y se ven enseguida), después G-2 
 - Pruebas: `claude plugin test mod` → 0 fail; `claude plugin validate mod` → OK.
 - Maqueta: `node mod/preview/maqueta.mjs --nueva`, mirar el escenario «Editar un agente» en `mod/tests/salida/maqueta.html` a 378 px.
 - Captura de Nimai de la vista Editar en la app (sesión nueva → `/oficina` → Equipos → abrir un agente → Editar).
+
+## 6. Qué se hizo (06/10/2026)
+
+Todas las tarjetas, en serie, sobre `hooks/register.tsx`. Pruebas nuevas en `tests/tablero-editar-g.test.ts`.
+
+| # | Estado | Notas |
+|---|---|---|
+| G-1 | Hecha | La placa y el ícono quedan solo en la escena. El nombre va en la ruta, en negrita y con `legibleSobre` (≥ 4,5); debajo, «equipo · dios · tarea». |
+| G-2 | Hecha | Tarjetas «Cómo trabaja», «Cuándo usarlo» (contador `n/200`, en naranja si pasa) e «Instrucciones», con borde del color del equipo. |
+| G-3 | Hecha | Caja «Para revisar (N)» con los avisos de `validarAgente` sobre el borrador, o «✓ Cumple el esquema». Guardar con avisos guarda igual y dice «Guardado en … con N avisos para revisar». |
+| G-4 | Hecha | `cambiosBorrador` (en `tablero-nucleo.ts`): «Vas a cambiar: modelo sonnet → haiku · descripción (+12 caracteres)…». |
+| G-5a | Hecha, **con un límite** | El motor **no tiene** una función para abrir un archivo en el editor. «Abrir en el editor» corre `code <ruta>` (y `cmd /c code <ruta>`, porque en Windows `code` es un .cmd). Si no encuentra VS Code, copia la ruta y lo avisa. Al volver, el botón «Releer archivo» relee la carpeta y rearma el borrador (el panel no lo relee solo mientras se edita). |
+| G-5b | Hecha | `partirSecciones` / `unirSecciones` / `reemplazarSeccion` (probadas ida y vuelta). Cada sección se despliega y tiene «Cambiar esta sección». El campo es de una línea (el motor no tiene campo multilínea): para textos con varios párrafos conviene «Abrir en el editor». Un prompt sin títulos `##` se ve entero como «Texto completo». |
+| G-6 | Hecha | Etiquetas y extras (`maxTurns`, `skills`…) en una línea chica al pie de «Cómo trabaja», solo lectura. El equipo ya se ve en el encabezado. |
+| G-7 | Hecha | Antes de cada Guardar (y de Restaurar) se guarda una copia del archivo en el store del mod (`anteriores`, ruta → texto), no en la carpeta de agentes. «Volver a la versión anterior…» pide confirmación; lo que había queda como copia, así que se puede deshacer. |
+
+Extra: el texto al pie de Equipos («Los cambios se guardan…») ahora hace salto de línea; era uno de los 5 elementos de Equipos que se salían del marco en la maqueta (quedan 4, ya existían antes de esta oleada).
+
+Verificación: `claude plugin test mod` → 295 pass, 0 fail; `claude plugin validate mod` → OK; `node mod/preview/make-preview.mjs` → OK; maqueta con un escenario nuevo, «Editar · por secciones, con cambios», con 0 elementos fuera del marco en las dos vistas de Editar.
+
+**Falta:** la captura de Nimai en la app (sesión nueva → `/oficina` → Equipos → abrir un agente → Editar), y probar en su compu que «Abrir en el editor» abre VS Code.

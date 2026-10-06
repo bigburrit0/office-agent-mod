@@ -31,7 +31,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect((await ui.find({ type: 'Button', key: 'rol-guardar' })) !== undefined).toBe(true)
     const svgs = await ui.findAll({ type: 'Svg' })
     if (surface === 'desktop') {
-      expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(1)
+      // G-1: la placa del equipo va solo en la escena, no se repite debajo.
+      expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(0)
     } else {
       expect(svgs.length).toBe(0)
     }
@@ -56,7 +57,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await clock.advance(2000)
     const promptVisible = async () =>
       (await ui.findAll({ type: 'Text' })).some(t => String(t.text ?? '').includes(FIN_PROMPT))
-    const inputPrompt = async () => (await ui.find({ type: 'Input', key: 'rol-prompt' })) !== undefined
+    const inputPrompt = async () => (await ui.find({ type: 'Button', key: 'rol-cambiar-seccion-0' })) !== undefined
     await ui.press({ key: 'tab-roles' })
     await abrirAgente(ui, 'implementador')
     await ui.press({ key: 'editar-implementador' })
@@ -85,7 +86,7 @@ test('Editar rol con panel de 40 columnas: los SVG respetan el ancho', async ($,
   await ui.press({ key: 'editar-implementador' })
   await ui.press({ key: 'rol-ver-prompt' })
   const svgs = await todos(ui, { type: 'Svg' })
-  expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(1)
+  expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(0)
   for (const svg of svgs) {
     const width = svg.props.width
     if (typeof width === 'number') expect(width <= 40 * 8).toBe(true)
@@ -115,7 +116,8 @@ test('Equipos: editar la descripción reescribe el archivo y conserva el resto',
   expect(escrito.includes('etiquetas: [frontend]')).toBe(true)
   expect(escrito.includes('Prompt de beta.')).toBe(true)
   const textos = await textosDe(ui)
-  expect(textos.some(t => t.startsWith(`Guardado en ${ruta}.`))).toBe(true)
+  // beta no cumple el esquema: se guarda igual y el aviso cuenta lo pendiente (G-3).
+  expect(textos.some(t => t.startsWith(`Guardado en ${ruta} con `) && t.includes('avisos para revisar'))).toBe(true)
   expect(disco.fuera.length).toBe(0)
 })
 
