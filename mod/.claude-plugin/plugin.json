@@ -1,0 +1,6 @@
+{
+  "name": "tablero-oficina",
+  "version": "0.1.0",
+  "description": "Panel de subagentes estilo oficina 8 bits",
+  "types": "./types/index.d.ts"
+}
