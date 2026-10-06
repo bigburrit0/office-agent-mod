@@ -73,3 +73,37 @@ Se registran acá cuando responda.
 - **Uso:** «Tablero de oficina»: contador LCD con los tokens de la sesión, batería para las 5 horas y almanaque de 7 días para la semana; cada uno con el % que queda y cuándo se renueva.
 - **Tema:** «Siempre claro». El panel usa solo la versión clara; el arte guarda la oscura como opción (por defecto en sus funciones, para no romper las pruebas), pero el panel no la elige. Con esto T2 (botón y detección) queda fuera.
 - **Plan:** aprobado, las 4 oleadas. Push a GitHub con permiso aparte.
+
+## 4. Qué se hizo (06/10/2026)
+
+Rama `tema-claro-uso`, un commit local por tarjeta aceptada. Sin push.
+
+| Tarjeta | Estado | Cómo quedó |
+|---|---|---|
+| T-1 | ✅ | `hooks/tema.ts`: paleta clara; todo texto contrasta 4,5:1 o más (medido). |
+| T-2 | ✅ | `hooks/arte-uso.ts`: contador de tokens, batería de 5 horas y almanaque semanal, con «quedan N %» y cuándo se renueva. Revisado en el navegador. |
+| T-3, T-3b | ✅ | `hooks/arte-oficina.ts`: escritorio libre, estante y pasillo que llena la pared por pisos. Revisado en el navegador: a 300 px parece algo «catálogo» (objetos repetidos en grilla); a mejorar si a Nimai no le gusta. |
+| T-4 | ✅ | Línea de tiempo en claro. |
+| T-5, T-5b | ✅ | Panel en tema claro, botones con aire (`columnGap`, `marginTop`), encabezado de equipo reorganizado, arte a todo el ancho. |
+| T-6 | ✅ | Tokens de toda la sesión (hilo principal y subagentes) y tablero de uso arriba en Subagentes. Sin ventanas dice «aparecen después de la primera respuesta». |
+| T-7 | ✅ | Arte nuevo en las tres vistas; el robot se preocupa con el 80 % de las 5 horas. |
+| T-8 | ✅ | Vista previa con sección «Tema claro (el panel)». |
+| T2 (botón de tema) | ➖ | Fuera por decisión de Nimai («siempre claro»). |
+
+**Verificación final (orquestador):** `plugin validate mod` OK; `plugin test mod` 255 pruebas, 254 pass y 1 fail por «timed out after 5000 ms» en «compu del trabajo con el kit». Esa prueba también falla por tiempo en la versión anterior (commit `8c67bcb`) con la misma carga de la máquina (CPU ~60 % por otras apps): **sensible a la carga**, no un error. En otras corridas pasaron las 250.
+
+**Lo que falta verificar (solo en la app):** cómo se ve el panel real en el escritorio. Supuestos S1 (llegan las ventanas) y S3 (los tokens cuentan desde que se carga el mod; en una sesión reanudada arrancan de cero).
+
+## 5. Cómo lo prueba Nimai
+
+Necesita: la app de Claude abierta. Tarda unos 5 minutos.
+
+1. En la app, abrí una **sesión nueva** del Code tab (el mod se carga al empezar una sesión; esta sesión tiene la versión vieja).
+2. Mandá cualquier mensaje corto (por ejemplo «hola») y esperá la respuesta: las ventanas de 5 horas y semanal llegan con la primera respuesta.
+3. Escribí `/oficina`. Vas a ver el panel en claro con el robot, el tablero de uso (tokens, batería de 5 horas y almanaque) y el pasillo abajo.
+4. Sacá una captura de **Subagentes**, otra de **Equipos** (con un equipo abierto) y otra de **Editar** (abrí un agente → Editar).
+5. Pasale las 3 capturas a Claude.
+
+Si falla: si el panel se ve igual que antes (oscuro), la sesión no tomó el mod nuevo; cerrá la app del todo y volvé a abrirla. Si aparece un aviso con «tablero-oficina» en gris en la conversación, copiáselo a Claude.
+
+Después: Claude ajusta lo que se vea mal y, **con tu permiso**, sube la rama a GitHub (`bigburrit0/office-agent-mod`).
