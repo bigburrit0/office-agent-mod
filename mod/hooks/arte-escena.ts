@@ -257,6 +257,39 @@ function escritorioLibre(libre: number, quieto: boolean, yPiso: number): { svg: 
   return { svg: `<g transform="translate(${ZONA_X} ${yPiso}) scale(${S})">${c}</g>`, ancho }
 }
 
+// Medidas de un SVG ya armado (width/height de la etiqueta de apertura); null si no se pueden leer.
+function medidaSvg(svg: string): { ancho: number; alto: number } | null {
+  const m = /^\s*<svg[\s>][^>]*>/.exec(String(svg))
+  if (!m) return null
+  const a = /\swidth="(\d+(?:\.\d+)?)"/.exec(m[0])
+  const h = /\sheight="(\d+(?:\.\d+)?)"/.exec(m[0])
+  if (!a || !h) return null
+  const ancho = Math.ceil(Number(a[1]))
+  const alto = Math.ceil(Number(h[1]))
+  return ancho > 0 && alto > 0 ? { ancho, alto } : null
+}
+
+// Cuelga los cuadros en la pared de la zona de trabajo, de izquierda a derecha, centrados entre cielorraso y piso.
+// Devuelve lo dibujado y la x donde termina el último (ZONA_X si no entró ninguno).
+function colgarCuadros(cuadros: string[], w: number, yPiso: number): { svg: string; fin: number } {
+  const GAP = 10
+  const parteAlta = TECHO + 2 // debajo de la sombra del cielorraso
+  const espacio = yPiso - parteAlta
+  let c = ''
+  let x = ZONA_X
+  for (const q of cuadros) {
+    const m = medidaSvg(q)
+    if (!m || m.alto + 8 > espacio) continue
+    if (x + m.ancho > w - MARGEN_DER) continue
+    const y = Math.round(parteAlta + (espacio - m.alto) / 2)
+    const cx = x + Math.floor(m.ancho / 2)
+    c += rect(cx - 1, y - 7, 2, 2, CONTORNO) + rect(cx, y - 5, 1, 5, ZOCALO)
+    c += anidar(q, x, y)
+    x += m.ancho + GAP
+  }
+  return { svg: c, fin: x === ZONA_X ? ZONA_X : x - GAP }
+}
+
 function armar(
   w: number,
   h: number,
@@ -265,6 +298,7 @@ function armar(
   vacia: boolean,
   quieto: boolean,
   alt: string,
+  cuadros: string[] = [],
 ): string {
   const yPiso = h - PISO
   const n = porFila(w)
@@ -282,6 +316,10 @@ function armar(
       const arriba = celdas.length - n
       c += rellenar(ZONA_X + arriba * CELDA_ANCHO, w - MARGEN_DER, yPiso - CELDA_ALTO, true)
     }
+  } else if (cuadros.length > 0) {
+    const col = colgarCuadros(cuadros, w, yPiso)
+    c += col.svg
+    c += rellenar(col.fin, w - MARGEN_DER, yPiso, false)
   } else if (vacia) {
     const libre = w - ZONA_X - MARGEN_DER
     const anchoV = escritorioLibre(libre, quieto, yPiso)
@@ -304,6 +342,7 @@ export function escenaOficinaSvg(o: {
   vacia?: boolean // dibuja el escritorio libre cuando no hay celdas (un string se trata como true)
   quieto?: boolean
   alt?: string // aria-label; por defecto «Oficina de agentes»
+  cuadros?: string[] // SVGs que cuelgan de la pared de la zona de trabajo (sin celdas); no dibuja el escritorio libre
 }): string {
   const w = anchoValido(o.ancho)
   const lista = Array.isArray(o.celdas) ? o.celdas.filter((x) => x && typeof x.svg === 'string') : []
@@ -314,11 +353,12 @@ export function escenaOficinaSvg(o: {
   const alt = typeof o.alt === 'string' && o.alt !== '' ? o.alt : 'Oficina de agentes'
   const quieto = o.quieto === true
   const cara = String(o.cara ?? '')
-  let out = armar(w, h, cara, visibles, conVacia, quieto, alt)
+  const cuadros = Array.isArray(o.cuadros) ? o.cuadros.filter((x) => typeof x === 'string' && x !== '') : []
+  let out = armar(w, h, cara, visibles, conVacia, quieto, alt, cuadros)
   // Si se pasa del peso, se dibujan menos celdas (de a una desde el final).
   while (out.length >= PESO_MAX && visibles.length > 0) {
     visibles = visibles.slice(0, -1)
-    out = armar(w, h, cara, visibles, conVacia, quieto, alt)
+    out = armar(w, h, cara, visibles, conVacia, quieto, alt, cuadros)
   }
   return out
 }

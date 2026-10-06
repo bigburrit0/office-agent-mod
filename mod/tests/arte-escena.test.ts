@@ -77,3 +77,35 @@ test('alt se escapa y no hay script', () => {
 test('el escritorio libre es más bajo que dos filas de agentes', () => {
   expect(escenaAlto(400, 0, true)).toBeLessThan(escenaAlto(400, 9, false))
 })
+
+// ---- cuadros colgados en la pared ----
+const cuadroPrueba = (color: string, lado = 48) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${lado}" height="${lado}" viewBox="0 0 ${lado} ${lado}"><rect width="${lado}" height="${lado}" fill="${color}"/></svg>`
+
+test('los cuadros se cuelgan en la pared: 3 colores aparecen y el alto no cambia', () => {
+  const cara = caraRobotSvg('feliz', 3, { fondo: ESCENA_FONDO, marco: true })
+  const colores = ['#123401', '#123402', '#123403']
+  const s = escenaOficinaSvg({ ancho: 378, cara, celdas: [], cuadros: colores.map((c) => cuadroPrueba(c)) })
+  for (const c of colores) expect(s.includes(c)).toBe(true)
+  expect(viewBox(s).h).toBe(escenaAlto(378, 0, false))
+  // Un cuadro más alto que la pared se omite.
+  const alto = escenaOficinaSvg({ ancho: 378, cara, celdas: [], cuadros: [cuadroPrueba('#abcd01', 200)] })
+  expect(alto.includes('#abcd01')).toBe(false)
+})
+
+test('con 30 cuadros a 378 px no se pasa del ancho', () => {
+  const cara = caraRobotSvg('feliz', 3, { fondo: ESCENA_FONDO, marco: true })
+  const todos = Array.from({ length: 30 }, (_x, i) => cuadroPrueba(`#77${String(i).padStart(2, '0')}aa`))
+  const s = escenaOficinaSvg({ ancho: 378, cara, celdas: [], cuadros: todos })
+  expect(viewBox(s).w).toBe(378)
+  const dibujados = todos.filter((q) => s.includes(q.match(/fill="(#[0-9a-f]+)"/)![1])).length
+  expect(dibujados > 0 && dibujados < 30).toBe(true)
+  for (const m of s.matchAll(/<svg x="(\d+)" y="\d+" xmlns[^>]*width="(\d+)"/g)) expect(Number(m[1]) + Number(m[2]) <= 378).toBe(true)
+})
+
+test('con cuadros y sin celdas no aparece el cartel del escritorio libre', () => {
+  const cara = caraRobotSvg('aburrido', 3, { marco: true })
+  const s = escenaOficinaSvg({ ancho: 378, cara, celdas: [], vacia: true, cuadros: [cuadroPrueba('#123401')] })
+  const cuenta = (t: string) => (t.match(/#F28C28/g) ?? []).length
+  expect(cuenta(s) < cuenta(escenaOficinaSvg({ ancho: 378, cara, celdas: [], vacia: true }))).toBe(true)
+})

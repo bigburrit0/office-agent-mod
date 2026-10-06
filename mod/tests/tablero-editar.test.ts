@@ -206,7 +206,7 @@ test('Editar: aparece la pizarra del taller', async ($, on) => {
   await ui.press({ key: 'tab-roles' })
   await abrirAgente(ui, 'implementador')
   await ui.press({ key: 'editar-implementador' })
-  expect((await altsSvg(ui)).includes('Pizarra del taller')).toBe(true)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot ') && a.includes('Taller de implementador'))).toBe(true)
 })
 
 
@@ -275,9 +275,9 @@ test('Editar: tras cambiar el modelo la cara tiene sospecha (d)', async ($, on) 
   })
   await abrirAgente(ui, 'implementador')
   await ui.press({ key: 'editar-implementador' })
-  expect((await altsSvg(ui)).includes('Oficina, robot con una ceja levantada')).toBe(false)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot con una ceja levantada'))).toBe(false)
   await ui.select({ plugin: 'tablero-oficina', key: 'rol-model', value: 'haiku' })
-  expect((await altsSvg(ui)).includes('Oficina, robot con una ceja levantada')).toBe(true)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot con una ceja levantada'))).toBe(true)
 })
 
 test('Editar: tras guardar la burbuja dice «¡Guardado!» y a los 3,5 s ya no (e)', async ($, on) => {

@@ -1002,6 +1002,46 @@ export const register: Register = on => {
       )
     }
 
+    // Cabecera de escena única (Equipos y Editar): robot colgado y `cuadros` en la pared, burbuja y greca debajo.
+    const cabeceraEscena = (cuadros: string[], alt: string, burbuja: string) => {
+      if (!claro || caraSvg === '') return null
+      const firma = `${estado.emocion}|${quieto}|${W}|${cuadros.length}|${cuadros.reduce((n, q) => n + q.length, 0)}`
+      const escena = cachedSvg('escena-cuadros', `${firma}|${alt}`, () =>
+        escenaOficinaSvg({
+          ancho: W,
+          cara: cachedSvg('cara-escena', `${estado.emocion}|${quieto}`, () =>
+            caraRobotSvg(estado.emocion, 3, { quieto, fondo: ESCENA_FONDO, marco: true }),
+          ),
+          celdas: [],
+          cuadros,
+          quieto,
+          alt,
+        }),
+      )
+
+      return (
+        <Box flexDirection="column">
+          {escena !== '' && (
+            <Box width="100%" backgroundColor={ESCENA_FONDO}>
+              <Svg key="svg-escena" source={escena} alt={alt} {...sizeProps(escena)} isInteractive />
+            </Box>
+          )}
+          {burbuja !== '' && (
+            <Box backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
+              <Text color={CLARO.texto} wrap="wrap">
+                {burbuja}
+              </Text>
+            </Box>
+          )}
+          {grecaSvg !== '' && (
+            <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
+              <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
+            </Box>
+          )}
+        </Box>
+      )
+    }
+
     // Fecha de hoy (hora local), con su número en el display.
     const local = nowReal - new Date(nowReal).getTimezoneOffset() * 60000
     const diaMaya = tzolkin(local)
@@ -1100,26 +1140,30 @@ export const register: Register = on => {
         )
         let editHeader: any
         let escenaEditar: any = null
+        let cuadrosEditar: string[] = []
         if (hasSvg) {
-          const paredArte = cachedSvg(`pared-${disponible}`, `${disponible}|${quieto}`, () =>
-            paredTallerSvg(disponible, 2, { quieto }),
-          )
-          const codiceArte = cachedSvg(`codice-${disponible}`, `${disponible}`, () => codiceSvg(disponible, 2))
-          escenaEditar = (
-            <Box flexDirection="column">
-              {paredArte !== '' && (
-                <Svg key="svg-pared-taller" source={paredArte} alt="Pared del taller" {...sizeProps(paredArte)} />
-              )}
-              {codiceArte !== '' && (
-                <Svg key="svg-codice" source={codiceArte} alt="Pizarra del taller" {...sizeProps(codiceArte)} />
-              )}
-            </Box>
-          )
+          if (!claro) {
+            const paredArte = cachedSvg(`pared-${disponible}`, `${disponible}|${quieto}`, () =>
+              paredTallerSvg(disponible, 2, { quieto }),
+            )
+            const codiceArte = cachedSvg(`codice-${disponible}`, `${disponible}`, () => codiceSvg(disponible, 2))
+            escenaEditar = (
+              <Box flexDirection="column">
+                {paredArte !== '' && (
+                  <Svg key="svg-pared-taller" source={paredArte} alt="Pared del taller" {...sizeProps(paredArte)} />
+                )}
+                {codiceArte !== '' && (
+                  <Svg key="svg-codice" source={codiceArte} alt="Pizarra del taller" {...sizeProps(codiceArte)} />
+                )}
+              </Box>
+            )
+          }
           const diosArte = cachedSvg(`dios2-${equipo}`, equipo, () => diosSvg(equipo, 2, acento))
           const editGlifo = glifoDe(draft.name, '', editado ? [editado] : catalogo.agentes)
           const roleIcon = cachedSvg(`glifo3-${editGlifo.tipo}-${equipo}`, equipo, () =>
             glifoSvg(editGlifo.tipo, equipo, 3),
           )
+          cuadrosEditar = [roleIcon, diosArte].filter(q => q !== '')
           editHeader = (
             <Box flexDirection="row" alignItems="center" flexWrap="wrap">
               {roleIcon !== '' && (
@@ -1160,7 +1204,9 @@ export const register: Register = on => {
           <Box flexDirection="column">
             {barraSuperior()}
             {noticeLine}
-            {cabecera(escenaEditar, burbujaEditar)}
+            {claro
+              ? cabeceraEscena(cuadrosEditar, `${caraAlt}. Taller de ${draft.name}`, burbujaEditar)
+              : cabecera(escenaEditar, burbujaEditar)}
             <Box flexDirection="column">
               <Box flexDirection="row" columnGap={1}>
                 <Button key="volver-equipos" label="← Equipos" onPress={() => cancelEdit($)} />
@@ -1292,8 +1338,13 @@ export const register: Register = on => {
         )
       }
 
+      const placasEquipos = claro
+        ? Object.keys(DIOSES_EQUIPO).map(eq =>
+            cachedSvg(`dios2-${eq}`, eq, () => diosSvg(eq, 2, EQUIPO_ACENTO[eq] ?? EQUIPO_ACENTO.base)),
+          )
+        : []
       const estanteArte = claro ? cachedSvg('estante', `${W}`, () => estanteSvg(W)) : ''
-      const temploArte = hasSvg ? cachedSvg(`templo-${disponible}`, `${disponible}`, () => temploSvg(disponible, 2)) : ''
+      const temploArte = hasSvg && !claro ? cachedSvg(`templo-${disponible}`, `${disponible}`, () => temploSvg(disponible, 2)) : ''
 
       const skills = await read($, skillsEquipoAtom)
       const nuevo = await read($, nuevoAtom)
@@ -1591,12 +1642,14 @@ export const register: Register = on => {
         <Box flexDirection="column">
           {barraSuperior()}
           {noticeLine}
-          {cabecera(
-            temploArte !== '' ? (
-              <Svg key="svg-templo" source={temploArte} alt="Edificio de la oficina" {...sizeProps(temploArte)} />
-            ) : null,
-            burbujaEquipos,
-          )}
+          {claro
+            ? cabeceraEscena(placasEquipos, `${caraAlt}. Placas de los equipos: ${Object.keys(DIOSES_EQUIPO).join(', ')}`, burbujaEquipos)
+            : cabecera(
+                temploArte !== '' ? (
+                  <Svg key="svg-templo" source={temploArte} alt="Edificio de la oficina" {...sizeProps(temploArte)} />
+                ) : null,
+                burbujaEquipos,
+              )}
           <Box flexDirection="column">
           {claro && estanteArte !== '' && (
             <Svg key="svg-estante" source={estanteArte} alt="Estante con carpetas" {...sizeProps(estanteArte)} />
