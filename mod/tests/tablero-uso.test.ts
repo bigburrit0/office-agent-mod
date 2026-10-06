@@ -1,6 +1,8 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { PANES, PROPS, PANE, fsFalso, textosDe } from './ayuda-tablero'
+import { formatoTokens } from '../hooks/arte-uso'
+import { datosUsoDe } from '../hooks/tablero-nucleo'
+import { PANES, PROPS, PANE, fsFalso, textosDe, turnoSub } from './ayuda-tablero'
 
 const USO = {
   startedAt: 0,
@@ -70,9 +72,11 @@ test('uso de la sesión: el desplegable arranca abierto y se cierra', async ($, 
   expect(await ui.find({ type: 'Button', key: 'compactar' })).toBe(undefined)
 })
 
-test('uso de la sesión: sin suscripción lo dice', async ($, on) => {
+test('uso de la sesión: sin ventanas dice que aparecen después de la primera respuesta', async ($, on) => {
   const { ui } = await montarUso($, on, { startedAt: 0, context: { window: 200000 }, rateLimits: [] })
-  expect((await textosDe(ui)).some(t => /Sin datos de las ventanas de 5 horas y semanal/.test(t))).toBe(true)
+  const textos = await textosDe(ui)
+  expect(textos.some(t => /Las ventanas de 5 horas y semanal aparecen después de la primera respuesta\./.test(t))).toBe(true)
+  expect(textos.some(t => /suscripción/.test(t))).toBe(false)
   expect(await linea(ui, /^Contexto/)).toBe('')
 })
 
@@ -139,4 +143,52 @@ test('uso de la sesión: con clave de API (sin ventanas) muestra el costo de la 
 test('uso de la sesión: con suscripción no se muestra el costo', async ($, on) => {
   const { ui } = await montarUso($, on, { ...USO, cost: { usd: 3.456 } })
   expect(await linea(ui, /^Costo/)).toBe('')
+})
+
+const alts = async (ui: any): Promise<string[]> =>
+  (await ui.findAll({ type: 'Svg' })).map((s: any) => String(s.props.alt ?? ''))
+
+test('tokens de la sesión: suma el hilo principal y los subagentes y el Svg muestra el total', async ($, on) => {
+  let guardado: any = null
+  on('state.set', async ($$: any, e: any, next: any) => {
+    if (String(e.key) === 'tokensSesion') guardado = e.value
+    return next(e)
+  })
+  on('turn.complete', (_$: any, e: any) => ({ text: e.answer, usage: e.usage }))
+  const { ui } = await montarUso($, on, USO)
+  const u = { input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 5000, cache_creation_input_tokens: 300, model: 'm' }
+  await turnoSub($, undefined, 'a', u)
+  await turnoSub($, undefined, 'b', u)
+  await turnoSub($, 'sub-1', 'c', u)
+  await ui.redraw()
+  expect(guardado).toEqual({ input: 3000, output: 600, cacheLectura: 15000, cacheEscritura: 900, turnos: 3 })
+  const total = formatoTokens(3000 + 600 + 15000 + 900)
+  expect((await alts(ui)).some(a => a.startsWith('Tokens de la sesión') && a.includes(total))).toBe(true)
+})
+
+test('tablero de uso: el Svg dice cuánto queda de 5 horas y de la semana', async ($, on) => {
+  const { ui } = await montarUso($, on, USO)
+  const alt = (await alts(ui)).find(a => a.startsWith('Tokens de la sesión')) ?? ''
+  expect(alt.includes('Ventana de 5 horas: queda 58 %')).toBe(true)
+  expect(alt.includes('Semana: queda 82 %')).toBe(true)
+  expect((await linea(ui, /^5 horas/)).includes('quedan 58 %')).toBe(true)
+  expect((await linea(ui, /^Semanal/)).includes('quedan 82 %')).toBe(true)
+})
+
+test('tablero de uso: un turno del hilo principal vuelve a pedir session.usage', async ($, on) => {
+  on('turn.complete', (_$: any, e: any) => ({ text: e.answer, usage: e.usage }))
+  const { ui, pedidos } = await montarUso($, on, USO)
+  expect(pedidos()).toBe(1)
+  await turnoSub($, undefined, 'listo', { input_tokens: 1, output_tokens: 1 })
+  await ui.redraw()
+  expect(pedidos()).toBe(2)
+  await turnoSub($, 'sub-1', 'listo', { input_tokens: 1, output_tokens: 1 })
+  expect(pedidos()).toBe(2)
+})
+
+test('datosUsoDe: sin uso ni turnos no hay tokens ni ventanas', () => {
+  const d = datosUsoDe(null, { input: 0, output: 0, cacheLectura: 0, cacheEscritura: 0, turnos: 0 }, 0)
+  expect(d.tokens).toBe(undefined)
+  expect(d.cincoHoras).toBe(undefined)
+  expect(d.semana).toBe(undefined)
 })

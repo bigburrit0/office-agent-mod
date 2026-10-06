@@ -104,6 +104,8 @@ declare module 'claude-code' {
        * (recortado a 4000 caracteres), tokens sumados de todos sus turnos y cantidad de turnos.
        */
       informes: Record<string, { texto: string; tokens: Record<string, number>; turnos: number }>
+      /** Tokens que consumió la sesión entera (hilo principal y subagentes), sumados turno a turno; `turnos` cuenta los turnos. */
+      tokensSesion: { input: number; output: number; cacheLectura: number; cacheEscritura: number; turnos: number }
       /** Cuerpo (sin frontmatter) de la skill de cada equipo, leído al abrir su desplegable `skill:<equipo>`. */
       skillsEquipo: Record<string, string>
       /** Formulario de «Nuevo agente»; `null` si está cerrado. */

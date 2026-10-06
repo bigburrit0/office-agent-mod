@@ -55,6 +55,7 @@ import {
   BUCKET_MS,
   bucketOf,
   cachedSvg,
+  datosUsoDe,
   CARA_ALTO,
   CARA_ANCHO,
   chipEquipo,
@@ -102,6 +103,7 @@ import {
   TITLE,
   totalTokens,
 } from './tablero-nucleo'
+import { altUso, quedaPct, tableroUsoSvg } from './arte-uso'
 import { CLARO, colorUsoClaro, legibleSobre, PASTILLAS_CLARO } from './tema'
 import type { Ordered, PatioEntrada, UsoSesion } from './tablero-nucleo'
 
@@ -117,6 +119,10 @@ const abiertosAtom = atom({ plugin: 'tablero-oficina', key: 'abiertos' } as cons
 const skillsEquipoAtom = atom({ plugin: 'tablero-oficina', key: 'skillsEquipo' } as const, {})
 const nuevoAtom = atom({ plugin: 'tablero-oficina', key: 'nuevo' } as const, null)
 const informesAtom = atom({ plugin: 'tablero-oficina', key: 'informes' } as const, {})
+const tokensSesionAtom = atom(
+  { plugin: 'tablero-oficina', key: 'tokensSesion' } as const,
+  { input: 0, output: 0, cacheLectura: 0, cacheEscritura: 0, turnos: 0 },
+)
 const noticeAtom = atom({ plugin: 'tablero-oficina', key: 'notice' } as const, '')
 const catalogoAtom = atom(
   { plugin: 'tablero-oficina', key: 'catalogo' } as const,
@@ -660,6 +666,28 @@ export const register: Register = on => {
   // motor todavía figuraba como «corriendo».
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
+    try {
+      const crudo: unknown = e.usage ?? result?.usage
+      if (crudo && typeof crudo === 'object') {
+        const u = crudo as Record<string, unknown>
+        const n = (k: string): number => (typeof u[k] === 'number' && Number.isFinite(u[k]) ? (u[k] as number) : 0)
+        const hayNumero = ['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens'].some(
+          k => typeof u[k] === 'number' && Number.isFinite(u[k]),
+        )
+        if (hayNumero) {
+          await update($, tokensSesionAtom, t => ({
+            input: t.input + n('input_tokens'),
+            output: t.output + n('output_tokens'),
+            cacheLectura: t.cacheLectura + n('cache_read_input_tokens'),
+            cacheEscritura: t.cacheEscritura + n('cache_creation_input_tokens'),
+            turnos: t.turnos + 1,
+          }))
+        }
+      }
+    } catch {
+      // El conteo es accesorio: nunca debe romper el turno.
+    }
+    if (e.agentId === undefined) void pedirUso($)
     if (e.agentId !== undefined) {
       try {
         const id = String(e.agentId)
@@ -1625,8 +1653,16 @@ export const register: Register = on => {
     const uso = (await read($, usoAtom)) as UsoSesion | null
     const usoAbierto = abiertosSub.uso !== false
     const confirmandoCompactar = abiertosSub['confirmar-compactar'] === true
+    const tokensSes = await read($, tokensSesionAtom)
+    const datosUso = datosUsoDe(uso, tokensSes, nowReal)
+    const svgUso =
+      hasSvg && e.surface !== 'terminal'
+        ? cachedSvg('uso-tablero', `${W}|${quieto}|${JSON.stringify(datosUso)}`, () =>
+            tableroUsoSvg(datosUso, W, { quieto }),
+          )
+        : ''
     const anchoBarra = narrow ? 10 : 20
-    const filaUso = (clave: string, nombre: string, pct: number, renueva: string) => {
+    const filaUso = (clave: string, nombre: string, pct: number, renueva: string, queda = false) => {
       const barra = barraUso(pct, anchoBarra)
 
       return (
@@ -1635,6 +1671,7 @@ export const register: Register = on => {
           <Text color={claro ? colorUsoClaro(pct) : colorUso(pct)}>{barra.llena}</Text>
           <Text {...suave}>{barra.vacia}</Text>
           <Text color={tx} bold>{` ${pct.toLocaleString('es-UY', { maximumFractionDigits: 1 })} %`}</Text>
+          {queda && <Text {...suave}>{` · quedan ${quedaPct(pct)} %`}</Text>}
           {renueva !== '' && <Text {...suave}>{` · se renueva ${renueva}`}</Text>}
         </Box>
       )
@@ -1656,7 +1693,7 @@ export const register: Register = on => {
         {usoAbierto && (
           <Box flexDirection="column" paddingLeft={2}>
             {limitesUso.map(l =>
-              filaUso(l.kind, NOMBRE_LIMITE[l.kind] ?? l.kind, l.percentUsed, cuandoRenueva(l.resetsAt, nowReal)),
+              filaUso(l.kind, NOMBRE_LIMITE[l.kind] ?? l.kind, l.percentUsed, cuandoRenueva(l.resetsAt, nowReal), l.kind === 'five_hour' || l.kind === 'seven_day'),
             )}
             {limitesUso.length === 0 && uso?.costo !== undefined && (
               <Box key="uso-costo" flexDirection="row" flexWrap="wrap">
@@ -1667,7 +1704,7 @@ export const register: Register = on => {
             )}
             {limitesUso.length === 0 && (
               <Text {...suave} wrap="wrap">
-                Sin datos de las ventanas de 5 horas y semanal: aparecen con una suscripción, después de la primera respuesta.
+                Las ventanas de 5 horas y semanal aparecen después de la primera respuesta.
               </Text>
             )}
             {uso?.contexto !== undefined && filaUso('contexto', 'Contexto', uso.contexto, '')}
@@ -1698,13 +1735,13 @@ export const register: Register = on => {
       </Box>
     )
     // Líneas que ocupa el bloque de uso (para no tapar la lista con poco espacio).
-    const lineasUso = usoAbierto
+    const lineasUso = linesOf(svgUso) + (usoAbierto
       ? 2 +
         Math.max(1, limitesUso.length) +
         (limitesUso.length === 0 && uso?.costo !== undefined ? 1 : 0) +
         (uso?.contexto !== undefined ? 1 : 0) +
         (confirmandoCompactar ? 3 : 0)
-      : 1
+      : 1)
     const sorted = orderTree(rows)
 
     const count = (status: string) => rows.filter(row => row.status === status).length
@@ -1931,6 +1968,9 @@ export const register: Register = on => {
         {barraSuperior()}
         {noticeLine}
         {showHeader && resumenAbierto && caraSvg !== '' && cabecera(escenaPatio, burbujaEstado())}
+        {svgUso !== '' && (
+          <Svg key="svg-uso" source={svgUso} alt={altUso(datosUso)} {...sizeProps(svgUso)} />
+        )}
         <Box flexDirection="column">
         {hasSvg && e.surface !== 'terminal' ? (
           <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={1}>

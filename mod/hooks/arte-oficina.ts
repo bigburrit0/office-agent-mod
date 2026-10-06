@@ -53,6 +53,13 @@ function lienzo(s: number) {
       if (ult && ult[0] === color) ult[1] += d
       else capas.push([color, d])
     },
+    // Tandas de color en orden de pintado, y volcado de tandas ya armadas (para juntar objetos sueltos).
+    runs(): Array<[string, string]> {
+      return capas
+    },
+    volcar(tandas: Array<[string, string]>) {
+      for (const [k, d] of tandas) capas.push([k, d])
+    },
     svg(): string {
       return capas.map(([k, d]) => `<path fill="${k}" d="${d}"/>`).join('')
     },
@@ -182,20 +189,138 @@ export function estanteSvg(anchoPx: number, escala: number = 2): string {
   return abrirSvg(w, 12 * s, l.svg(), 'estante con carpetas')
 }
 
-// Pasillo de la oficina: pared clara, zócalo y piso de baldosas abajo; a lo largo, objetos espaciados.
-// Alto exacto `altoPx` (24..480): con poco alto, solo zócalo, piso y objetos bajos.
-export function pieOficinaSvg(anchoPx: number, altoPx: number, escala: number = 2, opts?: { quieto?: boolean }): string {
+// Medidas del pasillo en unidades: pared sobre el zócalo (P) y alto en pantalla (h).
+function medidasPie(altoPx: unknown, escala: unknown) {
   const s = escalaEntera(escala)
-  const w = anchoEntero(anchoPx)
   const nAlto = Math.floor(Number(altoPx))
   const h = Math.max(24, Math.min(480, Number.isFinite(nAlto) ? nAlto : 24))
-  const u = Math.ceil(w / s)
   const hu = Math.ceil(h / s)
+  const P = hu - 6 - 2
+  return { s, h, hu, P }
+}
+
+const FILA_ALTO = 18 // alto de cada fila de objetos de pared, en unidades
+const TIPOS_PARED = ['ventana', 'pizarra', 'cuadros', 'estante', 'reloj']
+
+// Reparto vertical de la pared. Con h <= 60 px (o poca pared) queda el dibujo de siempre.
+function planPared(h: number, P: number) {
+  if (h <= 60 || P < 32) return null
+  const F = P - 14 // arriba de los objetos de piso
+  const top = F >= 26 ? 6 : 0 // la luminaria de techo ocupa 0..6
+  const avail = F - top
+  const n = Math.max(1, Math.ceil((avail - 18) / 34))
+  const gap = Math.max(0, (avail - n * FILA_ALTO) / (n + 1))
+  const filas: number[] = []
+  for (let i = 0; i < n; i++) filas.push(top + Math.floor(gap * (i + 1) + FILA_ALTO * i))
+  return { F, top, filas, lum: top > 0, M: Math.round((P * 2) / 3) }
+}
+
+// Franja horizontal más alta de pared sin ningún objeto (ni moldura), en unidades.
+export function franjaLisaMaxima(altoPx: number, escala: number = 2): number {
+  const { h, P } = medidasPie(altoPx, escala)
+  const ocupado: Array<[number, number]> = []
+  const plan = planPared(h, P)
+  if (plan) {
+    if (plan.lum) ocupado.push([0, 6])
+    for (const y of plan.filas) ocupado.push([y, y + FILA_ALTO])
+    ocupado.push([plan.M, plan.M + 2], [plan.F, P])
+  } else {
+    ocupado.push([P >= 12 ? P - 14 : P >= 10 ? P - 9 : P, P])
+    if (P >= 32) ocupado.push([P - 26, P - 6])
+    if (P >= 38) ocupado.push([P - 32, P - 23])
+  }
+  ocupado.sort((a, b) => a[0] - b[0])
+  let max = 0
+  let fin = 0
+  for (const [a, b] of ocupado) {
+    if (a > fin) max = Math.max(max, a - fin)
+    fin = Math.max(fin, b)
+  }
+  return Math.max(max, P - fin)
+}
+
+function ventana(l: Lienzo, cx: number, y: number) {
+  l.r(cx - 9, y, 18, 16, C.contorno)
+  l.r(cx - 8, y + 1, 16, 14, C.azulClaro)
+  l.r(cx - 8, y + 1, 16, 6, C.azul)
+  for (let i = 0; i < 4; i++) l.r(cx - 8, y + 1 + i * 2, 16, 1, C.beige)
+  l.r(cx - 1, y + 1, 2, 14, C.contorno)
+  l.r(cx - 10, y + 16, 20, 2, C.beigeOscuro)
+}
+
+function pizarra(l: Lienzo, cx: number, y: number, v: number) {
+  l.r(cx - 12, y, 24, 18, C.contorno)
+  l.r(cx - 11, y + 1, 22, 16, C.corcho)
+  const a = v % 2 === 0 ? C.azul : C.naranja
+  const b = v % 2 === 0 ? C.naranja : C.azul
+  const notas: Array<[number, number, number, string]> = [
+    [-9, 3, 5, a], [-2, 2, 5, b], [4, 4, 5, a], [-8, 10, 5, b], [-1, 10, 5, a], [5, 10, 4, b],
+  ]
+  for (const [dx, dy, ancho, color] of notas) {
+    l.r(cx + dx, y + dy, ancho, 5, color)
+    l.r(cx + dx + 2, y + dy, 1, 1, C.contorno)
+  }
+}
+
+function cuadros(l: Lienzo, cx: number, y: number) {
+  l.r(cx - 12, y, 12, 18, C.contorno)
+  l.r(cx - 11, y + 1, 10, 16, C.papel)
+  l.r(cx - 11, y + 9, 10, 8, C.planta)
+  l.r(cx - 8, y + 4, 3, 3, C.naranja)
+  l.r(cx + 2, y + 3, 10, 12, C.contorno)
+  l.r(cx + 3, y + 4, 8, 10, C.azulClaro)
+  l.r(cx + 3, y + 10, 8, 4, C.azul)
+}
+
+function estante(l: Lienzo, cx: number, y: number) {
+  l.r(cx - 13, y + 12, 26, 2, C.contorno)
+  l.r(cx - 13, y + 12, 26, 1, C.corcho)
+  l.r(cx - 12, y + 14, 2, 3, C.contorno)
+  l.r(cx + 4, y + 14, 2, 3, C.contorno)
+  const libros: Array<[number, number, string]> = [[2, 8, C.azul], [3, 6, C.naranja], [2, 7, C.beige], [3, 8, C.planta], [2, 6, C.azulClaro]]
+  let x = cx - 12
+  for (const [ancho, alto, color] of libros) {
+    l.r(x, y + 12 - alto, ancho, alto, C.contorno)
+    l.r(x, y + 13 - alto, ancho - 1, alto - 1, color)
+    x += ancho
+  }
+  // Planta colgante a la derecha.
+  l.r(cx + 8, y, 1, 5, C.gris)
+  l.r(cx + 6, y + 5, 5, 3, C.contorno)
+  l.r(cx + 7, y + 5, 3, 2, C.maceta)
+  l.r(cx + 5, y + 8, 2, 6, C.planta)
+  l.r(cx + 8, y + 8, 1, 8, C.planta)
+  l.r(cx + 10, y + 8, 2, 5, C.planta)
+}
+
+function reloj(l: Lienzo, cx: number, y: number) {
+  l.r(cx, y, 1, 2, C.gris)
+  l.r(cx - 8, y + 2, 16, 16, C.contorno)
+  l.r(cx - 7, y + 3, 14, 14, C.papel)
+  l.r(cx, y + 5, 1, 6, C.contorno)
+  l.r(cx, y + 10, 5, 1, C.naranja)
+}
+
+function luminaria(l: Lienzo, cx: number) {
+  l.r(cx, 0, 1, 2, C.contorno)
+  l.r(cx - 3, 2, 7, 1, C.contorno)
+  l.r(cx - 5, 3, 11, 3, C.contorno)
+  l.r(cx - 4, 3, 9, 2, C.papel)
+}
+
+// Pasillo de la oficina: pared clara, zócalo y piso de baldosas abajo; a lo largo, objetos espaciados.
+// Alto exacto `altoPx` (24..480): con poco alto, solo zócalo, piso y objetos bajos; con alto de sobra,
+// la pared se llena por pisos (ventanas, pizarra, cuadros, estante, reloj) y luminarias de techo.
+export function pieOficinaSvg(anchoPx: number, altoPx: number, escala: number = 2, opts?: { quieto?: boolean }): string {
+  const { s, h, hu, P } = medidasPie(altoPx, escala)
+  const w = anchoEntero(anchoPx)
+  const u = Math.ceil(w / s)
   const dy = h - hu * s // el dibujo se ancla abajo; lo que sobra arriba queda recortado
   const l = lienzo(s)
   const piso = 6
   const sueloY = hu - piso // donde arranca el piso
   const pared = sueloY - 2 // alto de la pared sobre el zócalo
+  const plan = planPared(h, P)
   l.r(0, 0, u, sueloY - 2, C.pared)
   l.r(0, sueloY - 2, u, 2, C.zocalo)
   l.r(0, sueloY, u, piso, C.beigeOscuro)
@@ -208,6 +333,38 @@ export function pieOficinaSvg(anchoPx: number, altoPx: number, escala: number = 
   const slot = 34
   const n = Math.floor(u / slot)
   const x0 = Math.floor((u - n * slot) / 2)
+  if (plan) {
+    // Guarda (moldura) a 2/3 del alto, detrás de los objetos.
+    l.r(0, plan.M, u, 2, C.beigeOscuro)
+    l.r(0, plan.M, u, 1, C.beige)
+    // Cada objeto se dibuja aparte y se junta por tanda de pintado: mismo orden, menos caracteres.
+    const niveles: Array<Map<string, string>> = []
+    const juntar = (o: Lienzo) => {
+      o.runs().forEach(([k, d], i) => {
+        const nivel = (niveles[i] ??= new Map())
+        nivel.set(k, (nivel.get(k) ?? '') + d)
+      })
+    }
+    for (let k = 0; k < n; k++) {
+      const cx = x0 + k * slot + 17
+      if (plan.lum && k % 2 === 0) {
+        const o = lienzo(s)
+        luminaria(o, cx)
+        juntar(o)
+      }
+      plan.filas.forEach((fy, r) => {
+        const tipo = TIPOS_PARED[(r * 2 + k) % TIPOS_PARED.length]
+        const o = lienzo(s)
+        if (tipo === 'ventana') ventana(o, cx, fy)
+        else if (tipo === 'pizarra') pizarra(o, cx, fy, k + r)
+        else if (tipo === 'cuadros') cuadros(o, cx, fy)
+        else if (tipo === 'estante') estante(o, cx, fy)
+        else reloj(o, cx, fy)
+        juntar(o)
+      })
+    }
+    for (const nivel of niveles) l.volcar([...nivel.entries()])
+  }
   const burbujas: Array<[number, number]> = []
   for (let k = 0; k < n; k++) {
     const sx = x0 + k * slot
@@ -234,8 +391,8 @@ export function pieOficinaSvg(anchoPx: number, altoPx: number, escala: number = 
       l.r(cx - 3, b - 3, 6, 1, C.gris)
       burbujas.push([cx, b])
     }
-    // Objetos de pared, solo si hay lugar de sobra arriba.
-    if (k % 3 === 1 && pared >= 32) {
+    // Objetos de pared de siempre, solo en el dibujo bajo (h <= 60 px).
+    if (!plan && k % 3 === 1 && pared >= 32) {
       const wy = sueloY - 28
       l.r(cx - 9, wy, 18, 18, C.contorno)
       l.r(cx - 8, wy + 1, 16, 16, C.azulClaro)
@@ -244,7 +401,7 @@ export function pieOficinaSvg(anchoPx: number, altoPx: number, escala: number = 
       l.r(cx - 1, wy + 1, 2, 16, C.contorno)
       l.r(cx - 10, wy + 18, 20, 2, C.beigeOscuro)
     }
-    if (k % 3 === 2 && pared >= 38) {
+    if (!plan && k % 3 === 2 && pared >= 38) {
       const ry = sueloY - 34
       l.r(cx - 4, ry, 9, 9, C.contorno)
       l.r(cx - 3, ry + 1, 7, 7, C.papel)

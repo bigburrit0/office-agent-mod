@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { estanteSvg, OFICINA_VACIA_ALTO, oficinaVaciaSvg, pieOficinaSvg } from '../hooks/arte-oficina'
+import { estanteSvg, franjaLisaMaxima, OFICINA_VACIA_ALTO, oficinaVaciaSvg, pieOficinaSvg } from '../hooks/arte-oficina'
 
 const viewBox = (s: string) => {
   const m = /viewBox="0 0 (\d+) (\d+)"/.exec(s)!
@@ -59,5 +59,24 @@ test('ancho NaN o negativo no tira error', () => {
     expect(oficinaVaciaSvg(n).startsWith('<svg')).toBe(true)
     expect(estanteSvg(n).startsWith('<svg')).toBe(true)
     expect(pieOficinaSvg(n, n).startsWith('<svg')).toBe(true)
+  }
+})
+
+test('con alto de sobra el pasillo se llena: 420x300 tiene 1,4 veces los caracteres de 420x120', () => {
+  expect(pieOficinaSvg(420, 300).length >= 1.4 * pieOficinaSvg(420, 120).length).toBe(true)
+})
+
+test('franjaLisaMaxima: ninguna franja de pared lisa pasa de 30 unidades', () => {
+  for (const alto of [120, 200, 300, 480]) {
+    for (const escala of [1, 2]) expect(franjaLisaMaxima(alto, escala) <= 30).toBe(true)
+  }
+})
+
+test('el pasillo alto mantiene viewBox exacto y sin animacion con quieto', () => {
+  for (const [ancho, alto] of [[420, 120], [420, 300], [1200, 480]]) {
+    const v = viewBox(pieOficinaSvg(ancho, alto))
+    expect(v.w).toBe(ancho)
+    expect(v.h).toBe(alto)
+    expect(pieOficinaSvg(ancho, alto, 2, { quieto: true }).includes('<animate')).toBe(false)
   }
 })

@@ -5,6 +5,7 @@
 // acciones, el estado y el dibujo viven en register.tsx.
 
 import type { AgenteTablero, TableroFila } from '../types/index'
+import type { DatosUso } from './arte-uso'
 import { DEFAULT_ROLES } from './roles'
 import { PATIO_EXPLOTA_MS, PATIO_SALE_MS } from './arte-escritorios'
 import { EQUIPO_ACENTO, tipoDeAgente } from './arte-iconos'
@@ -538,4 +539,26 @@ export function cuerpoSkill(texto: string): string {
   const salto = resto.indexOf('\n')
 
   return resto.slice(salto < 0 ? resto.length : salto + 1).trim()
+}
+
+// ---- Tokens de la sesión y datos del tablero de uso -------------------------------
+
+export type TokensSesion = { input: number; output: number; cacheLectura: number; cacheEscritura: number; turnos: number }
+
+// Une los tokens de la sesión y las ventanas del motor en lo que dibuja `tableroUsoSvg`.
+export function datosUsoDe(uso: UsoSesion | null, tokens: TokensSesion, ahora: number): DatosUso {
+  const d: DatosUso = {}
+  if (tokens.turnos > 0) {
+    d.tokens = {
+      total: tokens.input + tokens.output + tokens.cacheLectura + tokens.cacheEscritura,
+      nuevos: tokens.input + tokens.output + tokens.cacheEscritura,
+      cache: tokens.cacheLectura,
+    }
+  }
+  const cinco = uso?.limites.find(l => l.kind === 'five_hour')
+  if (cinco) d.cincoHoras = { pct: cinco.percentUsed, renueva: cuandoRenueva(cinco.resetsAt, ahora) }
+  const sem = uso?.limites.find(l => l.kind === 'seven_day')
+  if (sem) d.semana = { pct: sem.percentUsed, renueva: cuandoRenueva(sem.resetsAt, ahora), hoy: new Date(ahora).getDay() }
+
+  return d
 }

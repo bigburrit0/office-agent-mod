@@ -100,13 +100,52 @@ function abrirSvg(ancho: number, alto: number, cuerpo: string): string {
   )
 }
 
-function svgVacio(mensaje: string, ancho: number): string {
+type TemaLinea = 'oscuro' | 'claro'
+
+// Colores del tema claro de la línea de tiempo (mismos valores que CLARO en tema.ts; locales para no crear ciclos).
+const LINEA_CLARO = { fondo: '#FFFDF7', etiqueta: '#2B2118', eje: '#6B5B45', guia: '#C2AE86' }
+
+function luminancia(hex: string): number {
+  const c = [1, 3, 5].map(i => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+  })
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+}
+
+function contraste(a: string, b: string): number {
+  const la = luminancia(a)
+  const lb = luminancia(b)
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+
+// Oscurece un color hasta que contraste al menos 3:1 contra el fondo claro.
+function contrasteSobreClaro(hex: string): string {
+  let actual = hex
+  for (let k = 1; k <= 20 && contraste(actual, LINEA_CLARO.fondo) < 3; k++) {
+    const f = 1 - k * 0.05
+    actual =
+      '#' +
+      [1, 3, 5]
+        .map(i =>
+          Math.round(parseInt(hex.slice(i, i + 2), 16) * f)
+            .toString(16)
+            .padStart(2, '0'),
+        )
+        .join('')
+        .toUpperCase()
+  }
+  return actual
+}
+
+function svgVacio(mensaje: string, ancho: number, tema: TemaLinea = 'oscuro'): string {
   const w = Math.max(ancho, 120)
+  const claro = tema === 'claro'
   return abrirSvg(
     w,
     20,
-    `<rect width="${w}" height="20" fill="${PALETTE.selva}"/>` +
-      `<text x="6" y="14" font-family="monospace" font-size="11" fill="${PALETTE.crema}">${esc(mensaje)}</text>`,
+    `<rect width="${w}" height="20" fill="${claro ? LINEA_CLARO.fondo : PALETTE.selva}"/>` +
+      `<text x="6" y="14" font-family="monospace" font-size="11" fill="${claro ? LINEA_CLARO.etiqueta : PALETTE.crema}">${esc(mensaje)}</text>`,
   )
 }
 
@@ -254,10 +293,17 @@ function recortarEtiqueta(texto: string, max: number): string {
 }
 
 // Gantt: una fila por subagente, ordenadas por inicio; barras hechas de bloques escalonados.
-export function timelineSvg(rows: FilaTiempo[], nowMs: number, width: number): string {
+export function timelineSvg(
+  rows: FilaTiempo[],
+  nowMs: number,
+  width: number,
+  opts?: { tema?: 'oscuro' | 'claro' },
+): string {
   const w = entero(width, 480, 200, 2000)
+  const claro = opts?.tema === 'claro'
+  const tema: TemaLinea = claro ? 'claro' : 'oscuro'
   const lista = Array.isArray(rows) ? rows : []
-  if (lista.length === 0) return svgVacio(SIN_DATOS, w)
+  if (lista.length === 0) return svgVacio(SIN_DATOS, w, tema)
 
   const ahora = numeroSeguro(nowMs, 0)
   const ALTO_FILA = 16
@@ -302,7 +348,7 @@ export function timelineSvg(rows: FilaTiempo[], nowMs: number, width: number): s
     const escala = anchoBarra / span
     const alto = ARRIBA + filas.length * ALTO_FILA + 6
 
-    let cuerpo = `<rect width="${w}" height="${alto}" fill="${PALETTE.selva}"/>`
+    let cuerpo = `<rect width="${w}" height="${alto}" fill="${claro ? LINEA_CLARO.fondo : PALETTE.selva}"/>`
 
     // Eje: 4 divisiones con el tiempo transcurrido desde el primer inicio. Una marca que se
     // pisaría con otra (poco ancho) no se escribe; la línea de la división sí.
@@ -314,7 +360,7 @@ export function timelineSvg(rows: FilaTiempo[], nowMs: number, width: number): s
     const inicioUltima = xMarca(4) - marcas[4].length * 5.5
     let finAnterior = -Infinity
     for (let i = 0; i <= 4; i++) {
-      cuerpo += `<rect x="${xMarca(i)}" y="${ARRIBA - 2}" width="1" height="${alto - ARRIBA + 2}" fill="${PALETTE.turquesa}" opacity="0.35"/>`
+      cuerpo += `<rect x="${xMarca(i)}" y="${ARRIBA - 2}" width="1" height="${alto - ARRIBA + 2}" fill="${claro ? LINEA_CLARO.guia : PALETTE.turquesa}" opacity="0.35"/>`
       if (i === 4) continue
       const fin = xMarca(i) + marcas[i].length * 5.5
       if (xMarca(i) < finAnterior + 4 || fin + 4 > inicioUltima) marcas[i] = ''
@@ -324,21 +370,21 @@ export function timelineSvg(rows: FilaTiempo[], nowMs: number, width: number): s
       if (texto === '') return
       const x = xMarca(i)
       const ancla = i === 4 ? 'end' : 'start'
-      cuerpo += `<text x="${x}" y="10" text-anchor="${ancla}" font-family="monospace" font-size="9" fill="${PALETTE.oroPalido}">${esc(texto)}</text>`
+      cuerpo += `<text x="${x}" y="10" text-anchor="${ancla}" font-family="monospace" font-size="9" fill="${claro ? LINEA_CLARO.eje : PALETTE.oroPalido}">${esc(texto)}</text>`
     })
 
     filas.forEach((f, idx) => {
       const y = ARRIBA + idx * ALTO_FILA
       const yBloque = y + Math.floor((ALTO_FILA - LADO) / 2)
       // Marca de estado + etiqueta.
-      cuerpo += `<rect x="4" y="${yBloque + 2}" width="6" height="6" fill="${statusColor(f.status)}"/>`
-      cuerpo += `<text x="14" y="${y + 12}" font-family="monospace" font-size="11" fill="${PALETTE.crema}">${esc(recortarEtiqueta(f.label, maxChars))}</text>`
+      cuerpo += `<rect x="4" y="${yBloque + 2}" width="6" height="6" fill="${claro ? contrasteSobreClaro(statusColor(f.status)) : statusColor(f.status)}"/>`
+      cuerpo += `<text x="14" y="${y + 12}" font-family="monospace" font-size="11" fill="${claro ? LINEA_CLARO.etiqueta : PALETTE.crema}">${esc(recortarEtiqueta(f.label, maxChars))}</text>`
 
       // Barra: bloques como cubos de una pirámide escalonada.
       const x0 = xBarra + (f.ini - minimo) * escala
       const largo = Math.max(LADO, (f.fin - f.ini) * escala)
       const cantidad = Math.max(1, Math.min(120, Math.ceil(largo / PASO)))
-      const color = roleColor(f.role)
+      const color = claro ? contrasteSobreClaro(roleColor(f.role)) : roleColor(f.role)
       let bloques = ''
       for (let i = 0; i < cantidad; i++) {
         const x = Math.min(Math.round(x0 + i * PASO), w - MARGEN - LADO)
