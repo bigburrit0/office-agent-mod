@@ -193,6 +193,8 @@ Todas las oleadas quedaron hechas en una sola tanda, en la rama `skin-nueva`. Ve
 | TR-4/5 | Hecha | `hooks/arte-monitor.ts`: el monitor con prompt (cursor en Morse), hora, barra de estado, post-it, patito, marca y luz; los agentes como íconos del color de su equipo en 4 fases; carpetas en Equipos y el archivo en el editor en Editar. `hooks/arte-insignias-terminal.ts`: tipos de agente, placas, contador y fecha. |
 | TR-6/7/8 | Hecha | `arte-uso.ts` en verde de fósforo, al estilo `htop` (mismas pruebas); `hooks/arte-escritorio.ts`: teclado que se hunde con agentes, escritorio con la PC y el TURBO, borde de la mesa y caja de disquetes; huevos de pascua por hora y fecha. |
 
+**Versión de terminal (07/10/2026).** En la terminal (sin dibujos) el panel muestra el monitor hecho con caracteres (`hooks/terminal-texto.ts`, puro): el patito, el marco beige con el prompt y la hora, el robot en ASCII con su utilería según la emoción (taza, mate, chivito, zzz, PANIK!!, STONKS…), a su lado los agentes con el ícono y el color de su equipo y su estado (`[|]`, `[OK]`, `[SEGV]`), o las carpetas de Equipos, o el archivo de Editar; la barra de estado en video inverso; y abajo la marca, el post-it y la luz (ámbar fuera de hora). La lista de agentes descuenta esas líneas. Pruebas: 331 pass, 0 fail.
+
 **Para probarlo en la compu** (el enlace del mod apunta al repo): `git fetch` y `git checkout skin-nueva` en la carpeta del repo, sesión nueva y `/oficina`. Para volver a la oficina: `git checkout master`.
 
 **Lo que no se pudo verificar acá:** cómo se ve en la app de escritorio de verdad (solo la maqueta en el navegador) y si la app manda los `tool.call` de las tareas tal como los simula la prueba.

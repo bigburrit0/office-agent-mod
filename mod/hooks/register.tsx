@@ -26,7 +26,9 @@ import {
   toolsKind,
   toolsLabel,
 } from './roles'
-import { caraRobotSvg, EMOCION_ALT, robotAscii } from './arte-robot-terminal'
+import { caraRobotSvg, EMOCION_ALT } from './arte-robot-terminal'
+import { pantallaTerminal } from './terminal-texto'
+import type { ContenidoTerminal } from './terminal-texto'
 import {
   celdaMasSvg,
   celdaPatioSvg,
@@ -1330,14 +1332,34 @@ export const register: Register = on => {
         </Box>
       ) : null
 
-    // En la terminal (sin dibujos), el robot en ASCII y su frase.
-    const roboAscii = (burbuja: string) =>
-      claro ? null : (
-        <Box key="robot-ascii" flexDirection="column">
-          {robotAscii(estado.emocion, progreso?.pct ?? null).map((linea, i) => (
-            <Text key={`ascii-${i}`} color="green">
-              {linea}
-            </Text>
+    // En la terminal (sin dibujos): el monitor hecho con caracteres (terminal-texto.ts) y la frase del robot.
+    const roboAscii = (
+      burbuja: string,
+      contenido: Partial<Pick<ContenidoTerminal, 'agentes' | 'carpetas' | 'lineas' | 'prompt' | 'estado'>> = {},
+    ) => {
+      if (claro) return null
+      const lineas = pantallaTerminal({
+        emocion: estado.emocion,
+        progreso: progreso?.pct ?? null,
+        ancho: Math.min(76, textCols),
+        hora: horaTxt,
+        prompt: contenido.prompt ?? '$ ./oficina',
+        estado: contenido.estado ?? barraEstado(''),
+        apagado: estado.emocion === 'apagado',
+        ahora: now,
+        ...contenido,
+      })
+
+      return (
+        <Box key="terminal-monitor" flexDirection="column">
+          {lineas.map((linea, i) => (
+            <Box key={`tm-${i}`} flexDirection="row">
+              {linea.map((tramo, k) => (
+                <Text key={`tm-${i}-${k}`} color={tramo.c} backgroundColor={tramo.bg} bold={tramo.b === true} wrap="truncate">
+                  {tramo.t}
+                </Text>
+              ))}
+            </Box>
           ))}
           {burbuja !== '' && (
             <Text color="green" wrap="wrap">
@@ -1346,6 +1368,7 @@ export const register: Register = on => {
           )}
         </Box>
       )
+    }
 
     // Cabecera común: cara grande a la izquierda, escena de la vista a la derecha, burbuja y teclado debajo.
     const cabecera = (escena: any, burbuja: string) => {
@@ -1659,7 +1682,11 @@ export const register: Register = on => {
           <Box flexDirection="column" {...fondoPanel}>
             {barraSuperior()}
             {noticeLine}
-            {roboAscii(burbujaEditar)}
+            {roboAscii(burbujaEditar, {
+              prompt: `$ vi ${draft.name}.md`,
+              lineas: ['---', `name: ${draft.name}`, `model: ${draft.model}`, `effort: ${draft.effort}`, '---', ...secciones.map(sec => `## ${tituloSeccion(sec, unica)}`).slice(0, 2)],
+              estado: hayCambios ? '-- INSERTAR -- SIN GUARDAR' : avisosBorrador.length > 0 ? `-- ${avisosBorrador.length} AVISOS --` : '-- NORMAL --',
+            })}
             {claro
               ? cabeceraEscena(
                   {
@@ -2157,7 +2184,16 @@ export const register: Register = on => {
         <Box flexDirection="column" {...fondoPanel}>
           {barraSuperior()}
           {noticeLine}
-          {roboAscii(burbujaEquipos)}
+          {roboAscii(burbujaEquipos, {
+            prompt: '$ ls equipos/',
+            carpetas: carpetasEquipos.map(c => ({
+              nombre: c.equipo,
+              color: c.color,
+              cantidad: catalogo.agentes.filter(a => (a.equipos[0] ?? 'base') === c.equipo).length,
+              aviso: c.aviso,
+            })),
+            estado: `[${plural(listaCarpetas.length, 'EQUIPO', 'EQUIPOS')}] [${plural(avisosEquipos, 'AVISO', 'AVISOS')}]`,
+          })}
           {claro
             ? cabeceraEscena(
                 {
@@ -2523,7 +2559,9 @@ export const register: Register = on => {
 
       return base + Math.max(1, Math.ceil((full.length + 2 + depth * 2) / Math.max(10, textCols - 2)))
     }
-    let budget = Math.max(1, termRows - 8 - lineasUso)
+    // En la terminal, el monitor de texto ocupa sus líneas (robot, marco, marca) y la frase del robot unas 2 más.
+    const lineasMonitor = claro ? 0 : 14 + 2
+    let budget = Math.max(1, termRows - 8 - lineasUso - lineasMonitor)
     let showSummarySvg = false
     let showLine = false
     let showHeader = false
@@ -2635,7 +2673,22 @@ export const register: Register = on => {
       <Box flexDirection="column" {...fondoPanel}>
         {barraSuperior()}
         {noticeLine}
-        {roboAscii(burbujaEstado())}
+        {roboAscii(burbujaEstado(), {
+          agentes: rows
+            .filter(row => row.status === 'running' || (patioEstado[row.id] !== undefined && patioEstado[row.id].hasta > now))
+            .map(row => {
+              const info = parse(row.description, roleNames, row.type)
+              const { equipo } = glifoDe(info.base, info.role, catalogo.agentes)
+              return {
+                equipo,
+                color: (EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base)[0],
+                etiqueta: info.card,
+                fase: row.status === 'running' ? 'juega' : patioEstado[row.id].fase,
+                texto: info.text,
+              }
+            }),
+          estado: barraEstado(corriendoRows.map(row => parse(row.description, roleNames, row.type).card).filter(c => c !== '').slice(0, 2).join(' ')),
+        })}
         {claro ? (
           <Box flexDirection="column">
             <Box flexDirection="column" width="100%" backgroundColor={ESCENA_FONDO}>
