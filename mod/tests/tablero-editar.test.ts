@@ -32,7 +32,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const svgs = await ui.findAll({ type: 'Svg' })
     if (surface === 'desktop') {
       // G-1: la placa del equipo va solo en la escena, no se repite debajo.
-      expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(0)
+      expect(svgs.filter(s => /^Bandera /.test(String(s.props.alt ?? ''))).length).toBe(0)
     } else {
       expect(svgs.length).toBe(0)
     }
@@ -86,7 +86,7 @@ test('Editar rol con panel de 40 columnas: los SVG respetan el ancho', async ($,
   await ui.press({ key: 'editar-implementador' })
   await ui.press({ key: 'rol-ver-prompt' })
   const svgs = await todos(ui, { type: 'Svg' })
-  expect(svgs.filter(s => /^Placa /.test(String(s.props.alt ?? ''))).length).toBe(0)
+  expect(svgs.filter(s => /^Bandera /.test(String(s.props.alt ?? ''))).length).toBe(0)
   for (const svg of svgs) {
     const width = svg.props.width
     if (typeof width === 'number') expect(width <= 40 * 8).toBe(true)

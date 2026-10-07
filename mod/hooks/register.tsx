@@ -37,7 +37,8 @@ import {
 } from './arte-mar'
 import { estanteSvg, pieOficinaSvg } from './arte-oficina'
 import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
-import { DIOSES_EQUIPO, diosSvg, EQUIPO_ACENTO, glifoSvg, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
+import { EQUIPO_ACENTO, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
+import { DIOSES_EQUIPO, diosSvg, glifoSvg } from './arte-insignias'
 import { actividadDe, actividadParaCelda } from './arte-actividades'
 import { decidirEmocion, DORMIR_MS, franjaHora, SOSPECHA_MS } from './emociones'
 import type { Grupo } from './emociones'
@@ -1323,7 +1324,7 @@ export const register: Register = on => {
             escenaEditar = (
               <Box flexDirection="column">
                 {escenaEditar}
-                <Svg key="svg-dios-equipo" source={diosArte} alt={`Placa ${dios} del equipo ${equipo}`} {...sizeProps(diosArte)} />
+                <Svg key="svg-dios-equipo" source={diosArte} alt={`Bandera ${dios} del equipo ${equipo}`} {...sizeProps(diosArte)} />
               </Box>
             )
           }
@@ -1862,7 +1863,7 @@ export const register: Register = on => {
             <Svg
               key={`svg-grupo-${equipo}`}
               source={diosArte}
-              alt={dios !== '' ? `Placa ${dios} del equipo ${equipo}` : `Placa del equipo ${equipo}`}
+              alt={dios !== '' ? `Bandera ${dios} del equipo ${equipo}` : `Bandera del equipo ${equipo}`}
               {...sizeProps(diosArte)}
             />
             <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0} paddingX={1}>
@@ -1906,7 +1907,7 @@ export const register: Register = on => {
           {barraSuperior()}
           {noticeLine}
           {claro
-            ? cabeceraEscena(placasEquipos, `${caraAlt}. Placas de los equipos: ${Object.keys(DIOSES_EQUIPO).join(', ')}`, burbujaEquipos)
+            ? cabeceraEscena(placasEquipos, `${caraAlt}. Banderas de los equipos: ${Object.keys(DIOSES_EQUIPO).join(', ')}`, burbujaEquipos)
             : cabecera(
                 temploArte !== '' ? (
                   <Svg key="svg-templo" source={temploArte} alt="Edificio de la oficina" {...sizeProps(temploArte)} />

@@ -334,12 +334,12 @@ test('Equipos: nuevo agente crea el archivo con la plantilla, rechaza inválidos
 test('Equipos: barra y escena con las placas antes de los dioses; un solo friso (el de cierre)', async ($, on) => {
   const { ui } = await montarEquipos($, on, {})
   const alts = await altsSvg(ui)
-  expect(alts.some(a => a.startsWith('Barco, loro ') && a.includes('Placas de los equipos'))).toBe(true)
+  expect(alts.some(a => a.startsWith('Barco, loro ') && a.includes('Banderas de los equipos'))).toBe(true)
   expect(alts.includes('Edificio de la oficina')).toBe(false)
   expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
   // Cambio T-97: la cara chica «pensando» ya no existe; la cara grande de la cabecera común sigue a la emoción (aburrido sin agentes).
   const cara = alts.findIndex(a => /^Barco, loro /.test(a))
-  const primerDios = alts.findIndex(a => /^Placa /.test(a))
+  const primerDios = alts.findIndex(a => /^Bandera /.test(a))
   expect(cara >= 0).toBe(true)
   expect(primerDios > cara).toBe(true)
   expect(alts.some(a => /^Emblema del equipo/.test(a))).toBe(false)
@@ -348,7 +348,7 @@ test('Equipos: barra y escena con las placas antes de los dioses; un solo friso 
 test('Equipos: placa y contador por equipo', async ($, on) => {
   const { ui } = await montarEquipos($, on, DOS_EQUIPOS)
   const alts = await altsSvg(ui)
-  expect(alts.includes('Placa Caja de herramientas del equipo base')).toBe(true)
+  expect(alts.includes('Bandera Calavera y huesos del equipo base')).toBe(true)
   // base tiene alfa y los 4 roles migrados; dev-a1 tiene 1.
   expect(alts.includes('5 en el contador')).toBe(true)
   expect(alts.includes('1 en el contador')).toBe(true)
@@ -418,7 +418,7 @@ for (const vista of ['subagentes', 'equipos', 'editar'] as const) {
     expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
     expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
     const alt = alts.find(a => a.startsWith('Barco, loro ')) ?? ''
-    expect(alt.includes('Placas de los equipos')).toBe(vista === 'equipos')
+    expect(alt.includes('Banderas de los equipos')).toBe(vista === 'equipos')
     expect(alt.includes('Taller de ')).toBe(vista === 'editar')
     expect(alts.includes('Edificio de la oficina')).toBe(false)
     expect(alts.includes('Pared del taller')).toBe(false)
@@ -474,12 +474,12 @@ test('Equipos: «Cómo trabaja el equipo» va dentro de la tarjeta del equipo (c
   const { ui } = await montarEquipos($, on, { [`${RAIZ_FALSA}\base\alfa.md`]: archivoAgente('alfa', 'base', ['general']) })
   await ui.press({ key: 'abrir-grupo-base' })
   await ui.redraw()
-  const dios: any = await ui.find({ type: 'Svg', alt: 'Placa Caja de herramientas del equipo base' })
+  const dios: any = await ui.find({ type: 'Svg', alt: 'Bandera Calavera y huesos del equipo base' })
   expect(dios !== undefined).toBe(true)
   const tarjetas = (await ui.findAll({ type: 'Box' })).filter((b: any) => b.props?.borderStyle === 'round')
   const duena = tarjetas.find(
     (b: any) =>
-      descendientes(b, n => n.type === 'Svg' && n.props?.alt === 'Placa Caja de herramientas del equipo base').length > 0 &&
+      descendientes(b, n => n.type === 'Svg' && n.props?.alt === 'Bandera Calavera y huesos del equipo base').length > 0 &&
       descendientes(b, n => n.type === 'Button' && n.props?.key === 'abrir-skill-base').length > 0,
   )
   expect(duena !== undefined).toBe(true)

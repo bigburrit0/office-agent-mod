@@ -59,7 +59,7 @@ test('cambiosBorrador lista lo que cambia, en orden', () => {
 
 test('G-1: el nombre se lee (contraste ≥ 4,5) y la placa no se repite debajo de la escena', async ($, on) => {
   const { ui } = await editar($, on, { [SANO]: agenteValido('sano', 'base') }, 'sano')
-  expect((await altsSvg(ui)).filter(a => /^Placa |^Ícono del rol/.test(a)).length).toBe(0)
+  expect((await altsSvg(ui)).filter(a => /^Bandera |^Ícono del rol/.test(a)).length).toBe(0)
   const nombres = (await ui.findAll({ type: 'Text' })).filter((t: any) => String(t.text ?? '') === 'sano' && t.props.bold)
   expect(nombres.length > 0).toBe(true)
   for (const t of nombres) expect(contrasteHex(String(t.props.color), CLARO.panel) >= 4.5).toBe(true)
