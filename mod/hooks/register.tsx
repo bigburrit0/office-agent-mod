@@ -923,6 +923,8 @@ export const register: Register = on => {
     const tx = claro ? CLARO.texto : undefined
     const suave: { color?: string; dimColor?: boolean } = claro ? { color: CLARO.textoSuave } : { dimColor: true }
     const acentoTxt = claro ? CLARO.acento : PALETTE.oro
+    // En el escritorio el panel entero es de noche, sea cual sea el tema de la app.
+    const fondoPanel = claro ? { backgroundColor: CLARO.panel } : {}
     const legibleEn = (color: string, fondos: string[]): string => fondos.reduce((acc, f) => legibleSobre(acc, f), color)
     const running = rows.filter(row => row.status === 'running').length
     const reaccion = await read($, reaccionAtom)
@@ -1232,7 +1234,7 @@ export const register: Register = on => {
     if (view === 'roles') {
       if (e.surface === 'mobile') {
         return (
-          <Box flexDirection="column">
+          <Box flexDirection="column" {...fondoPanel}>
             {barraSuperior()}
             <Text dimColor>El editor de roles necesita campos de texto: abrilo en escritorio.</Text>
           </Box>
@@ -1357,7 +1359,7 @@ export const register: Register = on => {
             </Box>
           ) : (
             <Box key="rol-avisos" marginTop={1}>
-              <Text color={claro ? legibleEn('#2E7D32', [CLARO.panel]) : 'green'}>✓ Cumple el esquema</Text>
+              <Text color={claro ? legibleEn('#5FE39A', [CLARO.panel]) : 'green'}>✓ Cumple el esquema</Text>
             </Box>
           )
 
@@ -1427,7 +1429,7 @@ export const register: Register = on => {
         const tieneAnterior = draft.anterior !== undefined
 
         return (
-          <Box flexDirection="column">
+          <Box flexDirection="column" {...fondoPanel}>
             {barraSuperior()}
             {noticeLine}
             {claro
@@ -1574,7 +1576,7 @@ export const register: Register = on => {
               )}
               {confirmando && DEFAULT_ROLES[draft.name] !== undefined && (
                 <Box flexDirection="column">
-                  <Text wrap="wrap">¿Volver a los valores originales? Se pierde lo que cambiaste.</Text>
+                  <Text color={tx} wrap="wrap">¿Volver a los valores originales? Se pierde lo que cambiaste.</Text>
                   <Box flexDirection="row" columnGap={2} marginTop={1}>
                     <Button
                       key="rol-restaurar-si"
@@ -1759,7 +1761,7 @@ export const register: Register = on => {
             {fila}
             {abierto && (
               <Box flexDirection="column" borderStyle="round" borderColor={colorEquipo} paddingX={1} marginLeft={2}>
-                <Text dimColor wrap="wrap">
+                <Text {...suave} wrap="wrap">
                   {agente.description}
                 </Text>
                 <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
@@ -1778,7 +1780,7 @@ export const register: Register = on => {
                   {edit}
                   {copiar}
                 </Box>
-                <Text dimColor wrap="wrap">
+                <Text {...suave} wrap="wrap">
                   {agente.ruta}
                 </Text>
               </Box>
@@ -1900,7 +1902,7 @@ export const register: Register = on => {
       }
 
       return (
-        <Box flexDirection="column">
+        <Box flexDirection="column" {...fondoPanel}>
           {barraSuperior()}
           {noticeLine}
           {claro
@@ -1943,7 +1945,7 @@ export const register: Register = on => {
             ))}
           {catalogo.cargado && catalogo.agentes.length === 0 && (
             <Box flexDirection="column">
-              <Text dimColor wrap="wrap">
+              <Text {...suave} wrap="wrap">
                 {`No hay agentes en ${catalogo.raiz}. Lo mejor es instalar los del kit (kit/agentes). Si no, podés crear los 4 roles base o uno nuevo con + Nuevo agente.`}
               </Text>
               <Box flexDirection="row" marginTop={1}>
@@ -1955,7 +1957,7 @@ export const register: Register = on => {
               </Box>
               {abiertos['confirmar-roles-base'] === true && (
                 <Box flexDirection="column">
-                  <Text wrap="wrap">
+                  <Text color={tx} wrap="wrap">
                     {`¿Crear implementador, corrector, investigador y revisor en ${catalogo.raiz}${catalogo.raiz.includes('/') ? '/' : '\\'}base? No se pisa ningún archivo.`}
                   </Text>
                   <Box flexDirection="row" columnGap={2} marginTop={1}>
@@ -1982,7 +1984,7 @@ export const register: Register = on => {
               </Box>
             )
           })}
-          <Text dimColor wrap="wrap">Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
+          <Text {...suave} wrap="wrap">Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
           </Box>
           {pieCierre((termRows - 30) * 20)}
           {frisoCierre}
@@ -2348,7 +2350,7 @@ export const register: Register = on => {
     )
 
     const summaryText = (
-      <Text bold wrap="wrap">
+      <Text bold color={tx} wrap="wrap">
         {summary.join(SEP)}
       </Text>
     )
@@ -2362,7 +2364,7 @@ export const register: Register = on => {
     const bigStatus = bigWord === 'corre' ? 'running' : bigWord === 'lista' ? 'completed' : 'failed'
 
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" {...fondoPanel}>
         {barraSuperior()}
         {noticeLine}
         {claro ? (
@@ -2448,7 +2450,7 @@ export const register: Register = on => {
               <Button key="ir-equipos" label="Ver equipos" onPress={() => showView($, 'roles')} />
             </Box>
           ) : (
-            <Text bold>Todavía no corrió ningún subagente.</Text>
+            <Text bold color={tx}>Todavía no corrió ningún subagente.</Text>
           ))}
         {sorted.slice(0, room).map(({ row, depth }, index) => {
           const status = String(row.status ?? '')

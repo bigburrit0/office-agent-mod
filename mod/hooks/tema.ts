@@ -1,22 +1,23 @@
-// Paleta del tema claro del panel «oficina». Modulo puro, sin imports.
-// El panel usa siempre tema claro; aca viven los colores y los chequeos de contraste.
+// Paleta del panel «oficina» en la skin «Piratas»: noche en el Caribe, con neón turquesa y magenta.
+// Modulo puro, sin imports. Conserva el nombre CLARO (es el tema del escritorio) para que la rama
+// se pueda mezclar con master sin tocar cada uso; los valores son los de la noche.
 
 export const CLARO = {
-  panel: '#FBF6EA', // fondo general
-  escena: '#D9E7F2', // celeste palido detras del robot y del patio
-  barra: '#EFE6D2', // barra de pestanas
-  burbuja: '#FFF4DF',
-  burbujaBorde: '#F28C28',
-  tarjeta: '#F6EEDC',
-  tarjetaAlt: '#EFE5CF',
-  tarjetaHover: '#E8DCC0',
-  filas: ['#FFFDF7', '#F6EEDC'] as const,
-  filaHover: '#EADFC6',
-  texto: '#2B2118',
-  textoSuave: '#6B5B45',
-  borde: '#C2AE86',
-  acento: '#A04E0C',
-  chip: { fondo: '#2B2118', letra: '#FFF4DF' }, // chip del modelo
+  panel: '#120B1F', // fondo general: noche
+  escena: '#1D1238', // detras del loro y del patio
+  barra: '#1A1230', // barra de pestanas
+  burbuja: '#2A2140',
+  burbujaBorde: '#FF2E88', // magenta neon
+  tarjeta: '#1D1238',
+  tarjetaAlt: '#241845',
+  tarjetaHover: '#2E2156',
+  filas: ['#160F26', '#1D1238'] as const,
+  filaHover: '#2A1F4A',
+  texto: '#FFF6E0', // blanco hueso
+  textoSuave: '#C3B4DA',
+  borde: '#463868',
+  acento: '#21E6C1', // turquesa neon
+  chip: { fondo: '#21E6C1', letra: '#120B1F' }, // chip del modelo
 }
 
 // Todos los fondos sobre los que va texto.
@@ -50,30 +51,34 @@ export function contrasteHex(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
-// Si el color no llega al minimo contra el fondo, lo oscurece de a 5 % hasta cumplir.
+// Si el color no llega al minimo contra el fondo, lo corre de a 5 % hacia blanco (fondo oscuro)
+// o hacia negro (fondo claro) hasta cumplir.
 export function legibleSobre(color: string, fondo: string, minimo = 4.5): string {
   if (!HEX.test(color) || !HEX.test(fondo)) return CLARO.texto
   if (contrasteHex(color, fondo) >= minimo) return color
   const [r, g, b] = canales(color)
+  const haciaBlanco = luminancia(fondo) < 0.18
   for (let paso = 1; paso <= 20; paso++) {
-    const k = 1 - paso * 0.05
-    const h = [r, g, b].map(v => Math.round(v * k).toString(16).padStart(2, '0')).join('')
+    const k = paso * 0.05
+    const h = [r, g, b]
+      .map(v => Math.round(haciaBlanco ? v + (255 - v) * k : v * (1 - k)).toString(16).padStart(2, '0'))
+      .join('')
     if (contrasteHex('#' + h, fondo) >= minimo) return '#' + h.toLowerCase()
   }
-  return '#000000'
+  return haciaBlanco ? '#ffffff' : '#000000'
 }
 
-// Pastillas de estado claras, letra oscura del mismo tono.
+// Pastillas de estado sobre la noche: fondo oscuro teñido, letra clara del mismo tono.
 export const PASTILLAS_CLARO: Record<'corre' | 'lista' | 'fallo' | 'frenada', { fondo: string; color: string }> = {
-  corre: { fondo: '#D6E6F7', color: '#0B3A6B' },
-  lista: { fondo: '#D5EDDA', color: '#14532D' },
-  fallo: { fondo: '#F8D7D3', color: '#8B1A10' },
-  frenada: { fondo: '#E3E0D8', color: '#3F3A33' },
+  corre: { fondo: '#0E3A4A', color: '#8FFFEA' },
+  lista: { fondo: '#123D2A', color: '#8FF0B0' },
+  fallo: { fondo: '#4A1024', color: '#FFB3C8' },
+  frenada: { fondo: '#2A2440', color: '#D8CCE8' },
 }
 
-// Color del uso: verde < 50, naranja 50 a 79, rojo desde 80.
+// Color del uso: verde < 50, ambar 50 a 79, rojo desde 80 (claros, para leerse sobre la noche).
 export function colorUsoClaro(pct: number): string {
-  if (pct >= 80) return '#A81D12'
-  if (pct >= 50) return '#9A4A00'
-  return '#1B6B32'
+  if (pct >= 80) return '#FF6B7E'
+  if (pct >= 50) return '#FFC23C'
+  return '#5FE39A'
 }

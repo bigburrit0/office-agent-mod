@@ -102,8 +102,8 @@ function abrirSvg(ancho: number, alto: number, cuerpo: string): string {
 
 type TemaLinea = 'oscuro' | 'claro'
 
-// Colores del tema claro de la línea de tiempo (mismos valores que CLARO en tema.ts; locales para no crear ciclos).
-const LINEA_CLARO = { fondo: '#FFFDF7', etiqueta: '#2B2118', eje: '#6B5B45', guia: '#C2AE86' }
+// Colores del tema del escritorio para la línea de tiempo (skin «Piratas»: la noche de tema.ts; locales para no crear ciclos).
+const LINEA_CLARO = { fondo: '#160F26', etiqueta: '#FFF6E0', eje: '#C3B4DA', guia: '#463868' }
 
 function luminancia(hex: string): number {
   const c = [1, 3, 5].map(i => {
@@ -119,19 +119,20 @@ function contraste(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
-// Oscurece un color hasta que contraste al menos 3:1 contra el fondo claro.
+// Aclara un color hasta que contraste al menos 3:1 contra el fondo de noche.
 function contrasteSobreClaro(hex: string): string {
   let actual = hex
   for (let k = 1; k <= 20 && contraste(actual, LINEA_CLARO.fondo) < 3; k++) {
-    const f = 1 - k * 0.05
+    const f = k * 0.05
     actual =
       '#' +
       [1, 3, 5]
-        .map(i =>
-          Math.round(parseInt(hex.slice(i, i + 2), 16) * f)
+        .map(i => {
+          const v = parseInt(hex.slice(i, i + 2), 16)
+          return Math.round(v + (255 - v) * f)
             .toString(16)
-            .padStart(2, '0'),
-        )
+            .padStart(2, '0')
+        })
         .join('')
         .toUpperCase()
   }

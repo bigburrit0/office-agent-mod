@@ -14,17 +14,17 @@ test('sin opts es igual a tema oscuro y usa el azul', () => {
   expect(a).toContain('#1F5FA8')
 })
 
-test('tema claro usa fondo y letra claros', () => {
+test('tema del escritorio (noche pirata) usa fondo de noche y letra hueso', () => {
   const c = timelineSvg(filas, ahora, 420, { tema: 'claro' })
   expect(c).not.toContain('#1F5FA8')
   expect(c).not.toContain('#FFF4DF')
-  expect(c).toContain('#FFFDF7')
-  expect(c).toContain('#2B2118')
+  expect(c).toContain('#160F26')
+  expect(c).toContain('#FFF6E0')
   expect(c).toContain('viewBox="0 0 420 ')
 })
 
-test('vacío en tema claro no usa el azul', () => {
+test('vacío en el tema del escritorio no usa el azul', () => {
   const v = timelineSvg([], ahora, 420, { tema: 'claro' })
   expect(v).not.toContain('#1F5FA8')
-  expect(v).toContain('#FFFDF7')
+  expect(v).toContain('#160F26')
 })
