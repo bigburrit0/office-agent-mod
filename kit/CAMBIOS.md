@@ -1,5 +1,16 @@
 # Cambios
 
+## 07/10/2026: el robot dice el estado del proyecto
+
+| Archivo del kit | Qué cambió |
+|---|---|
+| `metodo/ESTADO-PROYECTO.md` | **Nuevo.** Reglas para que el robot de `/oficina` pueda decir el % del proyecto: lista de tareas de la sesión y tarjetas con `estado:`. Se importa con `@{{EQUIPOS}}\ESTADO-PROYECTO.md`. |
+| `metodo/CLAUDE-global.md` | Sección «Estado del proyecto» con el resumen y la línea de import. |
+| `ADAPTAR.md` | Paso 7c: instalar `ESTADO-PROYECTO.md` y verificar el import. |
+| `LEEME.md` | Sección 4: prueba del estado del proyecto. |
+
+Para la sesión del trabajo: repetí los pasos 2 y 4 de `ADAPTAR.md` solo para `CLAUDE-global.md`, y hacé el paso 7c.
+
 ## 06/10/2026: preparación para la compu del trabajo
 
 Cambios hechos directamente en el repo. **Desde el 06/10/2026 el repo es la fuente de verdad del kit**: las fuentes de casa ya no existen, así que el kit se edita acá (la columna «Fuente» queda como referencia de dónde venía cada archivo). `MANIFIESTO.md` es el de la primera exportación y no se regenera.

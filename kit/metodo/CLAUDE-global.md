@@ -22,6 +22,12 @@
 - Agentes y equipos en `{{EQUIPOS}}`. Skills: `/equipo-base`, `/equipo-direccion`, `/equipo-dev-app`, `/equipo-datos`, `/equipo-research`, `/equipo-librarian`.
 - Idea nueva: Dirección primero (`/equipo-direccion`); app de cero: `/idea-nueva`.
 
+## Estado del proyecto (lo lee el robot de `/oficina`)
+- Trabajo de 3 pasos o más: lista de tareas (`TaskCreate`), una por tarjeta, y cada una `completed` solo cuando pasó su aceptación.
+- Tarjetas en `tarjetas/<ID>.md` con su línea `estado:` al día (propuesta, aprobada, en curso, hecha, frenada).
+- Reglas completas:
+@{{EQUIPOS}}\ESTADO-PROYECTO.md
+
 # graphify
 - **graphify** (`~/.claude/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
 When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.

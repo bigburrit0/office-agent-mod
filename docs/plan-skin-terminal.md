@@ -4,7 +4,7 @@
 **Fuente:** el formulario «Skin nueva» que completó Nimai (respuestas guardadas el 07/10/2026, 00:20) y su pedido en el chat: «Quiero algo con muchos detalles y animación. Easter eggs en lo posible. La mascota tiene que poder también en su texto decir el estado del proyecto, cuánto % falta para su finalización, etc.»
 **Boceto:** https://claude.ai/artifact/XKVjFnBwTUCBwYjjeh44hw (privado; se abre con la cuenta de Nimai). También se arma local: `node mod/preview/boceto-terminal.mjs` → `mod/tests/salida/boceto-terminal.html`. Abrirlo en el navegador: todo se mueve.
 
-**Estado: boceto listo, falta el visto bueno de Nimai.** No se tocó el código del mod: todo lo nuevo está en `mod/preview/`.
+**Estado: plan aprobado por Nimai el 07/10/2026** («agregá todas las recomendaciones»). Decisiones en la sección 9.
 
 ## 1. Lo que pidió Nimai
 
@@ -158,14 +158,16 @@ Como en las oleadas anteriores: cada tarjeta con agente, ≤ 5 archivos y acepta
 
 Orden: TR-0, TR-1 y TR-2 primero (lo que más se ve y lo nuevo), después TR-3 a TR-5, y al final TR-6 a TR-8. Las que tocan `register.tsx` van en serie.
 
-## 9. Preguntas para Nimai
+## 9. Decisiones de Nimai (07/10/2026)
 
-1. **Después de las 18, si hay agentes corriendo.** Propuesta: «modo zombi»: sigue con cara de muerto pero tipea, y la burbuja dice «Horas extra…». ¿O que se despierte normal?
-2. **Sábados y domingos.** Propuesta: apagado todo el día.
-3. **Las horas** de la tabla de la sección 5. ¿Se ajustan?
-4. **El % del proyecto.** ¿Alcanza con las tareas de la sesión y las tarjetas, o sumamos otra fuente (por ejemplo, la tabla «Avance de las oleadas» de los planes de `docs/`)?
-5. **En la terminal (sin dibujos).** ¿El robot aparece en ASCII, en verde?
-6. **El monitor.** ¿Beige de los 90 (como el boceto) o gris oscuro de los 80?
+Aceptó todas las propuestas:
+
+1. **Después de las 18 con agentes corriendo: modo zombi.** Cara de muerto, pero tipea; la burbuja dice «Horas extra…».
+2. **Sábados y domingos:** apagado todo el día (con agentes corriendo, modo zombi).
+3. **Las horas** de la sección 5, como están.
+4. **El % del proyecto:** tareas de la sesión y, si no hay, tarjetas. Sin datos, sin número. Además, **instrucciones para el `CLAUDE.md`** de donde se instale: `kit/metodo/ESTADO-PROYECTO.md` (reglas para que Claude lleve la lista de tareas y las tarjetas al día) y la línea `@{{EQUIPOS}}\ESTADO-PROYECTO.md` en `kit/metodo/CLAUDE-global.md`. Paso 7c en `kit/ADAPTAR.md`.
+5. **En la terminal:** el robot aparece en ASCII, en verde.
+6. **El monitor:** beige de los 90.
 
 ## 10. Archivos del boceto
 

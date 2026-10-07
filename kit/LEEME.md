@@ -98,6 +98,7 @@ Pedile a la usuaria que abra una sesión nueva (o que use `/reload-plugins`) y r
 | Subagentes | Lanzar cualquier subagente | Aparece en el patio con el color de su equipo, haciendo su actividad. |
 | Uso de la sesión | Vista **Subagentes**, «Uso de la sesión» | Con suscripción: barras de 5 horas y semanal. Con clave de API: el costo de la sesión. |
 | Compactar | «Compactar sesión…» | Pide confirmación. Si Claude está respondiendo, avisa que se pruebe al terminar. |
+| Estado del proyecto | Pedile a Claude un trabajo de 3 pasos o más | Claude arma la lista de tareas y la burbuja del robot dice el % y cuánto falta. Si dice que no ve tareas ni tarjetas, falta el paso 7c de `ADAPTAR.md` (`ESTADO-PROYECTO.md`). |
 
 Listo cuando la usuaria vio cada fila y anotaste lo que no funcionó.
 

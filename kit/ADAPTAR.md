@@ -46,6 +46,14 @@ Listo cuando cada agente y skill instalado aparece en la lista o está marcado c
 Recién con los agentes instalados (paso 5) y verificados (paso 7), seguí «Instrucciones para Claude» de `LEEME.md`, sección 3. Si el mod se carga antes, el panel muestra «No hay agentes» y ofrece crear 4 roles base: **no los crees** si vas a instalar los del kit.
 Listo cuando `/oficina` abre y la pestaña Equipos muestra los equipos instalados.
 
+## 7c. Estado del proyecto en el robot
+El robot de `/oficina` dice el % del proyecto con las tareas de la sesión y las tarjetas (`metodo/ESTADO-PROYECTO.md`). Para que Claude lo sepa en cada proyecto:
+- Copiá `metodo/ESTADO-PROYECTO.md` a `{{EQUIPOS}}\ESTADO-PROYECTO.md` (con aprobación, como en el paso 5).
+- Verificá que el `CLAUDE.md` global fusionado (paso 4) tenga la sección «Estado del proyecto» con la línea `@{{EQUIPOS}}\ESTADO-PROYECTO.md`. Si la usuaria prefiere activarlo solo en algunos proyectos, la línea va en el `CLAUDE.md` de cada uno y no en el global.
+- Si ya hay reglas de la empresa sobre listas de tareas o tableros, ganan esas: proponé cómo convivir antes de escribir.
+
+Listo cuando, en una sesión nueva dentro de un proyecto, `/memory` muestra `ESTADO-PROYECTO.md` entre los archivos cargados.
+
 ## 8. Actualizaciones
 Cuando llegue un kit nuevo, leé `CAMBIOS.md` y repetí solo los pasos 2, 4 y 5 para los archivos que cambiaron.
 
