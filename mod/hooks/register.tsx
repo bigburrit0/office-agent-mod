@@ -997,24 +997,24 @@ export const register: Register = on => {
         const lista =
           tarjetas.length > 0 ? `: ${tarjetas.slice(0, 4).join(', ')}${tarjetas.length > 4 ? '…' : ''}.` : '.'
 
-        return conHora(`Laburando con ${plural(corriendoRows.length, 'agente', 'agentes')}${lista} ${extra}`)
+        return conHora(`Remando con ${plural(corriendoRows.length, 'marinero', 'marineros')}${lista} ${extra}`)
       }
-      if (orgulloVigente) return `¡Guardado! ${quienReaccion} estrena rol en la próxima sesión. De nada.`
+      if (orgulloVigente) return `¡Guardado! ${quienReaccion} estrena rol en la próxima travesía. Arrr, de nada.`
       switch (estado.emocion) {
         case 'dormido':
-          return `Modo ahorro de energía hace ${minutos(nowReal - ocioDesde - DORMIR_MS)} min. Despertame si pasa algo interesante.`
+          return `Durmiendo la siesta hace ${minutos(nowReal - ocioDesde - DORMIR_MS)} min. Despertame si aparece un barco.`
         case 'pensando':
-          return laburando('No me distraigas.')
+          return laburando('Vigilo con el catalejo.')
         case 'tipea':
-          return laburando('Tecleo a dos manos.')
+          return laburando('Anoto todo en la bitácora.')
         case 'multitarea':
-          return laburando('¡Mil cosas a la vez!')
+          return laburando('¡Mil cosas a la vez, por las barbas de Neptuno!')
         case 'concentrado': {
           const largo = [...corriendoRows].sort((a, b) => a.firstSeen - b.firstSeen)[0]
           const nombre = largo ? parse(largo.description, roleNames, largo.type).card : ''
 
           return conHora(
-            `${nombre !== '' ? nombre : 'El agente'} lleva ${minutos(masLargoMs)} min. Auriculares puestos: no me hablen.`,
+            `${nombre !== '' ? nombre : 'El agente'} lleva ${minutos(masLargoMs)} min. Estoy trazando el rumbo: silencio en cubierta.`,
           )
         }
         case 'sospecha': {
@@ -1023,9 +1023,9 @@ export const register: Register = on => {
             const q = quedaPct(cinco?.pct ?? 0)
             const renueva = cinco?.renueva ?? ''
             const cuando = renueva !== '' ? ` (se renueva ${renueva})` : ''
-            if ((cinco?.pct ?? 0) >= 95) return `¡Casi sin ventana! Queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
+            if ((cinco?.pct ?? 0) >= 95) return `¡Nos quedamos sin ron! Queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
 
-            return `Ojo: queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
+            return `Ojo, grumete: queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
           }
           if (estado.grupo === 'cambios' || (hayCambios && masLargoMs <= SOSPECHA_MS)) {
             return 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
@@ -1033,56 +1033,56 @@ export const register: Register = on => {
           const largo = [...corriendoRows].sort((a, b) => a.firstSeen - b.firstSeen)[0]
           const nombre = largo ? parse(largo.description, roleNames, largo.type).card : ''
 
-          return `${nombre !== '' ? nombre : 'Un agente'} lleva ${minutos(masLargoMs)} min… ¿se fue a almorzar?`
+          return `${nombre !== '' ? nombre : 'Un agente'} lleva ${minutos(masLargoMs)} min… ¿se lo llevó la corriente?`
         }
         case 'caceria':
-          return `¡Llegó${con(quienReaccion, ' ', '')}! A trabajar, que el café no se paga solo.`
+          return `¡Llegó${con(quienReaccion, ' ', '')}! ¡A sus puestos, que el ron no se paga solo!`
         case 'sorpresa':
-          return `¡Uy! Llegaron ${quienReaccion || 'varios'} de golpe. ¿Quién organizó esta fiesta?`
+          return `¡Arrr! Subieron ${quienReaccion || 'varios'} a bordo de golpe. ¿Quién organizó este abordaje?`
         case 'saluda':
-          return '¡Hola! Pasá, que la oficina está abierta.'
+          return '¡Ahoy! Subí a bordo, que hay lugar en cubierta.'
         case 'ruge':
-          return `¡ERROR! Falló${con(quienReaccion, ' ', '')}. A mí no me mires.`
+          return `¡Hombre al agua! Falló${con(quienReaccion, ' ', '')}. A mí no me mires.`
         case 'panico':
-          return `¡Fallaron varios a la vez${con(quienReaccion, ' (', ')')}! ¡No es un simulacro!`
+          return `¡Fallaron varios a la vez${con(quienReaccion, ' (', ')')}! ¡Todos a los botes!`
         case 'frustrado':
-          return `¿Otra falla?${con(quienReaccion, ' ', '.')} Esto ya es personal.`
+          return `¿Otra falla?${con(quienReaccion, ' ', '.')} Esto ya es un motín.`
         case 'chispazo':
-          return 'Chispazo: algo no salió. El aviso de arriba dice qué.'
+          return '¡Cañonazo! Algo no salió. El aviso de arriba dice qué.'
         case 'molesto':
-          return `Falló${con(molestoQuien, ' ', '')}. Estoy ofendido hasta que algo salga bien.`
+          return `Falló${con(molestoQuien, ' ', '')}. No me hablen hasta que algo salga bien. Arrr.`
         case 'bufido':
-          return `¿Frenaron${con(quienReaccion, ' ', '')}? Ok. Ok. Respiro.`
+          return `¿Frenaron${con(quienReaccion, ' ', '')}? Ok. Ok. Respiro hondo, como buen lobo de mar.`
         case 'contento':
-          return `¡Terminó${con(quienReaccion, ' ', '')}! Siguen los demás.`
+          return `¡Terminó${con(quienReaccion, ' ', '')}! Una galleta para ese marinero.`
         case 'aplaude':
-          return `¡Terminaron ${quienReaccion || 'varios'} juntos! Aplausos.`
+          return `¡Terminaron ${quienReaccion || 'varios'} juntos! Aplausos con las alas.`
         case 'festeja':
-          return '¡Listo! Oleada terminada sin fallas. Obvio.'
+          return '¡Tierra a la vista! Oleada terminada sin fallas. Obvio.'
         case 'alivio':
-          return `${quienReaccion !== '' ? quienReaccion : 'Eso'} salió bien. Uf, ya se me pasó el enojo.`
+          return `${quienReaccion !== '' ? quienReaccion : 'Eso'} salió bien. Uf, ya se me pasó el mareo.`
         case 'manana':
-          return 'Buen día. Primero el café, después los agentes.'
+          return 'Buen día, tripulación. Primero el café, después los agentes.'
         case 'hambre':
-          return '¿Ya es mediodía? Me está dando hambre.'
+          return '¿Ya es mediodía? ¡Quiero una galleta! ¡Quiero una galleta!'
         case 'casa':
-          return 'Ya son más de las cinco y media: dentro de poco me voy a casa.'
+          return 'Ya son más de las cinco y media: dentro de poco volvemos a puerto.'
         case 'bostezo':
-          return 'Aaaah… ¿Nadie tiene trabajo para mí?'
+          return 'Aaaah… ¿Nadie tiene un mapa para mí?'
         case 'estira':
-          return 'Estirando los circuitos. Sin agentes no hay vida.'
+          return 'Estirando las alas. Sin tripulación esto es un barco fantasma.'
         case 'riega':
-          return 'Riego la planta mientras nadie labura.'
+          return 'Lustro el doblón mientras nadie rema.'
         case 'diario':
-          return 'Leyendo el diario. Ninguna noticia de agentes.'
+          return 'Leyendo el mapa del tesoro. La cruz sigue en el mismo lugar.'
         case 'solitario':
-          return 'Solitario: voy ganando. Nadie me necesita.'
+          return 'Juego a los dados contra mí mismo. Voy ganando.'
         case 'silba':
-          return 'Fiu, fiu… la oficina está tranquila.'
+          return 'Fiu, fiu… quince hombres sobre el cofre del muerto…'
         case 'guina':
-          return 'Todo en orden por acá. Guiño, guiño.'
+          return 'Todo en orden por acá. Guiño con el ojo del parche.'
         default:
-          return 'Tomando café. Avisame cuando alguien trabaje.'
+          return 'Mirando el horizonte. Avisame cuando alguien suba a bordo.'
       }
     }
 

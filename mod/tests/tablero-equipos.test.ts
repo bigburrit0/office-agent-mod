@@ -512,7 +512,7 @@ test('Equipos: /oficina abre el panel con el robot saludando', async ($, on) => 
     viewport: { columns: 100, rows: 60 },
   })
   expect((await altsSvg(ui)).includes('Barco, loro saludando con el ala')).toBe(true)
-  expect((await textosDe(ui)).some(x => /¡Hola!/.test(x))).toBe(true)
+  expect((await textosDe(ui)).some(x => /¡Ahoy!/.test(x))).toBe(true)
 })
 
 test('compu nueva: abrir /oficina y Equipos no escribe nada en la carpeta de agentes', async ($, on) => {

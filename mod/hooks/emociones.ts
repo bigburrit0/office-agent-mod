@@ -29,8 +29,8 @@ export const ROTACION_OCIO = ['bostezo', 'estira', 'riega', 'diario', 'solitario
 /** Franjas del reloj (minutos desde la medianoche, hora local): desde, hasta (sin incluir) y emoción. */
 export const FRANJAS_HORA: Array<{ desde: number; hasta: number; emocion: string; frase: string }> = [
   { desde: 8 * 60, hasta: 10 * 60, emocion: 'manana', frase: 'Y recién arranca el día.' },
-  { desde: 12 * 60, hasta: 14 * 60, emocion: 'hambre', frase: 'Y me está dando hambre.' },
-  { desde: 17 * 60 + 30, hasta: 19 * 60, emocion: 'casa', frase: 'Y en un rato me voy a casa.' },
+  { desde: 12 * 60, hasta: 14 * 60, emocion: 'hambre', frase: 'Y me está dando hambre de galleta.' },
+  { desde: 17 * 60 + 30, hasta: 19 * 60, emocion: 'casa', frase: 'Y en un rato volvemos a puerto.' },
 ]
 
 /** Reacción guardada → emoción que muestra. `guardado` y `salta` son nombres viejos que siguen valiendo. */

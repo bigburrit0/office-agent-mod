@@ -566,29 +566,29 @@ test('descripción «Holas-1 mundo» (prefijo de 5 letras) no se toma como tarje
   expect((await ui.findAll({ type: 'Text', text: /^Holas-1\s*$/ })).length).toBe(0)
 })
 
-test('burbuja: «Tomando café» sin agentes', async ($, on) => {
+test('burbuja: «Mirando el horizonte» sin agentes', async ($, on) => {
   fsFalso(on)
   const { ui, paso } = await montar($, on, () => [])
   await paso(2000)
-  expect(await burbuja(ui, /Tomando café\. Avisame cuando alguien trabaje\./)).toBe(true)
+  expect(await burbuja(ui, /Mirando el horizonte\. Avisame cuando alguien suba a bordo\./)).toBe(true)
 })
 
-test('burbuja: «Laburando con 1 agente» con uno corriendo', async ($, on) => {
+test('burbuja: «Remando con 1 marinero» con uno corriendo', async ($, on) => {
   fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   await paso(8000)
-  expect(await burbuja(ui, /Laburando con 1 agente: T-9\. No me distraigas\./)).toBe(true)
+  expect(await burbuja(ui, /Remando con 1 marinero: T-9\. Vigilo con el catalejo\./)).toBe(true)
 })
 
-test('burbuja: «¡ERROR! Falló T-9.» cuando falla uno', async ($, on) => {
+test('burbuja: «¡Hombre al agua! Falló T-9.» cuando falla uno', async ($, on) => {
   fsFalso(on)
   let list: unknown[] = [D('r1', 'running')]
   const { ui, paso } = await montar($, on, () => list)
   await paso(2000)
   list = [D('r1', 'failed')]
   await paso(2000)
-  expect(await burbuja(ui, /¡ERROR! Falló T-9\. A mí no me mires\./)).toBe(true)
+  expect(await burbuja(ui, /¡Hombre al agua! Falló T-9\. A mí no me mires\./)).toBe(true)
 })
 
 test('encabezado: la escena única mide el ancho del panel y lleva la cara de 126 de ancho', async ($, on) => {

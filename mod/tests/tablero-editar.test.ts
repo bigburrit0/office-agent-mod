@@ -303,7 +303,7 @@ test('Editar: tras guardar la burbuja dice «¡Guardado!» y a los 3,5 s ya no (
   await ui.select({ plugin: 'tablero-oficina', key: 'rol-model', value: 'haiku' })
   await ui.press({ key: 'rol-guardar' })
   await ui.redraw()
-  expect((await textosDe(ui)).some(t => t.includes('¡Guardado! implementador estrena rol en la próxima sesión. De nada.'))).toBe(true)
+  expect((await textosDe(ui)).some(t => t.includes('¡Guardado! implementador estrena rol en la próxima travesía. Arrr, de nada.'))).toBe(true)
   await clock.advance(3500)
   await ui.redraw()
   expect((await textosDe(ui)).some(t => t.includes('¡Guardado!'))).toBe(false)

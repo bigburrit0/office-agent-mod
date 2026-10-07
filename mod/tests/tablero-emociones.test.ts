@@ -77,7 +77,7 @@ test('frustrado si falla otro mientras seguía molesto; alivio cuando uno termin
   list = [D('r1', 'failed'), D('r2', 'failed'), D('r3', 'completed')]
   await paso(2000)
   expect(await caraAlt(ui)).toBe('Barco, loro aliviado')
-  expect(await burbuja(ui, /ya se me pasó el enojo/)).toBe(true)
+  expect(await burbuja(ui, /ya se me pasó el mareo/)).toBe(true)
   // Se le pasó el enojo: después del alivio vuelve al ocio, no a molesto.
   await paso(4000)
   expect(await caraAlt(ui)).toBe('Barco, loro mirando el horizonte')
@@ -103,7 +103,7 @@ test('sorpresa si entran tres o más juntos; multitarea con cuatro corriendo', a
   list = [D('r1', 'running'), D('r2', 'running'), D('r3', 'running'), D('r4', 'running')]
   await paso(2000)
   expect(await caraAlt(ui)).toBe('Barco, loro sorprendido')
-  expect(await burbuja(ui, /Llegaron 4 agentes de golpe/)).toBe(true)
+  expect(await burbuja(ui, /Subieron 4 agentes a bordo de golpe/)).toBe(true)
   await paso(4000)
   expect(await caraAlt(ui)).toBe('Barco, loro haciendo mil cosas a la vez')
 })
@@ -121,7 +121,7 @@ test('hora del día: al mediodía, sin agentes, le da hambre', async ($, on) => 
   const { ui, paso } = await montarALas($, on, new Date(2026, 9, 6, 12, 30).getTime(), () => [D('c1', 'completed')])
   await paso(2000)
   expect(await caraAlt(ui)).toBe('Barco, loro soñando con una galleta')
-  expect(await burbuja(ui, /Me está dando hambre/)).toBe(true)
+  expect(await burbuja(ui, /¡Quiero una galleta!/)).toBe(true)
 })
 
 test('hora del día: desde las 17:30 dice que dentro de poco se va a casa', async ($, on) => {
@@ -130,7 +130,7 @@ test('hora del día: desde las 17:30 dice que dentro de poco se va a casa', asyn
   expect(await caraAlt(ui)).toBe('Barco, loro mirando el horizonte')
   for (let i = 0; i < 30; i++) await paso(10000)
   expect(await caraAlt(ui)).toBe('Barco, loro pensando en volver a puerto')
-  expect(await burbuja(ui, /dentro de poco me voy a casa/)).toBe(true)
+  expect(await burbuja(ui, /dentro de poco volvemos a puerto/)).toBe(true)
 })
 
 test('hora del día trabajando: la cara es de trabajo y la burbuja suma la frase de la hora', async ($, on) => {
@@ -138,7 +138,7 @@ test('hora del día trabajando: la cara es de trabajo y la burbuja suma la frase
   await paso(2000)
   await paso(4000)
   expect(await caraAlt(ui)).toBe('Barco, loro mirando por el catalejo')
-  expect(await burbuja(ui, /Laburando con 1 agente.*Y en un rato me voy a casa\./)).toBe(true)
+  expect(await burbuja(ui, /Remando con 1 marinero.*Y en un rato volvemos a puerto\./)).toBe(true)
 })
 
 test('patio por color: la celda lleva el equipo en el título y la leyenda lo nombra', async ($, on) => {

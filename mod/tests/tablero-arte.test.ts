@@ -56,7 +56,7 @@ test('Equipos: estante con carpetas y pasillo, con la cornisa al final', async (
 
 test('uso al 90 % y sin agentes: la burbuja del robot avisa cuánto queda', async ($, on) => {
   const ui = await montarSubVacio($, on, 'desktop', USO_90)
-  const burbuja = (await textosDe(ui)).find(t => t.startsWith('Ojo:'))
+  const burbuja = (await textosDe(ui)).find(t => t.startsWith('Ojo, grumete:'))
   expect(burbuja === undefined).toBe(false)
   expect(String(burbuja).includes('queda 10 %')).toBe(true)
 })
@@ -76,7 +76,7 @@ test('Subagentes escritorio: la burbuja del robot va antes del tablero de uso', 
   const ui = await montarSubVacio($, on, 'desktop', USO_90)
   const raiz = (await ui.findAll({ type: 'Box' }))[0]
   const orden = descendientes(raiz, () => true)
-  const iBurbuja = orden.findIndex(n => n.type === 'Text' && cadena(n).startsWith('Ojo:'))
+  const iBurbuja = orden.findIndex(n => n.type === 'Text' && cadena(n).startsWith('Ojo, grumete:'))
   const iUso = orden.findIndex(n => n.type === 'Svg' && String(n.props?.alt ?? '').startsWith('Tokens de la sesión'))
   expect(iBurbuja >= 0).toBe(true)
   expect(iUso >= 0).toBe(true)
