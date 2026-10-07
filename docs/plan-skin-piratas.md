@@ -4,7 +4,7 @@
 **Fuente:** el formulario «Nueva skin de la oficina» que completó Nimai (respuestas guardadas el 06/10/2026, 20:30).
 **Boceto:** `node mod/preview/boceto-piratas.mjs` → `mod/tests/salida/boceto-piratas.html` (panel a 378 px, el loro en 8 emociones, los peces, el tiburón, las banderas y los huevos de pascua). Abrirlo en el navegador: todo se mueve.
 
-Este documento es el plan: todavía no se tocó el mod. Nimai aprobó el plan y las ideas el 06/10/2026 y pidió subir el nivel del arte (ver sección 6).
+**Estado: completada (07/10/2026).** Nimai la dio por terminada; vive en su propia rama, `skin-piratas`, y no se mezcla con master. Versión marcada con la etiqueta `skin-piratas-v1`.
 
 ## 1. Lo que pidió Nimai
 
