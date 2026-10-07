@@ -32,9 +32,9 @@ test('Subagentes sin agentes: escena única y pasillo antes de la cornisa', asyn
   const alts = await altsSvg(ui)
   expect(alts.filter(a => a.startsWith('Barco, loro')).length).toBe(1)
   expect(alts.includes('Escritorio libre esperando a un agente')).toBe(false)
-  expect(alts.filter(a => a === 'Pasillo de la oficina').length).toBe(1)
-  expect(alts.indexOf('Pasillo de la oficina') < alts.indexOf('Cornisa del edificio')).toBe(true)
-  expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
+  expect(alts.filter(a => a === 'Bodega del barco').length).toBe(1)
+  expect(alts.indexOf('Bodega del barco') < alts.indexOf('Lecho de arena')).toBe(true)
+  expect(alts[alts.length - 1]).toBe('Lecho de arena')
 })
 
 test('Subagentes con 2 agentes corriendo: la escena única nombra a los dos en su alt', async ($, on) => {
@@ -49,9 +49,9 @@ test('Subagentes con 2 agentes corriendo: la escena única nombra a los dos en s
 test('Equipos: estante con carpetas y pasillo, con la cornisa al final', async ($, on) => {
   const { ui } = await montarEquipos($, on, DOS_EQUIPOS)
   const alts = await altsSvg(ui)
-  expect(alts.includes('Estante con carpetas')).toBe(true)
-  expect(alts.includes('Pasillo de la oficina')).toBe(true)
-  expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
+  expect(alts.includes('Repisa con botellas y mapas')).toBe(true)
+  expect(alts.includes('Bodega del barco')).toBe(true)
+  expect(alts[alts.length - 1]).toBe('Lecho de arena')
 })
 
 test('uso al 90 % y sin agentes: la burbuja del robot avisa cuánto queda', async ($, on) => {
@@ -64,7 +64,7 @@ test('uso al 90 % y sin agentes: la burbuja del robot avisa cuánto queda', asyn
 test('en terminal no aparece el arte nuevo', async ($, on) => {
   const ui = await montarSubVacio($, on, 'terminal')
   const alts = await altsSvg(ui)
-  for (const a of ['Escritorio libre esperando a un agente', 'Pasillo de la oficina', 'Estante con carpetas']) {
+  for (const a of ['Escritorio libre esperando a un agente', 'Bodega del barco', 'Repisa con botellas y mapas']) {
     expect(alts.includes(a)).toBe(false)
   }
 })

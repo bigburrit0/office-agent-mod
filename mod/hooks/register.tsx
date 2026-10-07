@@ -35,15 +35,14 @@ import {
   PATIO_ANCHO,
   pisoPatioSvg,
 } from './arte-mar'
-import { estanteSvg, pieOficinaSvg } from './arte-oficina'
-import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
+import { bodegaSvg, lechoSvg, repisaSvg, sogaSvg } from './arte-bodega'
+import { codiceSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
 import { EQUIPO_ACENTO, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
-import { DIOSES_EQUIPO, diosSvg, glifoSvg } from './arte-insignias'
+import { DIOSES_EQUIPO, diosSvg, doblonesSvg, glifoSvg, lunaDiaSvg } from './arte-insignias'
 import { actividadDe, actividadParaCelda } from './arte-actividades'
 import { decidirEmocion, DORMIR_MS, franjaHora, SOSPECHA_MS } from './emociones'
 import type { Grupo } from './emociones'
 import {
-  grecaBand,
   normalizeStatus,
   palabraEstadoSvg,
   PALETTE,
@@ -982,8 +981,8 @@ export const register: Register = on => {
       const anchoCara = svgSize(caraSvg).width || CARA_ANCHO
       disponible = Math.max(PATIO_ANCHO * 2, W - anchoCara)
       doselSvg = cachedSvg(`dosel-${disponible}`, `${disponible}`, () => doselPatioSvg(disponible, 2, { fondo }))
-      grecaSvg = cachedSvg(`greca-${W}`, `${W}`, () => grecaBand(W, 6))
-      frisoArte = cachedSvg(`friso-${W}`, `${W}`, () => frisoSvg(W, 2))
+      grecaSvg = cachedSvg(`soga-${W}`, `${W}`, () => sogaSvg(W, 6))
+      frisoArte = cachedSvg(`lecho-${W}`, `${W}`, () => lechoSvg(W, 2))
     }
     // Burbuja del robot: una frase que explica lo que pasa (con la tarjeta cuando se sabe).
     const burbujaEstado = (): string => {
@@ -1089,8 +1088,8 @@ export const register: Register = on => {
 
     const frisoCierre =
       frisoArte !== '' ? (
-        <Box key="caja-friso-cierre" width="100%" backgroundColor="#E8DCC0">
-          <Svg key="svg-friso-cierre" source={frisoArte} alt="Cornisa del edificio" {...sizeProps(frisoArte)} />
+        <Box key="caja-friso-cierre" width="100%" backgroundColor="#c9a35a">
+          <Svg key="svg-friso-cierre" source={frisoArte} alt="Lecho de arena" {...sizeProps(frisoArte)} />
         </Box>
       ) : null
 
@@ -1098,9 +1097,9 @@ export const register: Register = on => {
     const pieCierre = (altoPx: number, maximo = 140) => {
       if (!claro) return null
       const alto = Math.max(60, Math.min(maximo, Math.round(altoPx)))
-      const pie = cachedSvg('pie', `${W}|${alto}|${quieto}`, () => pieOficinaSvg(W, alto, 2, { quieto }))
+      const pie = cachedSvg('pie', `${W}|${alto}|${quieto}`, () => bodegaSvg(W, alto, 2, { quieto }))
 
-      return pie !== '' ? <Svg key="svg-pie" source={pie} alt="Pasillo de la oficina" {...sizeProps(pie)} /> : null
+      return pie !== '' ? <Svg key="svg-pie" source={pie} alt="Bodega del barco" {...sizeProps(pie)} /> : null
     }
 
     // Cabecera común: cara grande a la izquierda, escena de la vista a la derecha, burbuja y greca debajo.
@@ -1126,8 +1125,8 @@ export const register: Register = on => {
             </Box>
           )}
           {grecaSvg !== '' && (
-            <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
-              <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
+            <Box key="caja-greca" width="100%" backgroundColor="#9c8763">
+              <Svg key="svg-greca" source={grecaSvg} alt="Soga trenzada" {...sizeProps(grecaSvg)} />
             </Box>
           )}
         </Box>
@@ -1166,8 +1165,8 @@ export const register: Register = on => {
             </Box>
           )}
           {grecaSvg !== '' && (
-            <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
-              <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
+            <Box key="caja-greca" width="100%" backgroundColor="#9c8763">
+              <Svg key="svg-greca" source={grecaSvg} alt="Soga trenzada" {...sizeProps(grecaSvg)} />
             </Box>
           )}
         </Box>
@@ -1179,8 +1178,8 @@ export const register: Register = on => {
     const diaMaya = tzolkin(local)
     const barraSuperior = () => {
       const numMaya = hasSvg
-        ? cachedSvg(`dia-maya-${diaMaya.numero}`, `${diaMaya.numero}`, () =>
-            numeroMayaSvg(diaMaya.numero, 1, CLARO.acento),
+        ? cachedSvg(`dia-luna-${diaMaya.numero}`, `${diaMaya.numero}`, () =>
+            lunaDiaSvg(diaMaya.numero, 2),
           )
         : ''
 
@@ -1607,7 +1606,7 @@ export const register: Register = on => {
             cachedSvg(`dios2-${eq}`, eq, () => diosSvg(eq, 2, EQUIPO_ACENTO[eq] ?? EQUIPO_ACENTO.base)),
           )
         : []
-      const estanteArte = claro ? cachedSvg('estante', `${W}`, () => estanteSvg(W)) : ''
+      const estanteArte = claro ? cachedSvg('repisa', `${W}`, () => repisaSvg(W)) : ''
       const temploArte = hasSvg && !claro ? cachedSvg(`templo-${disponible}`, `${disponible}`, () => temploSvg(disponible, 2)) : ''
 
       const skills = await read($, skillsEquipoAtom)
@@ -1844,8 +1843,8 @@ export const register: Register = on => {
         const dios = DIOSES_EQUIPO[equipo]?.dios ?? ''
         const tarea = TAREA_EQUIPO[equipo]
         const diosArte = cachedSvg(`dios2-${equipo}`, equipo, () => diosSvg(equipo, 2, acento))
-        const numArte = cachedSvg(`maya2-${cantidad}-${acento[0]}`, `${cantidad}|${acento[0]}`, () =>
-          numeroMayaSvg(cantidad, 2, acento[0]),
+        const numArte = cachedSvg(`doblones2-${cantidad}-${acento[0]}`, `${cantidad}|${acento[0]}`, () =>
+          doblonesSvg(cantidad, 2, acento[0]),
         )
         const subtitulo = dios !== '' && tarea !== undefined ? `${dios} · ${tarea}` : dios
 
@@ -1878,7 +1877,7 @@ export const register: Register = on => {
                 <Svg
                   key={`svg-maya-${equipo}`}
                   source={numArte}
-                  alt={`${cantidad} en el contador`}
+                  alt={`${plural(cantidad, 'doblón', 'doblones')}, uno por agente`}
                   {...sizeProps(numArte)}
                 />
                 <Text color={CLARO.texto}>{cantidad === 1 ? ' 1 agente' : ` ${cantidad} agentes`}</Text>
@@ -1916,7 +1915,7 @@ export const register: Register = on => {
               )}
           <Box flexDirection="column">
           {claro && estanteArte !== '' && (
-            <Svg key="svg-estante" source={estanteArte} alt="Estante con carpetas" {...sizeProps(estanteArte)} />
+            <Svg key="svg-estante" source={estanteArte} alt="Repisa con botellas y mapas" {...sizeProps(estanteArte)} />
           )}
           <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2}>
             {formNuevo}
@@ -2394,8 +2393,8 @@ export const register: Register = on => {
               </Box>
             )}
             {showHeader && resumenAbierto && escenaUnica !== '' && grecaSvg !== '' && (
-              <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
-                <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
+              <Box key="caja-greca" width="100%" backgroundColor="#9c8763">
+                <Svg key="svg-greca" source={grecaSvg} alt="Soga trenzada" {...sizeProps(grecaSvg)} />
               </Box>
             )}
             {usoClaro}

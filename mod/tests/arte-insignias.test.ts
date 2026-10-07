@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { EQUIPO_ACENTO, TIPOS_GLIFO } from '../hooks/arte-iconos'
-import { ACENTO_INSIGNIAS, DIOSES_EQUIPO, diosMatriz, diosSvg, glifoMatriz, glifoSvg } from '../hooks/arte-insignias'
+import { ACENTO_INSIGNIAS, DIOSES_EQUIPO, diosMatriz, diosSvg, doblonesSvg, glifoMatriz, glifoSvg, lunaDiaSvg } from '../hooks/arte-insignias'
 
 const esSeguro = (s: string) =>
   s.startsWith('<svg') && s.endsWith('</svg>') && !/<script|on\w+=|href=/i.test(s) &&
@@ -43,4 +43,14 @@ test('doce banderas distintas de 24 x 24, con calavera y el emblema del equipo',
   expect(vistas.size).toBe(12)
   expect(diosMatriz('xyz')).toEqual(diosMatriz('base'))
   expect(diosSvg('base', Number.NaN, ['x', 'y'] as never).includes('width="24"')).toBe(true)
+})
+
+test('doblones: uno por agente hasta 8 (con más, un «+»); la luna cambia de fase con el día', () => {
+  expect(doblonesSvg(3, 2, '#5aa9e6').includes('aria-label="3 doblones"')).toBe(true)
+  expect(doblonesSvg(3, 2, '#5aa9e6').includes('#5aa9e6')).toBe(true)
+  expect(doblonesSvg(12, 2).includes('width="78"')).toBe(true) // 8 monedas + el «+»
+  expect(doblonesSvg(-1, 2).includes('0 doblones')).toBe(true)
+  const fases = new Set([1, 8, 16, 23].map(d => lunaDiaSvg(d, 2)))
+  expect(fases.size).toBe(4)
+  expect(lunaDiaSvg('x', 2)).toBe(lunaDiaSvg(1, 2))
 })

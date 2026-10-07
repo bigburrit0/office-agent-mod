@@ -151,4 +151,7 @@ En P-1 y P-2 hay que bajarlo:
 
 | P-4 | Hecha (07/10/2026) | `hooks/arte-insignias.ts` (`glifoSvg`, `diosSvg`, `DIOSES_EQUIPO` con los mismos nombres que `arte-iconos.ts`): íconos de rol en una placa de noche con remaches de oro (pluma y pergamino, catalejo, ancla, botiquín, reloj de arena, mapa del tesoro) y una bandera por equipo con calavera y su emblema (huesos, sombrero de capitán, catalejos, libro, barras, llaves de código, código del loro, sables, llaves, escobas, llaves de bodega, compás y escuadra). Flamea solo la punta para que el dibujo se lea. Las descripciones dicen «Bandera … del equipo …». |
 
-Falta: P-5 (tablero de uso), P-6 (greca y pasillo) y P-7 (textos). Mientras tanto esas piezas siguen con el arte de la oficina.
+| P-5 | Hecha (07/10/2026) | `arte-uso.ts` cambiado en el lugar (mismos datos y pruebas): tablero de madera de noche, letras hueso, contador en neón turquesa, semáforo claro (verde, ámbar, rojo) y un cofre, un reloj de arena y una bitácora junto a cada título. |
+| P-6 | Hecha (07/10/2026) | `hooks/arte-bodega.ts`: soga trenzada en vez de la greca; bodega del barco en vez del pasillo (tablones, vigas, barriles, cajas, rollos de soga, balas, cañón, faroles que titilan, ojos de buey con el mar y, con alto de sobra, una hamaca con un pirata que ronca; huevos de pascua: una rata que cruza cada 23 s y un fantasma que se asoma cada 41 s); lecho de arena en vez de la cornisa; repisa con botellas, mapas y velas en vez del estante. En `arte-insignias.ts`: doblones (uno por agente) en vez del contador de cada grupo y una lunita que cambia de fase con el día en la barra de arriba. |
+
+Falta: P-7 (textos con humor pirata).

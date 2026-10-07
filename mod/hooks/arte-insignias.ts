@@ -277,3 +277,67 @@ export function diosSvg(equipo: string, escala: number, acento: [string, string]
   const cuerpo = pathsDeMatriz(diosMatriz(equipo), { ...PAL, A, b }, e)
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${lado}" height="${lado}" viewBox="0 0 ${lado} ${lado}" shape-rendering="crispEdges">${cuerpo}</svg>`
 }
+
+// ---- Doblones y luna ----
+
+// Pila de doblones de oro (uno por agente, hasta 8; con más se agrega un «+»), con una cinta del color del
+// equipo debajo. Alto 9 x escala, como el contador que reemplaza.
+export function doblonesSvg(n: unknown, escala: number = 2, color?: string): string {
+  const e = entero(escala, 2, 1, 8)
+  let v = Math.round(Number(n))
+  if (!Number.isFinite(v) || v < 0) v = 0
+  const visibles = Math.min(8, v)
+  const cinta = typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#8a93a0'
+  const w = Math.max(1, visibles) * 4 + 3 + (v > 8 ? 4 : 0)
+  const filas: string[] = Array.from({ length: 9 }, () => '.'.repeat(w))
+  const pon = (x: number, y: number, c: string) => {
+    if (y >= 0 && y < 9 && x >= 0 && x < w) filas[y] = filas[y].slice(0, x) + c + filas[y].slice(x + 1)
+  }
+  // Monedas en dos alturas alternadas: parecen apiladas.
+  for (let i = 0; i < visibles; i++) {
+    const x = 1 + i * 4
+    const y = i % 2 ? 1 : 3
+    for (const [dx, dy, c] of [[1, 0, 'O'], [2, 0, 'O'], [3, 0, 'O'], [0, 1, 'O'], [1, 1, 'Y'], [2, 1, 'G'], [3, 1, 'G'], [4, 1, 'O'], [0, 2, 'O'], [1, 2, 'G'], [2, 2, 'g'], [3, 2, 'G'], [4, 2, 'O'], [1, 3, 'O'], [2, 3, 'O'], [3, 3, 'O']] as Array<[number, number, string]>) {
+      pon(x + dx, y + dy, c)
+    }
+  }
+  if (v > 8) {
+    const x = w - 4
+    pon(x + 1, 3, 'Y')
+    pon(x, 4, 'Y')
+    pon(x + 1, 4, 'Y')
+    pon(x + 2, 4, 'Y')
+    pon(x + 1, 5, 'Y')
+  }
+  for (let x = 0; x < w; x++) pon(x, 8, 'A')
+  const cuerpo = pathsDeMatriz(filas, { ...PAL, A: cinta }, e)
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w * e}" height="${9 * e}" viewBox="0 0 ${w * e} ${9 * e}" shape-rendering="crispEdges" role="img" aria-label="${v} doblones">${cuerpo}</svg>`
+}
+
+// Lunita de 9 x 9 cuya fase sigue el día del mes (1 llena a mitad de mes, nueva al principio).
+export function lunaDiaSvg(dia: unknown, escala: number = 1): string {
+  const e = entero(escala, 1, 1, 8)
+  let d = Math.round(Number(dia))
+  if (!Number.isFinite(d) || d < 1) d = 1
+  const fase = ((d - 1) % 30) / 30 // 0 nueva, 0,5 llena
+  const luz = 1 - Math.abs(fase - 0.5) * 2 // 0..1
+  const filas: string[] = []
+  for (let y = 0; y < 9; y++) {
+    let f = ''
+    for (let x = 0; x < 9; x++) {
+      const dx = x - 4
+      const dy = y - 4
+      if (dx * dx + dy * dy > 17) {
+        f += '.'
+        continue
+      }
+      // La parte iluminada crece de derecha a izquierda (creciente) y después se achica.
+      const umbral = fase < 0.5 ? 4 - luz * 9 : -4 + luz * 9
+      const iluminado = fase < 0.5 ? dx >= umbral : dx <= umbral
+      f += iluminado ? 'Y' : 'S'
+    }
+    filas.push(f)
+  }
+  const cuerpo = pathsDeMatriz(filas, { ...PAL, Y: '#fff0b8', S: '#3f335f' }, e)
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${9 * e}" height="${9 * e}" viewBox="0 0 ${9 * e} ${9 * e}" shape-rendering="crispEdges" role="img" aria-label="luna del día ${d}">${cuerpo}</svg>`
+}
