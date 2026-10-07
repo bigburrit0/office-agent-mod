@@ -1,12 +1,12 @@
 // Boceto 2 de la skin «Piratas» (docs/plan-skin-piratas.md): el arte antes de pasarlo al mod.
-// Usa el motor de pixel-piratas.mjs, el loro de loro-piratas.mjs y la escena de escena-piratas.mjs.
+// Usa el motor de pixel-piratas.mjs, el loro del mod (hooks/arte-loro.ts) y la escena de escena-piratas.mjs.
 // Uso: node mod/preview/boceto-piratas.mjs → mod/tests/salida/boceto-piratas.html
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { abrir, cuadros, grilla, mezcla, pon } from './pixel-piratas.mjs'
-import { EMOCIONES, loro } from './loro-piratas.mjs'
+import { EMOCIONES, EMOCION_ALT, caraRobotSvg } from '../hooks/arte-loro.ts'
 import { EQUIPOS, escenaSvg, pezGrilla, tiburonGrilla } from './escena-piratas.mjs'
 
 // ---- Banderas de equipo: tela que flamea, calavera y el emblema del equipo en su color ----
@@ -56,13 +56,8 @@ function banderaSvg(equipo, color, oscuro, escala = 3) {
 }
 
 // ---- Página ----
-const loroSvg = (emocion, escala) =>
-  abrir(42 * escala, 34 * escala, cuadros(EMOCIONES[emocion].cuadros.map(([o, d]) => [loro(o), d]), escala), `Loro: ${EMOCIONES[emocion].alt}`)
+const loroSvg = (emocion, escala) => caraRobotSvg(emocion, escala)
 
-const NOMBRES = {
-  vigia: 'Vigía (parpadea, mira de reojo)', risa: 'Muerto de risa', panico: 'Pánico', dormido: 'Dormido',
-  sospecha: 'Sospecha', grito: '¡Al abordaje!', hambre: 'Hambre (sueña con una galleta)', guino: 'Guiño (levanta el parche)',
-}
 const PECES = {
   'dev-a1': 'programa en su laptop', research: 'mira con el catalejo', datos: 'lleva el mapa de barras',
   librarian: 'lee con anteojos', seguridad: 'patrulla con tricornio', facilities: 'cuida las llaves',
@@ -106,14 +101,14 @@ ul{margin:8px 0 0;padding-left:20px}
 
 <section>
 <h2>El panel (378 px)</h2>
-<div class="panel">${escenaSvg({ emocion: 'vigia' })}
+<div class="panel">${escenaSvg({ emocion: 'aburrido' })}
 <p class="burbuja">¡Arrr! 6 marineros nadando y un tiburón rondando el ancla. Nadie toca mi galleta.</p>
 <div class="botones"><span class="btn p">Guardar</span><span class="btn">Cancelar</span></div></div>
 </section>
 
 <section>
-<h2>El capitán (lienzo del robot, escala 4)</h2>
-<div class="grilla">${Object.keys(EMOCIONES).map(k => `<figure>${loroSvg(k, 4)}<figcaption>${NOMBRES[k]}</figcaption></figure>`).join('')}</div>
+<h2>El capitán: sus 31 emociones (escala 3, como en el panel)</h2>
+<div class="grilla">${EMOCIONES.map(k => `<figure>${loroSvg(k, 3)}<figcaption>${k}<br>${EMOCION_ALT[k]}</figcaption></figure>`).join('')}</div>
 </section>
 
 <section>

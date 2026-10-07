@@ -30,7 +30,7 @@ async function montarSubVacio($: any, on: any, surface: 'terminal' | 'desktop', 
 test('Subagentes sin agentes: escena única y pasillo antes de la cornisa', async ($, on) => {
   const ui = await montarSubVacio($, on, 'desktop')
   const alts = await altsSvg(ui)
-  expect(alts.filter(a => a.startsWith('Oficina, robot')).length).toBe(1)
+  expect(alts.filter(a => a.startsWith('Barco, loro')).length).toBe(1)
   expect(alts.includes('Escritorio libre esperando a un agente')).toBe(false)
   expect(alts.filter(a => a === 'Pasillo de la oficina').length).toBe(1)
   expect(alts.indexOf('Pasillo de la oficina') < alts.indexOf('Cornisa del edificio')).toBe(true)
@@ -41,7 +41,7 @@ test('Subagentes con 2 agentes corriendo: la escena única nombra a los dos en s
   fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('r1', 'running'), D('r2', 'running')])
   await paso(2000)
-  const escena = (await altsSvg(ui)).filter(a => a.startsWith('Oficina, robot'))
+  const escena = (await altsSvg(ui)).filter(a => a.startsWith('Barco, loro'))
   expect(escena.length).toBe(1)
   expect((escena[0].match(/Agente /g) ?? []).length).toBe(2)
 })

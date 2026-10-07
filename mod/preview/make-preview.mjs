@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import * as px from '../hooks/pixel.ts'
-import * as cara from '../hooks/arte-robot.ts'
+import * as cara from '../hooks/arte-loro.ts'
 import * as patio from '../hooks/arte-escritorios.ts'
 import * as glifos from '../hooks/arte-iconos.ts'
 import * as dioses from '../hooks/arte-iconos.ts'
@@ -50,16 +50,16 @@ const GRUPOS_CARA = [
   ['Social', ['saluda', 'sorpresa', 'caceria']],
 ]
 
-// Sección «Cara del robot»: las emociones por grupo, con marco, animadas y quietas.
+// Sección «El capitán»: las emociones del loro por grupo, animadas y quietas.
 function seccionCara() {
-  let h = `<h2>Cara del robot (${cara.EMOCIONES.length} emociones)</h2>`
+  let h = `<h2>El capitán (${cara.EMOCIONES.length} emociones)</h2>`
   const vistas = new Set()
   for (const [grupo, lista] of GRUPOS_CARA) {
     h += `<h3>${grupo}</h3><div class="fila">`
     for (const e of lista) {
       vistas.add(e)
-      h += `<div><small>${e}: ${cara.EMOCION_ALT[e]}</small><br>${registrar('cara ' + e, cara.caraRobotSvg(e, 3, { fondo: '#0E4A22', marco: true }))}` +
-        ` ${registrar('cara quieta ' + e, cara.caraRobotSvg(e, 3, { fondo: '#0E4A22', marco: true, quieto: true }))}</div>`
+      h += `<div><small>${e}: ${cara.EMOCION_ALT[e]}</small><br>${registrar('cara ' + e, cara.caraRobotSvg(e, 3, { fondo: '#1D1238', marco: true }))}` +
+        ` ${registrar('cara quieta ' + e, cara.caraRobotSvg(e, 3, { fondo: '#1D1238', marco: true, quieto: true }))}</div>`
     }
     h += '</div>'
   }

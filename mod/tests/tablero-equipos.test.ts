@@ -334,11 +334,11 @@ test('Equipos: nuevo agente crea el archivo con la plantilla, rechaza inválidos
 test('Equipos: barra y escena con las placas antes de los dioses; un solo friso (el de cierre)', async ($, on) => {
   const { ui } = await montarEquipos($, on, {})
   const alts = await altsSvg(ui)
-  expect(alts.some(a => a.startsWith('Oficina, robot ') && a.includes('Placas de los equipos'))).toBe(true)
+  expect(alts.some(a => a.startsWith('Barco, loro ') && a.includes('Placas de los equipos'))).toBe(true)
   expect(alts.includes('Edificio de la oficina')).toBe(false)
   expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
   // Cambio T-97: la cara chica «pensando» ya no existe; la cara grande de la cabecera común sigue a la emoción (aburrido sin agentes).
-  const cara = alts.findIndex(a => /^Oficina, robot /.test(a))
+  const cara = alts.findIndex(a => /^Barco, loro /.test(a))
   const primerDios = alts.findIndex(a => /^Placa /.test(a))
   expect(cara >= 0).toBe(true)
   expect(primerDios > cara).toBe(true)
@@ -412,12 +412,12 @@ for (const vista of ['subagentes', 'equipos', 'editar'] as const) {
     expect(altsBarra.some(a => a.startsWith('Fecha de hoy: '))).toBe(true)
     // (b) exactamente un jaguar.
     const alts = await altsSvg(ui)
-    expect(alts.filter(a => a.startsWith('Oficina, robot ')).length).toBe(1)
+    expect(alts.filter(a => a.startsWith('Barco, loro ')).length).toBe(1)
     // (c) friso de cierre y escena propia.
     // El motor de pruebas no expone la key de un Svg: el friso de cierre se reconoce por su alt y por ir al final.
     expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
     expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
-    const alt = alts.find(a => a.startsWith('Oficina, robot ')) ?? ''
+    const alt = alts.find(a => a.startsWith('Barco, loro ')) ?? ''
     expect(alt.includes('Placas de los equipos')).toBe(vista === 'equipos')
     expect(alt.includes('Taller de ')).toBe(vista === 'editar')
     expect(alts.includes('Edificio de la oficina')).toBe(false)
@@ -432,7 +432,7 @@ for (const vista of ['subagentes', 'equipos', 'editar'] as const) {
 
 test('cabecera común: la burbuja de Equipos con el jaguar aburrido cuenta equipos y agentes', async ($, on) => {
   const { ui } = await montarEquipos($, on, DOS_EQUIPOS)
-  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot tomando café'))).toBe(true)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Barco, loro mirando el horizonte'))).toBe(true)
   expect((await textosDe(ui)).some(t => t.includes('equipos y'))).toBe(true)
 })
 
@@ -511,7 +511,7 @@ test('Equipos: /oficina abre el panel con el robot saludando', async ($, on) => 
     requestId: PANE.id,
     viewport: { columns: 100, rows: 60 },
   })
-  expect((await altsSvg(ui)).includes('Oficina, robot saludando')).toBe(true)
+  expect((await altsSvg(ui)).includes('Barco, loro saludando con el ala')).toBe(true)
   expect((await textosDe(ui)).some(x => /¡Hola!/.test(x))).toBe(true)
 })
 

@@ -3,7 +3,7 @@
 // Grilla de 187 x 112 unidades (374 x 224 px a escala 2). Las partes animadas son capas chicas aparte.
 
 import { abrir, bayer, caminos, cuadros, grilla, linea, mezcla, pon } from './pixel-piratas.mjs'
-import { loro, EMOCIONES as EMOCIONES_LORO } from './loro-piratas.mjs'
+import { caraRobotSvg } from '../hooks/arte-loro.ts'
 
 export const W = 187
 export const H = 112
@@ -457,8 +457,8 @@ export function escenaSvg(o = {}) {
     `<animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 0;60 24;60 24" keyTimes="0;0.9;0.91;0.95;1" dur="19s" repeatCount="indefinite"/></g>`
 
   // El loro, parado en la baranda (su percha es la baranda).
-  const emo = EMOCIONES_LORO[o.emocion ?? 'vigia'] ?? EMOCIONES_LORO.vigia
-  const loroSvg = cuadros(emo.cuadros.map(([op, d]) => [loro(op), d]), 3, 0, 0, quieto)
+  // El loro del mod (hooks/arte-loro.ts), anidado como SVG aparte igual que en el panel.
+  const loroSvg = caraRobotSvg(o.emocion ?? 'aburrido', 3, { quieto })
   const loroG = `<g transform="translate(4 2)">${loroSvg}</g>`
 
   return abrir(W * s, H * s, caminos(g, s) + anim + patito + peces + fugaz + loroG, 'Noche en el Caribe: el loro en la baranda y los subagentes nadando bajo el barco')

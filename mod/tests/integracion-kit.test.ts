@@ -99,7 +99,7 @@ test('compu del trabajo: un agente por equipo del edificio, creado desde el pane
   )
   await clock.advance(2000)
   await ui.redraw()
-  const escena = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Oficina, robot/.test(String(s.props.alt ?? '')))
+  const escena = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Barco, loro/.test(String(s.props.alt ?? '')))
   const nombrados = String(escena?.props.alt ?? '').split('. ').filter(a => /^Agente OPS-/.test(a))
   expect(nombrados.length).toBe(5)
   const fuentes = [String(escena?.props.source ?? '')]

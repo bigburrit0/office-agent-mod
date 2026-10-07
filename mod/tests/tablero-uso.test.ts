@@ -161,8 +161,8 @@ test('compactar: si el motor lo rechaza (un turno en curso) avisa y el robot ech
   await ui.press({ key: 'compactar-si' })
   await ui.redraw()
   expect((await textosDe(ui)).some(t => /^No se pudo compactar: .*probá cuando termine el turno\./.test(t))).toBe(true)
-  const cara = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Oficina, robot/.test(String(s.props.alt ?? '')))
-  expect(String(cara?.props.alt)).toBe('Oficina, robot echando chispas')
+  const cara = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Barco, loro/.test(String(s.props.alt ?? '')))
+  expect(String(cara?.props.alt)).toBe('Barco, loro echando chispas')
 })
 
 test('compactar: si otro plugin lo frena, avisa el motivo', async ($, on) => {

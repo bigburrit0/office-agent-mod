@@ -138,3 +138,12 @@ En P-1 y P-2 hay que bajarlo:
 - El cielo, la isla y el barco se dibujan una sola vez y se guardan en caché.
 
 **Para pulir en su oleada:** los emblemas de las banderas se leen poco a escala 3 (P-4). El casco bajo el agua y el reflejo de la luna pueden quedar más finos (P-2).
+
+## 7. Avance de las oleadas
+
+| # | Estado | Notas |
+|---|---|---|
+| P-0 | Hecha (07/10/2026) | `tema.ts` con la noche (conserva el nombre `CLARO` para mezclar con master); `legibleSobre` aclara sobre fondos oscuros; fondo de noche en la raíz de cada vista del escritorio; color explícito en los textos que no lo tenían (si no, con la app en tema claro quedaban oscuros sobre la noche). |
+| P-1 | Hecha (07/10/2026) | `hooks/arte-loro.ts`: el loro con las 31 emociones y el mismo contrato que `arte-robot.ts` (que queda sin usar). Los cuadros guardan solo lo que cambia: el más pesado ocupa 24.454 caracteres (el boceto llegaba a 91.118). Las descripciones pasan de «Oficina, robot …» a «Barco, loro …». Pruebas en `tests/arte-loro.test.ts`. El boceto y la vista previa usan este loro. |
+
+Mientras no estén P-2 a P-6, el loro aparece dentro de la oficina vieja (pared clara, escritorios y tablero de uso claros).

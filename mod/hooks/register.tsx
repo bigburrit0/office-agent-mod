@@ -26,7 +26,7 @@ import {
   toolsKind,
   toolsLabel,
 } from './roles'
-import { caraRobotSvg, EMOCION_ALT } from './arte-robot'
+import { caraRobotSvg, EMOCION_ALT } from './arte-loro'
 import {
   celdaMasSvg,
   celdaPatioSvg,
@@ -973,7 +973,7 @@ export const register: Register = on => {
     let frisoArte = ''
     let disponible = PATIO_ANCHO * 2
     if (hasSvg) {
-      caraAlt = `Oficina, robot ${EMOCION_ALT[estado.emocion] ?? estado.emocion}`
+      caraAlt = `Barco, loro ${EMOCION_ALT[estado.emocion] ?? estado.emocion}`
       // La firma no lleva `now`: el string queda idéntico entre redibujos y la animación no reinicia.
       caraSvg = cachedSvg('cara', `${estado.emocion}|${quieto}`, () =>
         caraRobotSvg(estado.emocion, 3, { quieto, fondo, marco: true }),
