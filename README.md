@@ -4,7 +4,7 @@ Mod de Claude Code: panel de subagentes estilo oficina 8 bits (comando `/oficina
 
 - `mod/`: el mod (fuente de verdad). Hooks en `mod/hooks`, pruebas en `mod/tests`, vista previa del arte en `mod/preview`.
 - `kit/`: el método de trabajo con agentes, para instalar en otra compu. Empezá por `kit/LEEME.md`.
-- `docs/`: planes y auditorías.
+- `docs/`: planes y auditorías. Para instalar y entender el mod: `docs/guia-tecnica-y-puesta-en-marcha.md`.
 
 ## Aceptación (desde esta carpeta)
 
