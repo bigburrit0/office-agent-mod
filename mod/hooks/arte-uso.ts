@@ -1,6 +1,7 @@
-// Arte del tablero de uso de la sesión: contador LCD de tokens, batería de 5 horas y almanaque semanal.
-// Funciones puras que devuelven strings SVG. Sin imports y solo sintaxis «borrable».
-// Solo SMIL (sin scripts ni referencias externas). Pensado para el panel de tema claro (#FBF6EA).
+// Arte del tablero de uso de la sesión: contador de tokens, batería de 5 horas y almanaque semanal.
+// Skin «Piratas»: tablero de madera oscura con letras hueso, contador en neón turquesa y un cofre, un reloj
+// de arena y una bitácora junto a cada título. Funciones puras que devuelven strings SVG. Sin imports y solo
+// sintaxis «borrable». Solo SMIL (sin scripts ni referencias externas). Pensado para el panel de noche (#120B1F).
 
 export type DatosUso = {
   tokens?: { total: number; nuevos: number; cache: number }
@@ -11,18 +12,41 @@ export type DatosUso = {
 }
 
 const C = {
-  contorno: '#2B2118',
-  beige: '#E8DCC0',
-  beigeOscuro: '#C2AE86',
-  grisClaro: '#C9C4B8',
-  azul: '#1F5FA8',
-  naranja: '#F28C28',
-  naranjaOscuro: '#B85C12',
-  crema: '#FFF4DF',
-  verde: '#3FAE6A',
-  rojo: '#D9363E',
-  lcd: '#13251b',
-  lcdDigito: '#9FE3C8',
+  contorno: '#0b0614',
+  beige: '#2b1d14', // madera del tablero
+  beigeOscuro: '#4b2e1b', // vetas y separadores
+  grisClaro: '#3f335f', // segmento vacío
+  azul: '#5c8dff', // días usados
+  naranja: '#ffc23c',
+  naranjaOscuro: '#b5136a',
+  crema: '#1a1230', // fondo de batería y días
+  verde: '#5fe39a',
+  rojo: '#ff6b7e',
+  lcd: '#0a0617',
+  lcdDigito: '#21e6c1',
+  texto: '#fff6e0',
+  hoy: '#ff2e88',
+}
+
+// Iconitos de 9 x 8 en píxeles de 2: cofre (tokens), reloj de arena (5 horas) y bitácora (semana).
+const ICONOS: Record<string, string[]> = {
+  cofre: ['.ooooooo.', 'o3333333o', 'ozYzgzYzo', 'oggggggGo', 'o44oo444o', 'o333g333o', 'o333o333o', 'ooooooooo'],
+  reloj: ['ooooooooo', '.oBBBBBo.', '..oBYBo..', '...oYo...', '...oYo...', '..oBYBo..', '.oYYYYYo.', 'ooooooooo'],
+  bitacora: ['ooooooooo', 'oWWWoWWWo', 'owwWoWwwo', 'oWWWoWWWo', 'owwWoWwwo', 'oWWWoWWWo', 'oVVVVVVVo', 'ooooooooo'],
+}
+const PAL_ICONO: Record<string, string> = {
+  o: '#0b0614', '3': '#74492a', '4': '#4b2e1b', g: '#f2b632', G: '#b8771a', z: '#fff3a8', Y: '#ffdd55',
+  B: '#7ab8ff', W: '#fff6e0', w: '#c9b8a0', V: '#a8173a',
+}
+function icono(nombre: string, x: number, y: number): string {
+  const por: Record<string, string> = {}
+  ICONOS[nombre].forEach((f, j) => {
+    for (let i = 0; i < f.length; i++) {
+      const c = PAL_ICONO[f[i]]
+      if (c) por[c] = (por[c] || '') + `M${x + i * 2} ${y + j * 2}h2v2h-2z`
+    }
+  })
+  return Object.keys(por).map(c => `<path fill="${c}" d="${por[c]}"/>`).join('')
 }
 
 const FUENTE = 'Verdana, DejaVu Sans, sans-serif'
@@ -142,7 +166,8 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
 
   // Contador LCD
   const hayTokens = !!d.tokens
-  s += texto(pad, 18, hayTokens ? 'TOKENS DE LA SESIÓN' : 'sin datos todavía', 10.5, C.contorno, ' font-weight="bold"')
+  s += texto(pad, 18, hayTokens ? 'TOKENS DE LA SESIÓN' : 'sin datos todavía', 10.5, C.texto, ' font-weight="bold"')
+  s += icono('cofre', w - pad - 18, 5)
   const lcdW = w - 2 * pad
   s += marco(pad, 24, lcdW, 28, C.lcd)
   const digitos = hayTokens ? formatoTokens(d.tokens!.total) : '-----'
@@ -151,13 +176,13 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
   if (hayTokens) {
     const sub = `nuevos ${abreviarTokens(d.tokens!.nuevos)} · caché ${abreviarTokens(d.tokens!.cache)}`
     const compacto = hayExtra && !dosLineas
-    s += texto(pad, 66, sub, compacto ? 10 : ajustar(sub, lcdW, 11), C.contorno)
+    s += texto(pad, 66, sub, compacto ? 10 : ajustar(sub, lcdW, 11), C.texto)
   }
   if (hayExtra) {
     const yl = dosLineas ? 80 : 66
     let xd = w - pad
     if (costoTxt) {
-      s += texto(xd, yl, costoTxt, 10, C.contorno, ' text-anchor="end" font-weight="bold"')
+      s += texto(xd, yl, costoTxt, 10, C.texto, ' text-anchor="end" font-weight="bold"')
       xd -= Math.ceil(costoTxt.length * 10 * 0.62) + 10
     }
     if (cxPct != null) {
@@ -168,7 +193,7 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
         const llena = i < llenosCx
         s += `<rect data-ctx="${llena ? 'llena' : 'vacia'}" x="${xb + i * 5}" y="${yl - 8}" width="4" height="9" fill="${llena ? colorCx : C.grisClaro}"/>`
       }
-      s += texto(dosLineas ? pad : xb - 8, yl, cxTxt, 10, C.contorno, dosLineas ? '' : ' text-anchor="end"')
+      s += texto(dosLineas ? pad : xb - 8, yl, cxTxt, 10, C.texto, dosLineas ? '' : ' text-anchor="end"')
     }
   }
   s += rect(b, y0 - 2, w - 2 * b, 2, C.beigeOscuro)
@@ -181,7 +206,8 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
   {
     const x = pad
     const y = y0
-    s += texto(x, y + 14, '5 HORAS', 10.5, C.contorno, ' font-weight="bold"')
+    s += texto(x, y + 14, '5 HORAS', 10.5, C.texto, ' font-weight="bold"')
+    s += icono('reloj', x + pw - 2 * pad - 18, y + 4)
     const cb = d.cincoHoras
     const queda = cb ? quedaPct(cb.pct) : 0
     const llenos = cb ? Math.round(queda / 10) : 0
@@ -189,7 +215,7 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
     const bw = pw - 2 * pad - 6
     const bh = 22
     s += marco(x, y + 22, bw, bh, C.crema)
-    s += rect(x + bw, y + 22 + 6, 5, 10, C.contorno)
+    s += rect(x + bw, y + 22 + 6, 5, 10, '#6a5680')
     const interior = bw - 2 * b - 4
     const sw = Math.max(2, Math.floor((interior - 18) / 10))
     const x1 = x + b + 2 + Math.floor((interior - (sw * 10 + 18)) / 2)
@@ -203,12 +229,12 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
     }
     if (cb) {
       const t = `quedan ${queda} %`
-      s += texto(x, y + 62, t, ajustar(t, maxTxt, 15), C.contorno, ' font-weight="bold"')
+      s += texto(x, y + 62, t, ajustar(t, maxTxt, 15), C.texto, ' font-weight="bold"')
       const r = `se renueva ${corto(cb.renueva)}`
-      s += texto(x, y + 77, r, ajustar(r, maxTxt, 10.5), C.contorno)
+      s += texto(x, y + 77, r, ajustar(r, maxTxt, 10.5), C.texto)
     } else {
       const t = 'esperando la primera respuesta'
-      s += texto(x, y + 66, t, ajustar(t, maxTxt, 11), C.contorno)
+      s += texto(x, y + 66, t, ajustar(t, maxTxt, 11), C.texto)
     }
   }
 
@@ -216,7 +242,8 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
   {
     const x = apilado ? pad : pw + pad
     const y = apilado ? y0 + altoPanel : y0
-    s += texto(x, y + 14, 'SEMANA', 10.5, C.contorno, ' font-weight="bold"')
+    s += texto(x, y + 14, 'SEMANA', 10.5, C.texto, ' font-weight="bold"')
+    s += icono('bitacora', x + pw - 2 * pad - 18, y + 4)
     const sm = d.semana
     const llenos = sm ? Math.round((Math.max(0, Math.min(100, num(sm.pct))) / 100) * 7) : 0
     const hoy = sm && Number.isInteger(sm.hoy) && sm.hoy >= 0 && sm.hoy <= 6 ? sm.hoy : -1
@@ -224,8 +251,8 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
     const c = Math.max(8, Math.min(18, Math.floor((pw - 2 * pad - 6 * gap) / 7)))
     for (let i = 0; i < 7; i++) {
       const cx = x + i * (c + gap)
-      s += texto(cx + Math.round(c / 2), y + 25, INICIALES[i], 10, C.contorno, ' text-anchor="middle"')
-      const borde = i === hoy ? C.naranja : C.contorno
+      s += texto(cx + Math.round(c / 2), y + 25, INICIALES[i], 10, C.texto, ' text-anchor="middle"')
+      const borde = i === hoy ? C.hoy : '#6a5680'
       const g = i === hoy ? Math.max(2, b) : 1
       s += rect(cx, y + 29, c, c, borde)
       s += rect(cx + g, y + 29 + g, c - 2 * g, c - 2 * g, i < llenos ? C.azul : C.crema)
@@ -236,12 +263,12 @@ export function tableroUsoSvg(d: DatosUso, anchoPx: number, opts?: { quieto?: bo
     }
     if (sm) {
       const t = `quedan ${quedaPct(sm.pct)} %`
-      s += texto(x, y + 67, t, ajustar(t, maxTxt, 15), C.contorno, ' font-weight="bold"')
+      s += texto(x, y + 67, t, ajustar(t, maxTxt, 15), C.texto, ' font-weight="bold"')
       const r = `se renueva ${corto(sm.renueva)}`
-      s += texto(x, y + 80, r, ajustar(r, maxTxt, 10.5), C.contorno)
+      s += texto(x, y + 80, r, ajustar(r, maxTxt, 10.5), C.texto)
     } else {
       const t = 'esperando la primera respuesta'
-      s += texto(x, y + 66, t, ajustar(t, maxTxt, 11), C.contorno)
+      s += texto(x, y + 66, t, ajustar(t, maxTxt, 11), C.texto)
     }
   }
 

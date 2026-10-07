@@ -119,13 +119,13 @@ test('a 300 px con contexto y costo nada se sale del ancho', () => {
 
 test('la mini barra de contexto usa verde, naranja y rojo segun el uso', () => {
   const barra = (c: number) => tableroUsoSvg({ contexto: c }, 420)
-  expect(barra(95).includes('data-ctx="llena" x="') && /data-ctx="llena"[^>]*fill="#D9363E"/.test(barra(95))).toBe(true)
+  expect(barra(95).includes('data-ctx="llena" x="') && /data-ctx="llena"[^>]*fill="#ff6b7e"/.test(barra(95))).toBe(true)
   expect(cuantos(barra(95), 'data-ctx="llena"')).toBe(10)
-  expect(/data-ctx="llena"[^>]*fill="#F28C28"/.test(barra(75))).toBe(true)
-  expect(/data-ctx="llena"[^>]*fill="#3FAE6A"/.test(barra(8))).toBe(true)
+  expect(/data-ctx="llena"[^>]*fill="#ffc23c"/.test(barra(75))).toBe(true)
+  expect(/data-ctx="llena"[^>]*fill="#5fe39a"/.test(barra(8))).toBe(true)
   expect(cuantos(barra(8), 'data-ctx="llena"')).toBe(1)
-  expect(barra(95).includes('#D9363E')).toBe(true)
-  expect(barra(8).includes('#D9363E')).toBe(false)
+  expect(barra(95).includes('#ff6b7e')).toBe(true)
+  expect(barra(8).includes('#ff6b7e')).toBe(false)
 })
 
 test('en la semana el marcador de hoy deja 3 px hasta las letras de «quedan»', () => {
