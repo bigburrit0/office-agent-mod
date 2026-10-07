@@ -4,7 +4,7 @@ import { listarCatalogo, validarAgente } from '../hooks/catalogo'
 import type { FsMin } from '../hooks/catalogo'
 import { actividadDe } from '../hooks/arte-actividades'
 import { KIT } from './kit-agentes'
-import { PANES, PROPS, PANE, RAIZ_FALSA, abrirTodo, fsFalso, textosDe } from './ayuda-tablero'
+import { T0, PANES, PROPS, PANE, RAIZ_FALSA, abrirTodo, fsFalso, textosDe } from './ayuda-tablero'
 
 // La compu del trabajo: los agentes del kit instalados en ~\.claude\agents (kit-agentes.ts se
 // regenera con `node mod/tests/generar-kit-agentes.mjs` cuando cambia un agente del kit).
@@ -31,7 +31,7 @@ function fsMin(archivos: Map<string, string>): FsMin {
 
 const montar = async ($: any, on: any, archivos: Record<string, string>) => {
   const disco = fsFalso(on, archivos, { vacio: true })
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, {})
   let lista: unknown[] = []
   on('agent.list', () => ({ value: lista }))
@@ -99,7 +99,7 @@ test('compu del trabajo: un agente por equipo del edificio, creado desde el pane
   )
   await clock.advance(2000)
   await ui.redraw()
-  const escena = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Oficina, robot/.test(String(s.props.alt ?? '')))
+  const escena = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Terminal, robot/.test(String(s.props.alt ?? '')))
   const nombrados = String(escena?.props.alt ?? '').split('. ').filter(a => /^Agente OPS-/.test(a))
   expect(nombrados.length).toBe(5)
   const fuentes = [String(escena?.props.source ?? '')]

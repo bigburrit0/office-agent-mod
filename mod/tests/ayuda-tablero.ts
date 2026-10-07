@@ -4,6 +4,10 @@ import { plantillaAgente, rolAAgente, serializeAgente } from '../hooks/catalogo'
 import { DEFAULT_ROLES } from '../hooks/roles'
 import type { AgenteCatalogo } from '../hooks/catalogo'
 
+// Reloj de las pruebas: un miércoles a las 10:30, hora local (horario de trabajo y fuera de las franjas del día).
+// Así el robot no está «apagado» (antes de las 8, desde las 18 y el fin de semana) salvo que la prueba lo pida.
+export const T0 = new Date(2026, 9, 7, 10, 30).getTime()
+
 // ---- Disco falso: ninguna prueba toca el disco real ----
 export const HOME_FALSO = 'C:\\home-falso'
 export const RAIZ_FALSA = `${HOME_FALSO}\\.claude\\agents`
@@ -56,6 +60,8 @@ export function fsFalso(on: any, archivos: Record<string, string> = {}, opts: { 
     return out
   }
   on('env.get', () => ({ value: HOME_FALSO }))
+  // La carpeta de la sesión también es falsa: el panel busca ahí tarjetas/*.md (estado del proyecto).
+  on('session.cwd', () => ({ value: `${HOME_FALSO}\\proyecto` }))
   on('fs.list', (_$: any, e: any) => {
     const dir = revisar(e.path)
     return {
@@ -159,7 +165,7 @@ export const D = (id: string, status: string) => ({
 
 export async function montar($: any, on: any, getList: () => unknown[]) {
   fsFalso(on)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   on('agent.list', () => ({ value: getList() }))
   on('ui.panes', () => ({ value: PANES }))
   const ui = await $.ui.mount({
@@ -188,7 +194,7 @@ export async function montarAncho(
   rows = 60,
 ) {
   fsFalso(on)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: agentes }))
   on('ui.panes', () => ({ value: PANES }))
@@ -238,7 +244,7 @@ export async function montarEquipos(
   opts: { vacio?: boolean } = {},
 ) {
   const disco = fsFalso(on, archivos, opts)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, store)
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: PANES }))
@@ -272,7 +278,7 @@ export const DOS_EQUIPOS = {
 
 export async function montarSub($: any, on: any) {
   fsFalso(on)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: AGENTS }))
   on('ui.panes', () => ({ value: PANES }))

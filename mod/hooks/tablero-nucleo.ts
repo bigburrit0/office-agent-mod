@@ -9,7 +9,7 @@ import type { DatosUso } from './arte-uso'
 import { DEFAULT_ROLES, toolsLabel } from './roles'
 import { PATIO_EXPLOTA_MS, PATIO_SALE_MS } from './arte-escritorios'
 import { EQUIPO_ACENTO, tipoDeAgente } from './arte-iconos'
-import { DORMIR_MS, franjaHora, OCIO_PASO_MS } from './emociones'
+import { DORMIR_MS, franjaHora, fueraDeHora, huevoDeHora, OCIO_PASO_MS } from './emociones'
 import { PALETTE } from './pixel'
 import { CLARO } from './tema'
 
@@ -324,7 +324,9 @@ export function ritmoRobot(rows: TableroFila[], ocioDesde: number, ms: number): 
   const ocio = Math.max(0, ms - ocioDesde)
   const paso = Math.min(Math.floor(ocio / OCIO_PASO_MS), Math.ceil(DORMIR_MS / OCIO_PASO_MS))
 
-  return `${paso}|${franjaHora(minutosDelDia(ms))?.emocion ?? ''}`
+  const minutos = minutosDelDia(ms)
+  const dia = new Date(ms)
+  return `${paso}|${franjaHora(minutos, dia.getDay())?.emocion ?? ''}|${fueraDeHora(minutos, dia.getDay())}|${huevoDeHora(minutos, dia.getDate()) ?? ''}`
 }
 
 // Mezcla la lista del motor con lo ya guardado, conservando el instante de
@@ -381,6 +383,15 @@ export type ReaccionTipo =
   | 'alivio'
   | 'saluda'
   | 'sorpresa'
+  | 'pikachu'
+  | 'estoEstaBien'
+  | 'otraVez'
+  | 'distraido'
+  | 'successKid'
+  | 'stonks'
+  | 'notStonks'
+  | 'drake'
+  | 'masDe9000'
 
 // Compara la lista anterior con la nueva y elige UNA reacción, la más fuerte:
 // fallas (pánico si son varias, frustrado si ya estaba molesto, ruge) > frenado (bufido) >

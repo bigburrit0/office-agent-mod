@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { PANES, PANE, PROPS, RAIZ_FALSA, abrirAgente, agenteValido, fsFalso, turnoSub } from './ayuda-tablero'
+import { T0, PANES, PANE, PROPS, RAIZ_FALSA, abrirAgente, agenteValido, fsFalso, turnoSub } from './ayuda-tablero'
 
 // Maqueta: monta el panel a 48 columnas y emite el árbol de cada escenario. Un módulo de hooks no puede importar node:fs, así que el
 // JSON sale por consola entre marcadores <<<MAQUETA nombre>>> … <<<FIN>>> y
@@ -54,7 +54,7 @@ async function raiz(ui: any): Promise<any> {
 
 async function montarMaqueta($: any, on: any, agentes: unknown[], uso?: unknown, archivos: Record<string, string> = {}) {
   fsFalso(on, archivos)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: agentes }))
   on('ui.panes', () => ({ value: PANES }))

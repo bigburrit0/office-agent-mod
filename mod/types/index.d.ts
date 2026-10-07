@@ -132,6 +132,15 @@ declare module 'claude-code' {
           | 'alivio'
           | 'saluda'
           | 'sorpresa'
+          | 'pikachu'
+          | 'estoEstaBien'
+          | 'otraVez'
+          | 'distraido'
+          | 'successKid'
+          | 'stonks'
+          | 'notStonks'
+          | 'drake'
+          | 'masDe9000'
         hasta: number
         quien?: string
       } | null
@@ -156,6 +165,17 @@ declare module 'claude-code' {
       patio: Record<string, { fase: 'sale' | 'explota'; hasta: number }>
       /** `true` cuando la usuaria pidió el arte quieto (sin animaciones). */
       quieto: boolean
+      /**
+       * Estado del proyecto (lo dice el robot): las tareas de la sesión (TaskCreate, TaskUpdate, TodoWrite),
+       * las tarjetas leídas de `tarjetas/*.md` en la carpeta de la sesión y cuándo se leyeron (ms desde epoch).
+       * `carpeta` es la carpeta de la sesión; vacía si no se sabe.
+       */
+      proyecto: {
+        tareas: Array<{ id: string; titulo: string; estado: 'pending' | 'in_progress' | 'completed'; cerrada?: number }>
+        tarjetas: Array<{ id: string; titulo: string; estado: 'propuesta' | 'aprobada' | 'en curso' | 'hecha' | 'frenada'; motivo?: string }>
+        leidas: number
+        carpeta: string
+      }
     }
   }
 }

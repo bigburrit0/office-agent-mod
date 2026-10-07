@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import { formatoTokens } from '../hooks/arte-uso'
 import { datosUsoDe } from '../hooks/tablero-nucleo'
-import { PANES, PROPS, PANE, fsFalso, textosDe, turnoSub } from './ayuda-tablero'
+import { T0, PANES, PROPS, PANE, fsFalso, textosDe, turnoSub } from './ayuda-tablero'
 
 const USO = {
   startedAt: 0,
@@ -15,7 +15,7 @@ const USO = {
 
 async function montarUso($: any, on: any, uso: unknown, surface: 'terminal' | 'desktop' = 'desktop') {
   fsFalso(on)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: PANES }))
   let pedidos = 0
@@ -161,8 +161,8 @@ test('compactar: si el motor lo rechaza (un turno en curso) avisa y el robot ech
   await ui.press({ key: 'compactar-si' })
   await ui.redraw()
   expect((await textosDe(ui)).some(t => /^No se pudo compactar: .*probá cuando termine el turno\./.test(t))).toBe(true)
-  const cara = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Oficina, robot/.test(String(s.props.alt ?? '')))
-  expect(String(cara?.props.alt)).toBe('Oficina, robot echando chispas')
+  const cara = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Terminal, robot/.test(String(s.props.alt ?? '')))
+  expect(String(cara?.props.alt)).toBe('Terminal, robot echando chispas')
 })
 
 test('compactar: si otro plugin lo frena, avisa el motivo', async ($, on) => {

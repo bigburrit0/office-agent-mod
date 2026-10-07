@@ -26,7 +26,7 @@ import {
   toolsKind,
   toolsLabel,
 } from './roles'
-import { caraRobotSvg, EMOCION_ALT } from './arte-robot'
+import { caraRobotSvg, EMOCION_ALT, robotAscii } from './arte-robot-terminal'
 import {
   celdaMasSvg,
   celdaPatioSvg,
@@ -35,14 +35,26 @@ import {
   PATIO_ANCHO,
   pisoPatioSvg,
 } from './arte-escritorios'
-import { estanteSvg, pieOficinaSvg } from './arte-oficina'
-import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
-import { DIOSES_EQUIPO, diosSvg, EQUIPO_ACENTO, glifoSvg, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
+import { bordeMesaSvg, disquetesSvg, escritorioSvg, tecladoSvg } from './arte-escritorio'
+import { codiceSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
+import { EQUIPO_ACENTO, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
+import { contadorSvg, DIOSES_EQUIPO, diosSvg, fechaSvg, glifoSvg } from './arte-insignias-terminal'
 import { actividadDe, actividadParaCelda } from './arte-actividades'
-import { decidirEmocion, DORMIR_MS, franjaHora, SOSPECHA_MS } from './emociones'
+import { accesorioDelDia, decidirEmocion, DORMIR_MS, franjaHora, SOSPECHA_MS } from './emociones'
 import type { Grupo } from './emociones'
+import { afinarReaccion, tarjetaDe } from './memes'
 import {
-  grecaBand,
+  etiquetaProyecto,
+  fraseProyecto,
+  leerTarjeta,
+  listaTodo,
+  nombreProyecto,
+  progresoProyecto,
+  tareaActualizada,
+  tareaCreada,
+} from './proyecto'
+import type { Progreso, TarjetaProyecto } from './proyecto'
+import {
   normalizeStatus,
   palabraEstadoSvg,
   PALETTE,
@@ -97,6 +109,7 @@ import {
   plural,
   podarCeldas,
   REACT_CHISPAZO_MS,
+  REACT_LONG_MS,
   REACT_MEDIO_MS,
   ritmoRobot,
   semillaDe,
@@ -111,7 +124,7 @@ import {
   totalTokens,
 } from './tablero-nucleo'
 import { altUso, quedaPct, tableroUsoSvg } from './arte-uso'
-import { ESCENA_FONDO, escenaAlto, escenaOficinaSvg } from './arte-escena'
+import { celdaMasTerminalSvg, celdaTerminalSvg, ESCENA_FONDO, escenaAlto, escenaOficinaSvg, porFilaMonitor } from './arte-monitor'
 import { CLARO, colorUsoClaro, legibleSobre, PASTILLAS_CLARO } from './tema'
 import type { Ordered, PatioEntrada, UsoSesion } from './tablero-nucleo'
 
@@ -143,6 +156,10 @@ const usoAtom = atom({ plugin: 'tablero-oficina', key: 'uso' } as const, null)
 const molestoAtom = atom({ plugin: 'tablero-oficina', key: 'molesto' } as const, '')
 const patioAtom = atom({ plugin: 'tablero-oficina', key: 'patio' } as const, {})
 const quietoAtom = atom({ plugin: 'tablero-oficina', key: 'quieto' } as const, false)
+const proyectoAtom = atom(
+  { plugin: 'tablero-oficina', key: 'proyecto' } as const,
+  { tareas: [], tarjetas: [], leidas: 0, carpeta: '' },
+)
 
 // El timer vive en el módulo: una recarga en caliente lo cancela junto con
 // el entorno viejo, y el render lo vuelve a armar si el panel sigue abierto.
@@ -175,9 +192,11 @@ async function refresh($: EngineInterface): Promise<void> {
   // Guarda la tarjeta del que falló (vacío = no molesto; un `true` viejo cuenta como molesto sin nombre).
   const molestoRaw: unknown = await read($, molestoAtom)
   const molesto0 = molestoRaw === true ? '?' : typeof molestoRaw === 'string' ? molestoRaw : ''
-  const reaction = detectReaction(prev, merged.rows, now, molesto0)
+  const reaction = afinarReaccion(detectReaction(prev, merged.rows, now, molesto0), prev, merged.rows, now) as ReturnType<typeof detectReaction>
   const expired = reaction === null && react0 !== null && react0.hasta <= now
-  const falla = reaction !== null && (reaction.tipo === 'ruge' || reaction.tipo === 'panico' || reaction.tipo === 'frustrado')
+  const falla =
+    reaction !== null &&
+    (reaction.tipo === 'ruge' || reaction.tipo === 'panico' || reaction.tipo === 'frustrado' || reaction.tipo === 'pikachu' || reaction.tipo === 'estoEstaBien')
   const molesto = falla
     ? (reaction?.quien ?? '')
     : reaction !== null && reaction.tipo === 'alivio'
@@ -205,7 +224,89 @@ async function refresh($: EngineInterface): Promise<void> {
   ) {
     await update($, nowAtom, () => now)
   }
+  await leerTarjetas($, now)
 }
+
+// ---- Estado del proyecto (proyecto.ts): tareas de la sesión y tarjetas del proyecto ----
+
+const TARJETAS_CADA_MS = 30000
+const TARJETAS_MAX = 300
+// Cuándo se leyeron por última vez (vive en el módulo: no hace falta redibujar por esto).
+let tarjetasLeidasEn = 0
+
+// Relee tarjetas/*.md en la carpeta de la sesión, como mucho cada 30 s. Solo lee; nunca escribe. Nunca lanza.
+async function leerTarjetas($: EngineInterface, ahora: number, forzar = false): Promise<void> {
+  try {
+    if (!forzar && ahora >= tarjetasLeidasEn && ahora - tarjetasLeidasEn < TARJETAS_CADA_MS) return
+    tarjetasLeidasEn = ahora
+    const previo = await read($, proyectoAtom)
+    let carpeta = ''
+    try {
+      carpeta = String((await $.session.cwd()) ?? '')
+    } catch {
+      carpeta = ''
+    }
+    const tarjetas: TarjetaProyecto[] = []
+    if (carpeta !== '') {
+      const sep = carpeta.includes('/') && !carpeta.includes('\\') ? '/' : '\\'
+      const dir = `${carpeta.replace(/[\\/]+$/, '')}${sep}tarjetas`
+      try {
+        if (await $.fs.exists(dir)) {
+          const archivos = (await $.fs.list(dir)).filter(f => f.kind === 'file' && /\.md$/i.test(f.name)).slice(0, TARJETAS_MAX)
+          for (const f of archivos) {
+            try {
+              const t = leerTarjeta(String(await $.fs.read(`${dir}${sep}${f.name}`)), f.name)
+              if (t) tarjetas.push(t)
+            } catch {
+              // Una tarjeta ilegible no cuenta.
+            }
+          }
+        }
+      } catch {
+        // Sin carpeta de tarjetas: el robot no inventa un número.
+      }
+    }
+    tarjetas.sort((a, b) => a.id.localeCompare(b.id, 'es', { numeric: true }))
+    const antes = progresoProyecto(previo.tareas, previo.tarjetas)
+    const iguales = JSON.stringify(tarjetas) === JSON.stringify(previo.tarjetas) && carpeta === previo.carpeta
+    // Solo se escribe si cambió algo: escribir el estado redibuja el panel.
+    if (iguales) return
+    await update($, proyectoAtom, p => ({ ...p, tarjetas, carpeta, leidas: ahora }))
+    await reaccionarProyecto($, antes, progresoProyecto(previo.tareas, tarjetas), ahora)
+  } catch {
+    // El estado del proyecto es accesorio.
+  }
+}
+
+// Cuando el % cambia, el robot reacciona: Stonks si sube, Not stonks si baja, Deal with it al llegar al 100 %.
+async function reaccionarProyecto($: EngineInterface, antes: Progreso | null, despues: Progreso | null, ahora: number): Promise<void> {
+  if (antes === null || despues === null || antes.fuente !== despues.fuente || antes.pct === despues.pct) {
+    await update($, nowAtom, () => ahora)
+    return
+  }
+  const quien = `${antes.pct}|${despues.pct}`
+  const tipo = despues.pct === 100 ? ('orgullo' as const) : despues.pct > antes.pct ? ('stonks' as const) : ('notStonks' as const)
+  await update($, reaccionAtom, () => ({ tipo, hasta: ahora + REACT_LONG_MS, quien }))
+  await update($, nowAtom, () => ahora)
+}
+
+// Una herramienta de tareas respondió: se anota en la lista del proyecto. Nunca lanza.
+async function anotarTareas($: EngineInterface, cambiar: (tareas: any[], ahora: number) => any[]): Promise<void> {
+  try {
+    const ahora = await $.clock.now()
+    const previo = await read($, proyectoAtom)
+    const tareas = cambiar(previo.tareas, ahora)
+    if (JSON.stringify(tareas) === JSON.stringify(previo.tareas)) return
+    await update($, proyectoAtom, p => ({ ...p, tareas }))
+    await reaccionarProyecto($, progresoProyecto(previo.tareas, previo.tarjetas), progresoProyecto(tareas, previo.tarjetas), ahora)
+  } catch {
+    // La lista de tareas es accesoria: nunca rompe la herramienta.
+  }
+}
+
+// «Drake»: cancelar y, al rato, guardar.
+let canceladoEn = 0
+const DRAKE_MS = 120000
 
 async function isPaneOpen($: EngineInterface): Promise<boolean> {
   return (await $.ui.panes()).some(pane => pane.id === PANE)
@@ -616,6 +717,11 @@ async function patchSeccion($: EngineInterface, indice: number, texto: string): 
 }
 
 async function cancelEdit($: EngineInterface): Promise<void> {
+  try {
+    canceladoEn = await $.clock.now()
+  } catch {
+    canceladoEn = 0
+  }
   await update($, draftAtom, () => null)
   await update($, promptAtom, () => false)
   await cerrarDesc($)
@@ -709,7 +815,9 @@ async function saveDraft($: EngineInterface): Promise<void> {
     )
     if (ok) {
       const ahora = await $.clock.now()
-      await update($, reaccionAtom, () => ({ tipo: 'orgullo' as const, hasta: ahora + REACT_MEDIO_MS, quien: draft.name }))
+      const drake = canceladoEn > 0 && ahora - canceladoEn < DRAKE_MS
+      canceladoEn = 0
+      await update($, reaccionAtom, () => ({ tipo: drake ? ('drake' as const) : ('orgullo' as const), hasta: ahora + REACT_MEDIO_MS, quien: draft.name }))
       await update($, nowAtom, () => ahora)
     }
   } catch (error) {
@@ -766,6 +874,11 @@ export const register: Register = on => {
     // Relee el catálogo (y, solo si falla, vuelve a registrar los roles de siempre).
     await cargarCatalogo($)
     await refresh($)
+    try {
+      await leerTarjetas($, await $.clock.now(), true)
+    } catch {
+      // Sin tarjetas, el robot no inventa.
+    }
     // Al abrir el panel el robot saluda (y guiña al final), salvo que ya esté reaccionando a algo.
     try {
       const ahora = await $.clock.now()
@@ -781,6 +894,27 @@ export const register: Register = on => {
     startTimer($)
 
     return { text: 'Tablero de subagentes abierto.' }
+  })
+
+  // Estado del proyecto: las herramientas de tareas pasan sin cambios y su resultado se anota (solo lectura).
+  on('tool.call', { tool: 'TaskCreate' }, async ($, e, next) => {
+    const r = await next(e)
+    const task = (r as { result?: { task?: { id?: unknown; subject?: unknown } } }).result?.task
+    if (r.deny === undefined && r.isError !== true && task) await anotarTareas($, t => tareaCreada(t, task.id, task.subject ?? e.subject))
+    return r
+  })
+  on('tool.call', { tool: 'TaskUpdate' }, async ($, e, next) => {
+    const r = await next(e)
+    const ok = (r as { result?: { success?: unknown } }).result?.success
+    if (r.deny === undefined && r.isError !== true && ok !== false) {
+      await anotarTareas($, (t, ahora) => tareaActualizada(t, e.taskId, { estado: e.status, titulo: e.subject }, ahora))
+    }
+    return r
+  })
+  on('tool.call', { tool: 'TodoWrite' }, async ($, e, next) => {
+    const r = await next(e)
+    if (r.deny === undefined && r.isError !== true) await anotarTareas($, (t, ahora) => listaTodo(t, e.todos, ahora))
+    return r
   })
 
   // Al lanzarse un subagente ya existe: se refresca sin esperar el tick (y
@@ -831,11 +965,14 @@ export const register: Register = on => {
             if (typeof v === 'number' && Number.isFinite(v)) suma[k] = v
           }
         }
+        let pasoNueveMil = ''
         await update($, informesAtom, previo => {
           const antes = previo[id]
           const tokens: Record<string, number> = { ...(antes?.tokens ?? {}) }
           for (const [k, v] of Object.entries(suma)) tokens[k] = (tokens[k] ?? 0) + v
           const nuevo = { texto: texto !== '' ? texto : (antes?.texto ?? ''), tokens, turnos: (antes?.turnos ?? 0) + 1 }
+          // ¡Más de 9000! El agente acaba de pasar los 9000 tokens de salida.
+          if ((antes?.tokens.output_tokens ?? 0) <= 9000 && (tokens.output_tokens ?? 0) > 9000) pasoNueveMil = id
           const resto = { ...previo }
           delete resto[id]
           const claves = Object.keys(resto)
@@ -843,6 +980,13 @@ export const register: Register = on => {
 
           return { ...resto, [id]: nuevo }
         })
+        if (pasoNueveMil !== '') {
+          const ahora = await $.clock.now()
+          const fila = (await read($, agents)).find(row => row.id === pasoNueveMil)
+          const quien = fila ? tarjetaDe(fila.description) || clean(fila.type) : ''
+          await update($, reaccionAtom, () => ({ tipo: 'masDe9000' as const, hasta: ahora + REACT_LONG_MS, quien }))
+          await update($, nowAtom, () => ahora)
+        }
       } catch {
         // El informe es accesorio: nunca debe romper el turno.
       }
@@ -923,6 +1067,8 @@ export const register: Register = on => {
     const tx = claro ? CLARO.texto : undefined
     const suave: { color?: string; dimColor?: boolean } = claro ? { color: CLARO.textoSuave } : { dimColor: true }
     const acentoTxt = claro ? CLARO.acento : PALETTE.oro
+    // En el escritorio el panel entero es la pantalla negra, sea cual sea el tema de la app.
+    const fondoPanel = claro ? { backgroundColor: CLARO.panel } : {}
     const legibleEn = (color: string, fondos: string[]): string => fondos.reduce((acc, f) => legibleSobre(acc, f), color)
     const running = rows.filter(row => row.status === 'running').length
     const reaccion = await read($, reaccionAtom)
@@ -943,7 +1089,19 @@ export const register: Register = on => {
     const masLargoMs = corriendoRows.reduce((max, row) => Math.max(max, now - row.firstSeen), 0)
     const ocioDesde = ocioDesdeDe(rows, nowReal)
     const minutosHoy = minutosDelDia(nowReal)
-    const franja = franjaHora(minutosHoy)
+    const fechaHoy = new Date(nowReal)
+    const diaSemana = fechaHoy.getDay()
+    const diaMes = fechaHoy.getDate()
+    const mes = fechaHoy.getMonth() + 1
+    const diaDelAnio = Math.floor((Date.UTC(fechaHoy.getFullYear(), mes - 1, diaMes) - Date.UTC(fechaHoy.getFullYear(), 0, 0)) / 86400000)
+    const franja = franjaHora(minutosHoy, diaSemana)
+    // Estado del proyecto (tareas de la sesión o tarjetas): lo dice el robot y lo muestra la pantallita del pecho.
+    const proyecto = await read($, proyectoAtom)
+    const progreso = progresoProyecto(proyecto.tareas, proyecto.tarjetas)
+    const nombreProy = nombreProyecto(proyecto.carpeta)
+    const fraseProy = fraseProyecto(progreso, nombreProy)
+    // Avisos del esquema del agente que se edita: «¿Esto es una paloma?».
+    const avisosEsquema = draftComun !== null && editadoComun !== undefined && !hayCambios && validarAgente(editadoComun).length > 0
     // Uso de la sesión: lo necesita el robot (preocupado) y el tablero de uso de Subagentes.
     const uso = (await read($, usoAtom)) as UsoSesion | null
     const tokensSes = await read($, tokensSesionAtom)
@@ -958,11 +1116,23 @@ export const register: Register = on => {
       ocioMs: nowReal - ocioDesde,
       minutosDelDia: minutosHoy,
       semilla: ocioDesde,
+      diaSemana,
+      diaMes,
+      avisosEsquema,
     })
+    const accesorio = accesorioDelDia({ mes, diaMes, diaDelAnio, diaSemana, minutosDelDia: minutosHoy, pct: progreso?.pct ?? null })
+    const apagadoAhora = estado.emocion === 'apagado' || estado.emocion === 'zombi'
+    // La hora y la barra de estado de la pantalla (como tmux). A las 13:37, modo leet.
+    const horaTxt = `${String(fechaHoy.getHours()).padStart(2, '0')}:${String(fechaHoy.getMinutes()).padStart(2, '0')}`
+    const barraEstado = (extra: string): string =>
+      minutosHoy === 13 * 60 + 37 ? 'H4CK3R M0D3 [1337]' : `[${running} AG] ${etiquetaProyecto(progreso)}${extra !== '' ? ` ${extra}` : ''}`
     // Ocio, hora del día o cambios sin guardar: cada vista pone su propia frase en la burbuja.
-    const tranquilo = estado.grupo === 'ocio' || estado.grupo === 'hora'
+    const tranquilo = estado.grupo === 'ocio' || estado.grupo === 'hora' || estado.grupo === 'apagado' || estado.grupo === 'huevo'
     const orgulloVigente =
-      reaccion !== null && (reaccion.tipo === 'orgullo' || reaccion.tipo === 'guardado') && reaccion.hasta > nowReal
+      reaccion !== null &&
+      (reaccion.tipo === 'orgullo' || reaccion.tipo === 'guardado') &&
+      reaccion.hasta > nowReal &&
+      !String(reaccion.quien ?? '').includes('|')
 
     let caraSvg = ''
     let caraAlt = ''
@@ -971,18 +1141,19 @@ export const register: Register = on => {
     let frisoArte = ''
     let disponible = PATIO_ANCHO * 2
     if (hasSvg) {
-      caraAlt = `Oficina, robot ${EMOCION_ALT[estado.emocion] ?? estado.emocion}`
+      caraAlt = `Terminal, robot ${EMOCION_ALT[estado.emocion] ?? estado.emocion}`
       // La firma no lleva `now`: el string queda idéntico entre redibujos y la animación no reinicia.
-      caraSvg = cachedSvg('cara', `${estado.emocion}|${quieto}`, () =>
-        caraRobotSvg(estado.emocion, 3, { quieto, fondo, marco: true }),
+      caraSvg = cachedSvg('cara', `${estado.emocion}|${quieto}|${progreso?.pct ?? '-'}|${accesorio}`, () =>
+        caraRobotSvg(estado.emocion, 3, { quieto, progreso: progreso?.pct ?? null, accesorio }),
       )
       const anchoCara = svgSize(caraSvg).width || CARA_ANCHO
       disponible = Math.max(PATIO_ANCHO * 2, W - anchoCara)
       doselSvg = cachedSvg(`dosel-${disponible}`, `${disponible}`, () => doselPatioSvg(disponible, 2, { fondo }))
-      grecaSvg = cachedSvg(`greca-${W}`, `${W}`, () => grecaBand(W, 6))
-      frisoArte = cachedSvg(`friso-${W}`, `${W}`, () => frisoSvg(W, 2))
+      grecaSvg = cachedSvg(`teclado-${W}`, `${W}|${running > 0}|${quieto}`, () => tecladoSvg(W, { tipeando: running > 0, quieto }))
+      frisoArte = cachedSvg(`borde-${W}`, `${W}`, () => bordeMesaSvg(W))
     }
-    // Burbuja del robot: una frase que explica lo que pasa (con la tarjeta cuando se sabe).
+    // Burbuja del robot: una frase que explica lo que pasa (con la tarjeta cuando se sabe) y, cuando
+    // tiene sentido, el estado del proyecto (proyecto.ts; sin datos no inventa un número).
     const burbujaEstado = (): string => {
       const con = (nombre: string, antes: string, despues: string): string =>
         nombre !== '' ? `${antes}${nombre}${despues}` : ''
@@ -990,59 +1161,72 @@ export const register: Register = on => {
       const minutos = (ms: number): number => Math.max(0, Math.floor(ms / 60000))
       // Trabajando en una franja de la hora del día, la burbuja lo comenta al final.
       const conHora = (texto: string): string => (franja ? `${texto} ${franja.frase}` : texto)
+      // El estado del proyecto va al final cuando hay datos (sin datos, solo en el ocio).
+      const conProyecto = (texto: string): string => (progreso !== null ? `${texto} ${fraseProy}` : texto)
       const laburando = (extra: string): string => {
         const tarjetas = corriendoRows.map(row => parse(row.description, roleNames, row.type).card).filter(c => c !== '')
         const lista =
           tarjetas.length > 0 ? `: ${tarjetas.slice(0, 4).join(', ')}${tarjetas.length > 4 ? '…' : ''}.` : '.'
 
-        return conHora(`Laburando con ${plural(corriendoRows.length, 'agente', 'agentes')}${lista} ${extra}`)
+        return conProyecto(conHora(`Laburando con ${plural(corriendoRows.length, 'agente', 'agentes')}${lista} ${extra}`))
       }
-      if (orgulloVigente) return `¡Guardado! ${quienReaccion} estrena rol en la próxima sesión. De nada.`
+      const largo = [...corriendoRows].sort((a, b) => a.firstSeen - b.firstSeen)[0]
+      const nombreLargo = largo ? parse(largo.description, roleNames, largo.type).card : ''
+      const [pctAntes, pctAhora] = quienReaccion.includes('|') ? quienReaccion.split('|') : ['', '']
+      if (orgulloVigente) return `¡Guardado! ${quienReaccion} estrena rol en la próxima sesión. Lentes puestos.`
       switch (estado.emocion) {
         case 'dormido':
-          return `Modo ahorro de energía hace ${minutos(nowReal - ocioDesde - DORMIR_MS)} min. Despertame si pasa algo interesante.`
+          return `Modo ahorro de energía hace ${minutos(nowReal - ocioDesde - DORMIR_MS)} min. ${fraseProy}`
         case 'pensando':
           return laburando('No me distraigas.')
         case 'tipea':
-          return laburando('Tecleo a dos manos.')
+          return laburando('Tecleo con los bongós.')
         case 'multitarea':
-          return laburando('¡Mil cosas a la vez!')
-        case 'concentrado': {
-          const largo = [...corriendoRows].sort((a, b) => a.firstSeen - b.firstSeen)[0]
-          const nombre = largo ? parse(largo.description, roleNames, largo.type).card : ''
+          return laburando('Mi cerebro brilla.')
+        case 'doge':
+          return laburando('Wow. Muy agentes. Tan paralelo.')
+        case 'concentrado':
+          return conProyecto(conHora(`${nombreLargo !== '' ? nombreLargo : 'El agente'} lleva ${minutos(masLargoMs)} min. Modo Hackerman: no me hablen.`))
+        case 'zombi':
+          return conProyecto(`Horas extra… ${plural(corriendoRows.length, 'agente', 'agentes')} trabajando y yo apagado. Tipeo igual.`)
+        case 'harold': {
+          const cinco = datosUso.cincoHoras
+          const q = quedaPct(cinco?.pct ?? 0)
+          const renueva = cinco?.renueva ?? ''
+          const cuando = renueva !== '' ? ` (se renueva ${renueva})` : ''
+          if ((cinco?.pct ?? 0) >= 95) return `Todo bárbaro (sonrío): ¡casi sin ventana! Queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
 
-          return conHora(
-            `${nombre !== '' ? nombre : 'El agente'} lleva ${minutos(masLargoMs)} min. Auriculares puestos: no me hablen.`,
-          )
+          return `Ojo: queda ${q} % de las 5 horas${cuando}. Sonrío igual. Mejor tareas cortas.`
         }
+        case 'dosBotones':
+          return 'Hay cambios sin guardar: Guardar (G) o Cancelar (C). No me hagas elegir.'
+        case 'paloma':
+          return '¿Esto es un bug? No: es un aviso del esquema. Mirá «Para revisar».'
         case 'sospecha': {
-          if (estado.grupo === 'uso') {
-            const cinco = datosUso.cincoHoras
-            const q = quedaPct(cinco?.pct ?? 0)
-            const renueva = cinco?.renueva ?? ''
-            const cuando = renueva !== '' ? ` (se renueva ${renueva})` : ''
-            if ((cinco?.pct ?? 0) >= 95) return `¡Casi sin ventana! Queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
+          if (hayCambios && masLargoMs <= SOSPECHA_MS) return 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
 
-            return `Ojo: queda ${q} % de las 5 horas${cuando}. Mejor tareas cortas.`
-          }
-          if (estado.grupo === 'cambios' || (hayCambios && masLargoMs <= SOSPECHA_MS)) {
-            return 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
-          }
-          const largo = [...corriendoRows].sort((a, b) => a.firstSeen - b.firstSeen)[0]
-          const nombre = largo ? parse(largo.description, roleNames, largo.type).card : ''
-
-          return `${nombre !== '' ? nombre : 'Un agente'} lleva ${minutos(masLargoMs)} min… ¿se fue a almorzar?`
+          return conProyecto(`${nombreLargo !== '' ? nombreLargo : 'Un agente'} lleva ${minutos(masLargoMs)} min… ¿se colgó?`)
         }
         case 'caceria':
-          return `¡Llegó${con(quienReaccion, ' ', '')}! A trabajar, que el café no se paga solo.`
+          return `¡Llegó${con(quienReaccion, ' ', '')}! $ ./a-trabajar`
+        case 'otraVez':
+          return estado.grupo === 'hora'
+            ? conProyecto('Ah, otra vez lunes. Primero el café.')
+            : `Ah, otra vez${con(quienReaccion, ' ', '')}. Vamos.`
+        case 'distraido':
+          return `Perdón a los que ya estaban: llegó${con(quienReaccion, ' ', '')} y tiene cosas nuevas.`
         case 'sorpresa':
-          return `¡Uy! Llegaron ${quienReaccion || 'varios'} de golpe. ¿Quién organizó esta fiesta?`
+          return reaccion?.tipo === 'pikachu'
+            ? `¿Falló${con(quienReaccion, ' ', '')}? ¿Ya? Si recién arrancaba.`
+            : `¡Uy! Llegaron ${quienReaccion || 'varios'} de golpe. ¿Quién organizó esta fiesta?`
         case 'saluda':
-          return '¡Hola! Pasá, que la oficina está abierta.'
+          return conProyecto('¡Hola! La terminal está prendida.')
         case 'ruge':
-          return `¡ERROR! Falló${con(quienReaccion, ' ', '')}. A mí no me mires.`
+          return `ERROR: falló${con(quienReaccion, ' ', '')}. A mí no me mires.`
         case 'panico':
-          return `¡Fallaron varios a la vez${con(quienReaccion, ' (', ')')}! ¡No es un simulacro!`
+          return `¡PANIK! Fallaron varios a la vez${con(quienReaccion, ' (', ')')}.`
+        case 'estoEstaBien':
+          return `Todo bien. Todo perfecto.${con(quienReaccion, ' (Fallaron ', '.)')} Los demás siguen.`
         case 'frustrado':
           return `¿Otra falla?${con(quienReaccion, ' ', '.')} Esto ya es personal.`
         case 'chispazo':
@@ -1053,54 +1237,117 @@ export const register: Register = on => {
           return `¿Frenaron${con(quienReaccion, ' ', '')}? Ok. Ok. Respiro.`
         case 'contento':
           return `¡Terminó${con(quienReaccion, ' ', '')}! Siguen los demás.`
+        case 'successKid':
+          return conProyecto(`${quienReaccion !== '' ? quienReaccion : 'La tarjeta'} pasó al primer intento.`)
         case 'aplaude':
           return `¡Terminaron ${quienReaccion || 'varios'} juntos! Aplausos.`
         case 'festeja':
-          return '¡Listo! Oleada terminada sin fallas. Obvio.'
+          return conProyecto('¡Listo! Oleada terminada sin fallas. Obvio.')
         case 'alivio':
-          return `${quienReaccion !== '' ? quienReaccion : 'Eso'} salió bien. Uf, ya se me pasó el enojo.`
+          return `KALM. ${quienReaccion !== '' ? quienReaccion : 'Eso'} salió bien. Respiro.`
+        case 'stonks':
+          return `Stonks: de ${pctAntes} % a ${pctAhora} %. ${fraseProy}`
+        case 'notStonks':
+          return `Not stonks: de ${pctAntes} % a ${pctAhora} %. Se reabrió algo. ${fraseProy}`
+        case 'orgullo':
+          return fraseProy
+        case 'drake':
+          return `Cancelar: no. Guardar: sí. ${quienReaccion} queda guardado.`
+        case 'masDe9000':
+          return `¡${quienReaccion !== '' ? quienReaccion : 'Un agente'} escribió más de 9000 tokens!`
+        case 'arranque':
+          return `Cargando… RAM OK. ¡Buen día! ${fraseProy}`
         case 'manana':
-          return 'Buen día. Primero el café, después los agentes.'
+          return `Primero el café, después los agentes. ${fraseProy}`
         case 'hambre':
-          return '¿Ya es mediodía? Me está dando hambre.'
+          return `Pausa para el chivito. ${fraseProy}`
+        case 'siesta':
+          return `Cabeceo… ¿alguien lanzó un agente? ${fraseProy}`
+        case 'mate':
+          return `Mate y bizcochos. ${fraseProy}`
         case 'casa':
-          return 'Ya son más de las cinco y media: dentro de poco me voy a casa.'
+          return `Bueno, me voy. ${fraseProy}`
+        case 'apagado':
+          return `[apagado] Fuera de hora: el robot vuelve a las 8. ${fraseProy}`
+        case 'noEncontrado':
+          return '404: robot no encontrado. Vuelve en un minuto.'
+        case 'rickroll':
+          return 'Te iba a decir el % del proyecto, pero primero bailemos.'
+        case 'rollSafe':
+          return `Ningún agente puede fallar si no lanzás ninguno. ${fraseProy}`
         case 'bostezo':
-          return 'Aaaah… ¿Nadie tiene trabajo para mí?'
+          return `Aaaah… ¿Nadie tiene trabajo para mí? ${fraseProy}`
         case 'estira':
-          return 'Estirando los circuitos. Sin agentes no hay vida.'
+          return `Estirando los circuitos. ${fraseProy}`
         case 'riega':
-          return 'Riego la planta mientras nadie labura.'
+          return `Riego el cactus mientras nadie labura. ${fraseProy}`
         case 'diario':
-          return 'Leyendo el diario. Ninguna noticia de agentes.'
+          return `$ man oficina. Ninguna novedad. ${fraseProy}`
         case 'solitario':
-          return 'Solitario: voy ganando. Nadie me necesita.'
+          return `Juego a la viborita en el pecho. ${fraseProy}`
         case 'silba':
-          return 'Fiu, fiu… la oficina está tranquila.'
+          return `Fiu, fiu… la terminal está tranquila. ${fraseProy}`
         case 'guina':
-          return 'Todo en orden por acá. Guiño, guiño.'
+          return `Todo en orden por acá. Guiño, guiño. ${fraseProy}`
         default:
-          return 'Tomando café. Avisame cuando alguien trabaje.'
+          return `Tomando café. Avisame cuando alguien trabaje. ${fraseProy}`
       }
     }
 
     const frisoCierre =
       frisoArte !== '' ? (
-        <Box key="caja-friso-cierre" width="100%" backgroundColor="#E8DCC0">
-          <Svg key="svg-friso-cierre" source={frisoArte} alt="Cornisa del edificio" {...sizeProps(frisoArte)} />
+        <Box key="caja-friso-cierre" width="100%" backgroundColor="#261B12">
+          <Svg key="svg-friso-cierre" source={frisoArte} alt="Borde del escritorio" {...sizeProps(frisoArte)} />
         </Box>
       ) : null
 
-    // Pasillo de la oficina, justo antes de la cornisa: llena el espacio que sobra de la vista.
+    // Escritorio con la PC, justo antes del borde de la mesa: llena el espacio que sobra de la vista.
     const pieCierre = (altoPx: number, maximo = 140) => {
       if (!claro) return null
-      const alto = Math.max(60, Math.min(maximo, Math.round(altoPx)))
-      const pie = cachedSvg('pie', `${W}|${alto}|${quieto}`, () => pieOficinaSvg(W, alto, 2, { quieto }))
+      const alto = Math.max(72, Math.min(maximo, Math.round(altoPx)))
+      const pie = cachedSvg('pie', `${W}|${alto}|${quieto}|${running > 0}`, () => escritorioSvg(W, alto, { quieto, activo: running > 0 }))
 
-      return pie !== '' ? <Svg key="svg-pie" source={pie} alt="Pasillo de la oficina" {...sizeProps(pie)} /> : null
+      return pie !== '' ? <Svg key="svg-pie" source={pie} alt="Escritorio con la PC" {...sizeProps(pie)} /> : null
     }
 
-    // Cabecera común: cara grande a la izquierda, escena de la vista a la derecha, burbuja y greca debajo.
+    // La línea de la terminal donde habla el robot: «robot>» y la frase.
+    const burbujaCaja = (burbuja: string) =>
+      burbuja !== '' ? (
+        <Box key="burbuja" flexDirection="row" backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
+          <Text bold color="#5EF27F">{'robot> '}</Text>
+          <Box flexGrow={1} flexShrink={1} minWidth={0}>
+            <Text color={CLARO.texto} wrap="wrap">
+              {burbuja}
+            </Text>
+          </Box>
+        </Box>
+      ) : null
+
+    const tecladoCaja =
+      grecaSvg !== '' ? (
+        <Box key="caja-greca" width="100%" backgroundColor="#D2C6A6">
+          <Svg key="svg-greca" source={grecaSvg} alt="Teclado" {...sizeProps(grecaSvg)} />
+        </Box>
+      ) : null
+
+    // En la terminal (sin dibujos), el robot en ASCII y su frase.
+    const roboAscii = (burbuja: string) =>
+      claro ? null : (
+        <Box key="robot-ascii" flexDirection="column">
+          {robotAscii(estado.emocion, progreso?.pct ?? null).map((linea, i) => (
+            <Text key={`ascii-${i}`} color="green">
+              {linea}
+            </Text>
+          ))}
+          {burbuja !== '' && (
+            <Text color="green" wrap="wrap">
+              {`robot> ${burbuja}`}
+            </Text>
+          )}
+        </Box>
+      )
+
+    // Cabecera común: cara grande a la izquierda, escena de la vista a la derecha, burbuja y teclado debajo.
     const cabecera = (escena: any, burbuja: string) => {
       if (!hasSvg || caraSvg === '') return null
 
@@ -1115,34 +1362,28 @@ export const register: Register = on => {
               {escena}
             </Box>
           </Box>
-          {burbuja !== '' && (
-            <Box backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
-              <Text color={CLARO.texto} wrap="wrap">
-                {burbuja}
-              </Text>
-            </Box>
-          )}
-          {grecaSvg !== '' && (
-            <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
-              <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
-            </Box>
-          )}
+          {burbujaCaja(burbuja)}
+          {tecladoCaja}
         </Box>
       )
     }
 
-    // Cabecera de escena única (Equipos y Editar): robot colgado y `cuadros` en la pared, burbuja y greca debajo.
-    const cabeceraEscena = (cuadros: string[], alt: string, burbuja: string) => {
+    // Cabecera del monitor (Equipos y Editar): el robot y, al lado, las carpetas de los equipos o el archivo en el editor.
+    const cabeceraEscena = (
+      contenido: { carpetas?: Array<{ equipo: string; color: string; nombre: string; aviso?: boolean }>; lineas?: string[]; prompt?: string; estado?: string },
+      alt: string,
+      burbuja: string,
+    ) => {
       if (!claro || caraSvg === '') return null
-      const firma = `${estado.emocion}|${quieto}|${W}|${cuadros.length}|${cuadros.reduce((n, q) => n + q.length, 0)}`
+      const firma = `${estado.emocion}|${quieto}|${W}|${progreso?.pct ?? '-'}|${accesorio}|${horaTxt}|${apagadoAhora}|${JSON.stringify(contenido)}`
       const escena = cachedSvg('escena-cuadros', `${firma}|${alt}`, () =>
         escenaOficinaSvg({
           ancho: W,
-          cara: cachedSvg('cara-escena', `${estado.emocion}|${quieto}`, () =>
-            caraRobotSvg(estado.emocion, 3, { quieto, fondo: ESCENA_FONDO, marco: true }),
-          ),
+          cara: caraSvg,
           celdas: [],
-          cuadros,
+          ...contenido,
+          hora: horaTxt,
+          apagado: estado.emocion === 'apagado',
           quieto,
           alt,
         }),
@@ -1155,18 +1396,8 @@ export const register: Register = on => {
               <Svg key="svg-escena" source={escena} alt={alt} {...sizeProps(escena)} isInteractive />
             </Box>
           )}
-          {burbuja !== '' && (
-            <Box backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
-              <Text color={CLARO.texto} wrap="wrap">
-                {burbuja}
-              </Text>
-            </Box>
-          )}
-          {grecaSvg !== '' && (
-            <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
-              <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
-            </Box>
-          )}
+          {burbujaCaja(burbuja)}
+          {tecladoCaja}
         </Box>
       )
     }
@@ -1175,11 +1406,7 @@ export const register: Register = on => {
     const local = nowReal - new Date(nowReal).getTimezoneOffset() * 60000
     const diaMaya = tzolkin(local)
     const barraSuperior = () => {
-      const numMaya = hasSvg
-        ? cachedSvg(`dia-maya-${diaMaya.numero}`, `${diaMaya.numero}`, () =>
-            numeroMayaSvg(diaMaya.numero, 1, CLARO.acento),
-          )
-        : ''
+      const numMaya = hasSvg ? cachedSvg(`fecha-${diaMes}-${mes}`, `${diaMes}|${mes}`, () => fechaSvg(diaMes, mes, 2)) : ''
 
       return (
         <Box
@@ -1215,7 +1442,7 @@ export const register: Register = on => {
             />
           ) : null}
           {numMaya !== '' ? (
-            <Text color={CLARO.acento}>{` ${diaMaya.texto} `}</Text>
+            <Text color={CLARO.textoSuave}>{` ${diaMaya.texto} `}</Text>
           ) : (
             <Text color={CLARO.textoSuave}>{`${diaMaya.texto} `}</Text>
           )}
@@ -1234,7 +1461,7 @@ export const register: Register = on => {
         return (
           <Box flexDirection="column">
             {barraSuperior()}
-            <Text dimColor>El editor de roles necesita campos de texto: abrilo en escritorio.</Text>
+            <Text {...suave}>El editor de roles necesita campos de texto: abrilo en escritorio.</Text>
           </Box>
         )
       }
@@ -1330,11 +1557,13 @@ export const register: Register = on => {
         const subtituloEquipo = [`equipo ${equipo}`, dios, tarea].filter(x => x !== undefined && x !== '').join(' · ')
         const editHeader = <Text {...suave} wrap="wrap">{subtituloEquipo}</Text>
         const burbujaEditar =
-          orgulloVigente || !(tranquilo || estado.grupo === 'cambios')
+          orgulloVigente || !(tranquilo || estado.grupo === 'cambios' || estado.grupo === 'esquema')
             ? burbujaEstado()
             : hayCambios
-              ? 'Hay cambios sin guardar: Guardar (G) o Cancelar (C).'
-              : `Editando ${draft.name}. Lo que guardes vale en una sesión nueva.`
+              ? 'Hay cambios sin guardar: Guardar (G) o Cancelar (C). No me hagas elegir.'
+              : estado.grupo === 'esquema'
+                ? `Editando ${draft.name}. ¿Esto es un bug? No: es un aviso del esquema. Mirá «Para revisar».`
+                : `Editando ${draft.name}. Lo que guardes vale en una sesión nueva.`
 
         // Avisos del esquema calculados sobre el borrador (no sobre el archivo).
         const avisosBorrador = editado
@@ -1427,11 +1656,27 @@ export const register: Register = on => {
         const tieneAnterior = draft.anterior !== undefined
 
         return (
-          <Box flexDirection="column">
+          <Box flexDirection="column" {...fondoPanel}>
             {barraSuperior()}
             {noticeLine}
+            {roboAscii(burbujaEditar)}
             {claro
-              ? cabeceraEscena(cuadrosEditar, `${caraAlt}. Taller de ${draft.name}`, burbujaEditar)
+              ? cabeceraEscena(
+                  {
+                    prompt: `$ VI ${draft.name}.MD`,
+                    lineas: [
+                      '---',
+                      `NAME: ${draft.name}`,
+                      `MODEL: ${draft.model}`,
+                      `EFFORT: ${draft.effort}`,
+                      '---',
+                      ...secciones.map(sec => `## ${tituloSeccion(sec, unica)}`).slice(0, 5),
+                    ],
+                    estado: hayCambios ? '-- INSERTAR -- SIN GUARDAR' : avisosBorrador.length > 0 ? `-- ${avisosBorrador.length} AVISOS --` : '-- NORMAL --',
+                  },
+                  `${caraAlt}. Archivo de ${draft.name} abierto en el editor`,
+                  burbujaEditar,
+                )
               : cabecera(escenaEditar, burbujaEditar)}
             <Box flexDirection="column">
               <Box flexDirection="row" columnGap={1}>
@@ -1574,7 +1819,7 @@ export const register: Register = on => {
               )}
               {confirmando && DEFAULT_ROLES[draft.name] !== undefined && (
                 <Box flexDirection="column">
-                  <Text wrap="wrap">¿Volver a los valores originales? Se pierde lo que cambiaste.</Text>
+                  <Text color={tx} wrap="wrap">¿Volver a los valores originales? Se pierde lo que cambiaste.</Text>
                   <Box flexDirection="row" columnGap={2} marginTop={1}>
                     <Button
                       key="rol-restaurar-si"
@@ -1599,12 +1844,21 @@ export const register: Register = on => {
         )
       }
 
-      const placasEquipos = claro
-        ? Object.keys(DIOSES_EQUIPO).map(eq =>
-            cachedSvg(`dios2-${eq}`, eq, () => diosSvg(eq, 2, EQUIPO_ACENTO[eq] ?? EQUIPO_ACENTO.base)),
+      // Equipos en la pantalla: una carpeta por equipo del catálogo (o los de siempre si no hay agentes), con ⚠ si alguno avisa.
+      const equiposPantalla = [...new Set(catalogo.agentes.map(a => a.equipos[0] ?? 'base'))]
+      const listaCarpetas = (equiposPantalla.length > 0 ? equiposPantalla : Object.keys(DIOSES_EQUIPO)).slice(0, 12)
+      const carpetasEquipos = listaCarpetas.map(eq => ({
+        equipo: eq,
+        color: (EQUIPO_ACENTO[eq] ?? EQUIPO_ACENTO.base)[0],
+        nombre: eq.replace(/^dev-/, 'D-'),
+        aviso: catalogo.agentes.some(a => (a.equipos[0] ?? 'base') === eq && validarAgente(a).length > 0),
+      }))
+      const avisosEquipos = carpetasEquipos.filter(c => c.aviso).length
+      const estanteArte = claro
+        ? cachedSvg('disquetes', `${W}|${listaCarpetas.join(',')}`, () =>
+            disquetesSvg(W, listaCarpetas.map(eq => (EQUIPO_ACENTO[eq] ?? EQUIPO_ACENTO.base)[0])),
           )
-        : []
-      const estanteArte = claro ? cachedSvg('estante', `${W}`, () => estanteSvg(W)) : ''
+        : ''
       const temploArte = hasSvg && !claro ? cachedSvg(`templo-${disponible}`, `${disponible}`, () => temploSvg(disponible, 2)) : ''
 
       const skills = await read($, skillsEquipoAtom)
@@ -1695,19 +1949,19 @@ export const register: Register = on => {
             <Box key={`rol-${name}`} flexDirection="column">
               <Box flexDirection="row">
                 {toggle}
-                <Text>{'  '}</Text>
+                <Text color={tx}>{'  '}</Text>
                 <Text color={roleColor(name)} bold>
                   {pad(name, 14)}
                 </Text>
-                <Text wrap="truncate">{agente.model}</Text>
+                <Text color={tx} wrap="truncate">{agente.model}</Text>
                 {avisoCerrado}
               </Box>
               {abierto && (
                 <Box flexDirection="column" paddingX={2}>
-                  <Text dimColor wrap="wrap">{agente.description}</Text>
-                  <Text wrap="wrap">{`${agente.effort} · ${toolsLabel(agente.tools)}`}</Text>
-                  {etiquetas !== '' && <Text dimColor wrap="wrap">{etiquetas}</Text>}
-                  <Text dimColor wrap="wrap">{agente.ruta}</Text>
+                  <Text {...suave} wrap="wrap">{agente.description}</Text>
+                  <Text color={tx} wrap="wrap">{`${agente.effort} · ${toolsLabel(agente.tools)}`}</Text>
+                  {etiquetas !== '' && <Text {...suave} wrap="wrap">{etiquetas}</Text>}
+                  <Text {...suave} wrap="wrap">{agente.ruta}</Text>
                   {listaAvisos}
                   <Box flexDirection="row" columnGap={2}>
                     {edit}
@@ -1759,7 +2013,7 @@ export const register: Register = on => {
             {fila}
             {abierto && (
               <Box flexDirection="column" borderStyle="round" borderColor={colorEquipo} paddingX={1} marginLeft={2}>
-                <Text dimColor wrap="wrap">
+                <Text {...suave} wrap="wrap">
                   {agente.description}
                 </Text>
                 <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
@@ -1778,7 +2032,7 @@ export const register: Register = on => {
                   {edit}
                   {copiar}
                 </Box>
-                <Text dimColor wrap="wrap">
+                <Text {...suave} wrap="wrap">
                   {agente.ruta}
                 </Text>
               </Box>
@@ -1841,8 +2095,8 @@ export const register: Register = on => {
         const dios = DIOSES_EQUIPO[equipo]?.dios ?? ''
         const tarea = TAREA_EQUIPO[equipo]
         const diosArte = cachedSvg(`dios2-${equipo}`, equipo, () => diosSvg(equipo, 2, acento))
-        const numArte = cachedSvg(`maya2-${cantidad}-${acento[0]}`, `${cantidad}|${acento[0]}`, () =>
-          numeroMayaSvg(cantidad, 2, acento[0]),
+        const numArte = cachedSvg(`contador2-${cantidad}-${acento[0]}`, `${cantidad}|${acento[0]}`, () =>
+          contadorSvg(cantidad, 2, acento[0]),
         )
         const subtitulo = dios !== '' && tarea !== undefined ? `${dios} · ${tarea}` : dios
 
@@ -1900,11 +2154,20 @@ export const register: Register = on => {
       }
 
       return (
-        <Box flexDirection="column">
+        <Box flexDirection="column" {...fondoPanel}>
           {barraSuperior()}
           {noticeLine}
+          {roboAscii(burbujaEquipos)}
           {claro
-            ? cabeceraEscena(placasEquipos, `${caraAlt}. Placas de los equipos: ${Object.keys(DIOSES_EQUIPO).join(', ')}`, burbujaEquipos)
+            ? cabeceraEscena(
+                {
+                  prompt: '$ LS EQUIPOS/',
+                  carpetas: carpetasEquipos,
+                  estado: `[${plural(listaCarpetas.length, 'EQUIPO', 'EQUIPOS')}] [${plural(avisosEquipos, 'AVISO', 'AVISOS')}]`,
+                },
+                `${caraAlt}. Carpetas de los equipos: ${listaCarpetas.join(', ')}`,
+                burbujaEquipos,
+              )
             : cabecera(
                 temploArte !== '' ? (
                   <Svg key="svg-templo" source={temploArte} alt="Edificio de la oficina" {...sizeProps(temploArte)} />
@@ -1913,7 +2176,7 @@ export const register: Register = on => {
               )}
           <Box flexDirection="column">
           {claro && estanteArte !== '' && (
-            <Svg key="svg-estante" source={estanteArte} alt="Estante con carpetas" {...sizeProps(estanteArte)} />
+            <Svg key="svg-estante" source={estanteArte} alt="Caja de disquetes, uno por equipo" {...sizeProps(estanteArte)} />
           )}
           <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2}>
             {formNuevo}
@@ -1943,7 +2206,7 @@ export const register: Register = on => {
             ))}
           {catalogo.cargado && catalogo.agentes.length === 0 && (
             <Box flexDirection="column">
-              <Text dimColor wrap="wrap">
+              <Text {...suave} wrap="wrap">
                 {`No hay agentes en ${catalogo.raiz}. Lo mejor es instalar los del kit (kit/agentes). Si no, podés crear los 4 roles base o uno nuevo con + Nuevo agente.`}
               </Text>
               <Box flexDirection="row" marginTop={1}>
@@ -1955,7 +2218,7 @@ export const register: Register = on => {
               </Box>
               {abiertos['confirmar-roles-base'] === true && (
                 <Box flexDirection="column">
-                  <Text wrap="wrap">
+                  <Text color={tx} wrap="wrap">
                     {`¿Crear implementador, corrector, investigador y revisor en ${catalogo.raiz}${catalogo.raiz.includes('/') ? '/' : '\\'}base? No se pisa ningún archivo.`}
                   </Text>
                   <Box flexDirection="row" columnGap={2} marginTop={1}>
@@ -1982,7 +2245,7 @@ export const register: Register = on => {
               </Box>
             )
           })}
-          <Text dimColor wrap="wrap">Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
+          <Text {...suave} wrap="wrap">Los cambios se guardan en el archivo del agente; valen en una sesión nueva o a los pocos segundos.</Text>
           </Box>
           {pieCierre((termRows - 30) * 20)}
           {frisoCierre}
@@ -2153,7 +2416,7 @@ export const register: Register = on => {
       // Escritorio: la escena única usa siempre escala 3 y mide sus celdas por fila (126 px del robot + 28 de márgenes).
       if (claro) {
         escalaPatio = 3
-        celdasPorFila = Math.max(0, Math.floor((W - 154) / (PATIO_ANCHO * 3)))
+        celdasPorFila = porFilaMonitor(W)
       }
       const fondoCelda = claro ? ESCENA_FONDO : fondo
       podarCeldas(new Set(rows.map(row => row.id)))
@@ -2166,8 +2429,11 @@ export const register: Register = on => {
         const acento = EQUIPO_ACENTO[equipo] ?? EQUIPO_ACENTO.base
         const etiqueta = info.card
         const titulo = [info.card, info.model, info.role, info.text, `equipo ${equipo}`].filter(part => part !== '').join(SEP)
-        const svg = cachedSvg(`celda-${row.id}`, `${fase}|${equipo}|${etiqueta}|${quieto}|${titulo}|${escalaPatio}`, () =>
-          celdaPatioSvg({
+        const accionAlt = fase === 'explota' ? 'explotando' : fase === 'sale' ? 'saliendo' : 'trabajando'
+        const svg = cachedSvg(`celda-${row.id}`, `${fase}|${equipo}|${etiqueta}|${quieto}|${titulo}|${escalaPatio}|${claro}`, () =>
+          claro
+            ? celdaTerminalSvg({ equipo, color: acento[0], fase, etiqueta, quieto, alt: `Agente ${etiqueta} ${accionAlt}: ${titulo}` })
+            : celdaPatioSvg({
             fase,
             acento,
             actividad: actividadParaCelda(actividadDe(equipo).actividad, escalaPatio, acento[0]),
@@ -2197,8 +2463,8 @@ export const register: Register = on => {
         const escalaMas = claro ? 3 : 2
         const masSvg =
           maxCeldas > 0
-            ? cachedSvg(`celda-mas-${resto}-${escalaMas}`, `${resto}|${fondoCelda}`, () =>
-                celdaMasSvg(resto, escalaMas, { fondo: fondoCelda }),
+            ? cachedSvg(`celda-mas-${resto}-${escalaMas}`, `${resto}|${fondoCelda}|${claro}`, () =>
+                claro ? celdaMasTerminalSvg(resto) : celdaMasSvg(resto, escalaMas, { fondo: fondoCelda }),
               )
             : ''
         celdas.length = 0
@@ -2305,15 +2571,19 @@ export const register: Register = on => {
     const escenaAlt = [caraAlt, ...celdas.map(c => c.alt)].join('. ')
     const escenaUnica = (() => {
       if (!claro || caraSvg === '') return ''
-      const firma = `${estado.emocion}|${quieto}|${W}|${celdas.map(c => `${c.id}:${c.fase}:${c.equipo}:${c.titulo}`).join(',')}`
+      const estadoPantalla = barraEstado(corriendoRows.map(row => parse(row.description, roleNames, row.type).card).filter(c => c !== '').slice(0, 2).join(' '))
+      const fallo = reaccion !== null && reaccion.hasta > now && ['ruge', 'panico', 'frustrado', 'pikachu', 'estoEstaBien'].includes(String(reaccion.tipo))
+      const firma = `${estado.emocion}|${quieto}|${W}|${progreso?.pct ?? '-'}|${accesorio}|${horaTxt}|${estadoPantalla}|${fallo}|${celdas.map(c => `${c.id}:${c.fase}:${c.equipo}:${c.titulo}`).join(',')}`
       return cachedSvg('escena', `${firma}|${escenaAlt}`, () =>
         escenaOficinaSvg({
           ancho: W,
-          cara: cachedSvg('cara-escena', `${estado.emocion}|${quieto}`, () =>
-            caraRobotSvg(estado.emocion, 3, { quieto, fondo: ESCENA_FONDO, marco: true }),
-          ),
+          cara: caraSvg,
           celdas: celdas.map(c => ({ svg: c.svg })),
-          vacia: true,
+          hora: horaTxt,
+          estado: estadoPantalla,
+          progreso: progreso?.pct ?? null,
+          apagado: estado.emocion === 'apagado',
+          cuac: fallo,
           quieto,
           alt: escenaAlt,
         }),
@@ -2348,7 +2618,7 @@ export const register: Register = on => {
     )
 
     const summaryText = (
-      <Text bold wrap="wrap">
+      <Text bold color={tx} wrap="wrap">
         {summary.join(SEP)}
       </Text>
     )
@@ -2362,9 +2632,10 @@ export const register: Register = on => {
     const bigStatus = bigWord === 'corre' ? 'running' : bigWord === 'lista' ? 'completed' : 'failed'
 
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" {...fondoPanel}>
         {barraSuperior()}
         {noticeLine}
+        {roboAscii(burbujaEstado())}
         {claro ? (
           <Box flexDirection="column">
             <Box flexDirection="column" width="100%" backgroundColor={ESCENA_FONDO}>
@@ -2372,13 +2643,7 @@ export const register: Register = on => {
                 <Svg key="svg-escena" source={escenaUnica} alt={escenaAlt} {...sizeProps(escenaUnica)} isInteractive />
               )}
             </Box>
-            {showHeader && resumenAbierto && escenaUnica !== '' && burbujaEstado() !== '' && (
-              <Box backgroundColor={CLARO.burbuja} borderStyle="round" borderColor={CLARO.burbujaBorde} paddingX={1}>
-                <Text color={CLARO.texto} wrap="wrap">
-                  {burbujaEstado()}
-                </Text>
-              </Box>
-            )}
+            {showHeader && resumenAbierto && escenaUnica !== '' && burbujaCaja(burbujaEstado())}
             {showHeader && resumenAbierto && escenaUnica !== '' && equiposPatio.length > 0 && (
               <Box key="leyenda-patio" flexDirection="row" flexWrap="wrap" width="100%" columnGap={1}>
                 {equiposPatio.map(equipo => (
@@ -2390,11 +2655,7 @@ export const register: Register = on => {
                 ))}
               </Box>
             )}
-            {showHeader && resumenAbierto && escenaUnica !== '' && grecaSvg !== '' && (
-              <Box key="caja-greca" width="100%" backgroundColor={PALETTE.oroPalido}>
-                <Svg key="svg-greca" source={grecaSvg} alt="Franja de teclas" {...sizeProps(grecaSvg)} />
-              </Box>
-            )}
+            {showHeader && resumenAbierto && escenaUnica !== '' && tecladoCaja}
             {usoClaro}
           </Box>
         ) : (
@@ -2448,7 +2709,7 @@ export const register: Register = on => {
               <Button key="ir-equipos" label="Ver equipos" onPress={() => showView($, 'roles')} />
             </Box>
           ) : (
-            <Text bold>Todavía no corrió ningún subagente.</Text>
+            <Text bold color={tx}>Todavía no corrió ningún subagente.</Text>
           ))}
         {sorted.slice(0, room).map(({ row, depth }, index) => {
           const status = String(row.status ?? '')

@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { D, DOS_EQUIPOS, PANES, PROPS, PANE, altsSvg, descendientes, fsFalso, montar, montarEquipos, textosDe } from './ayuda-tablero'
+import { T0, D, DOS_EQUIPOS, PANES, PROPS, PANE, altsSvg, descendientes, fsFalso, montar, montarEquipos, textosDe } from './ayuda-tablero'
 
 const USO_90 = {
   startedAt: 0,
@@ -10,7 +10,7 @@ const USO_90 = {
 
 async function montarSubVacio($: any, on: any, surface: 'terminal' | 'desktop', uso: unknown = null) {
   fsFalso(on)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: PANES }))
   on('session.usage', () => ({ value: uso }))
@@ -27,31 +27,30 @@ async function montarSubVacio($: any, on: any, surface: 'terminal' | 'desktop', 
   return ui
 }
 
-test('Subagentes sin agentes: escena única y pasillo antes de la cornisa', async ($, on) => {
+test('Subagentes sin agentes: el monitor y el escritorio antes del borde de la mesa', async ($, on) => {
   const ui = await montarSubVacio($, on, 'desktop')
   const alts = await altsSvg(ui)
-  expect(alts.filter(a => a.startsWith('Oficina, robot')).length).toBe(1)
-  expect(alts.includes('Escritorio libre esperando a un agente')).toBe(false)
-  expect(alts.filter(a => a === 'Pasillo de la oficina').length).toBe(1)
-  expect(alts.indexOf('Pasillo de la oficina') < alts.indexOf('Cornisa del edificio')).toBe(true)
-  expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
+  expect(alts.filter(a => a.startsWith('Terminal, robot')).length).toBe(1)
+    expect(alts.filter(a => a === 'Escritorio con la PC').length).toBe(1)
+  expect(alts.indexOf('Escritorio con la PC') < alts.indexOf('Borde del escritorio')).toBe(true)
+  expect(alts[alts.length - 1]).toBe('Borde del escritorio')
 })
 
 test('Subagentes con 2 agentes corriendo: la escena única nombra a los dos en su alt', async ($, on) => {
   fsFalso(on)
   const { ui, paso } = await montar($, on, () => [D('r1', 'running'), D('r2', 'running')])
   await paso(2000)
-  const escena = (await altsSvg(ui)).filter(a => a.startsWith('Oficina, robot'))
+  const escena = (await altsSvg(ui)).filter(a => a.startsWith('Terminal, robot'))
   expect(escena.length).toBe(1)
   expect((escena[0].match(/Agente /g) ?? []).length).toBe(2)
 })
 
-test('Equipos: estante con carpetas y pasillo, con la cornisa al final', async ($, on) => {
+test('Equipos: caja de disquetes y escritorio, con el borde de la mesa al final', async ($, on) => {
   const { ui } = await montarEquipos($, on, DOS_EQUIPOS)
   const alts = await altsSvg(ui)
-  expect(alts.includes('Estante con carpetas')).toBe(true)
-  expect(alts.includes('Pasillo de la oficina')).toBe(true)
-  expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
+  expect(alts.includes('Caja de disquetes, uno por equipo')).toBe(true)
+  expect(alts.includes('Escritorio con la PC')).toBe(true)
+  expect(alts[alts.length - 1]).toBe('Borde del escritorio')
 })
 
 test('uso al 90 % y sin agentes: la burbuja del robot avisa cuánto queda', async ($, on) => {
@@ -64,7 +63,7 @@ test('uso al 90 % y sin agentes: la burbuja del robot avisa cuánto queda', asyn
 test('en terminal no aparece el arte nuevo', async ($, on) => {
   const ui = await montarSubVacio($, on, 'terminal')
   const alts = await altsSvg(ui)
-  for (const a of ['Escritorio libre esperando a un agente', 'Pasillo de la oficina', 'Estante con carpetas']) {
+  for (const a of ['Escritorio con la PC', 'Borde del escritorio', 'Caja de disquetes, uno por equipo', 'Teclado']) {
     expect(alts.includes(a)).toBe(false)
   }
 })

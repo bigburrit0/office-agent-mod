@@ -4,7 +4,7 @@
 **Fuente:** el formulario «Skin nueva» que completó Nimai (respuestas guardadas el 07/10/2026, 00:20) y su pedido en el chat: «Quiero algo con muchos detalles y animación. Easter eggs en lo posible. La mascota tiene que poder también en su texto decir el estado del proyecto, cuánto % falta para su finalización, etc.»
 **Boceto:** https://claude.ai/artifact/XKVjFnBwTUCBwYjjeh44hw (privado; se abre con la cuenta de Nimai). También se arma local: `node mod/preview/boceto-terminal.mjs` → `mod/tests/salida/boceto-terminal.html`. Abrirlo en el navegador: todo se mueve.
 
-**Estado: plan aprobado por Nimai el 07/10/2026** («agregá todas las recomendaciones»). Decisiones en la sección 9.
+**Estado: programada (07/10/2026).** Nimai aprobó el plan («agregá todas las recomendaciones»); las decisiones están en la sección 9 y el avance en la sección 11. Falta su prueba en la app.
 
 ## 1. Lo que pidió Nimai
 
@@ -179,3 +179,22 @@ Todos en `mod/preview/`; el mod todavía no los usa.
 | `robot-terminal.mjs` | El robot por piezas: 35 emociones (las 31 de la oficina y 4 del día) y 14 de memes (con el Rickroll) |
 | `escena-terminal.mjs` | El monitor, los íconos de los 12 equipos en 4 fases, carpetas de Equipos, editor de Editar, teclado, escritorio y `htop` |
 | `boceto-terminal.mjs` | La página del boceto |
+
+## 11. Avance (07/10/2026)
+
+Todas las oleadas quedaron hechas en una sola tanda, en la rama `skin-nueva`. Verificación: `claude plugin test mod` → **327 pass, 0 fail** (eran 295; se sumaron 32 pruebas nuevas); `claude plugin validate mod` → OK; tipos sin errores (`tsc` con la configuración del motor); maqueta a 378 px con 0 elementos fuera del marco medidos en el navegador.
+
+| # | Estado | Qué quedó |
+|---|---|---|
+| TR-0 | Hecha | `tema.ts`: pantalla negra y fósforo (conserva el nombre `CLARO`); `legibleSobre` aclara sobre fondos oscuros; fondo negro en la raíz de cada vista; todos los textos con color explícito; la burbuja es una línea de terminal con `robot>`. |
+| TR-1 | Hecha | `hooks/arte-robot-terminal.ts` (motor en `hooks/arte-fosforo.ts`): 51 emociones con el contrato de `caraRobotSvg`, la pantallita del pecho con el % (late si no hay datos), accesorios por fecha y `robotAscii` para la terminal. El más pesado: ~21.000 caracteres. |
+| TR-2 | Hecha | `hooks/proyecto.ts` (puro), estado `proyecto` en `types/index.d.ts`, ganchos `tool.call` de `TaskCreate`, `TaskUpdate` y `TodoWrite` (solo leen el resultado) y lectura de `tarjetas/*.md` cada 30 s como mucho, sin escribir estado si nada cambió. Reglas para Claude en `kit/metodo/ESTADO-PROYECTO.md`. |
+| TR-3 | Hecha | `emociones.ts`: el día nuevo, apagado (antes de las 8, desde las 18 y el fin de semana), modo zombi, «404», Rickroll, Doge, Harold, Dos botones y la paloma. `hooks/memes.ts` (puro) afina las reacciones: Pikachu, This is fine, Ah otra vez, Novio distraído y Success Kid. Stonks, Not stonks, Drake y ¡Más de 9000! salen de `register.tsx`. |
+| TR-4/5 | Hecha | `hooks/arte-monitor.ts`: el monitor con prompt (cursor en Morse), hora, barra de estado, post-it, patito, marca y luz; los agentes como íconos del color de su equipo en 4 fases; carpetas en Equipos y el archivo en el editor en Editar. `hooks/arte-insignias-terminal.ts`: tipos de agente, placas, contador y fecha. |
+| TR-6/7/8 | Hecha | `arte-uso.ts` en verde de fósforo, al estilo `htop` (mismas pruebas); `hooks/arte-escritorio.ts`: teclado que se hunde con agentes, escritorio con la PC y el TURBO, borde de la mesa y caja de disquetes; huevos de pascua por hora y fecha. |
+
+**Para probarlo en la compu** (el enlace del mod apunta al repo): `git fetch` y `git checkout skin-nueva` en la carpeta del repo, sesión nueva y `/oficina`. Para volver a la oficina: `git checkout master`.
+
+**Lo que no se pudo verificar acá:** cómo se ve en la app de escritorio de verdad (solo la maqueta en el navegador) y si la app manda los `tool.call` de las tareas tal como los simula la prueba.
+
+**Quedan sin usar en la rama** (para que la mezcla con master sea simple): `arte-robot.ts`, `arte-escena.ts`, `arte-oficina.ts`, `arte-edificio.ts` en lo que es dibujo, `arte-escritorios.ts` en el escritorio (sigue para la terminal sin dibujos) y los dibujos de `arte-iconos.ts`.

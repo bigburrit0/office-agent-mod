@@ -129,6 +129,7 @@ y abrir una sesión nueva. No hay nada que copiar. (El 06/10/2026 se bajó así 
 | `session.measure` | Leer el uso de la sesión (5 horas, semana, contexto, costo). |
 | `ui.render` (`Pane`, `tablero-oficina`) | Devolver el árbol del panel. |
 | `ui.close` | Parar el reloj cuando el panel se cierra. |
+| `tool.call` (`TaskCreate`, `TaskUpdate`, `TodoWrite`) | Skin «Terminal retro»: anotar la lista de tareas de la sesión para el % del proyecto. Deja pasar la llamada sin cambios y solo lee el resultado. |
 
 APIs del motor usadas: `$.agent.list/register`, `$.fs.list/read/write/exists`, `$.store.get/set`, `$.session.usage`, y átomos de `$.state`.
 
@@ -148,6 +149,7 @@ Contrato completo en `mod/types/index.d.ts`. Lo principal:
 | `uso` | Ventanas `five_hour` y `seven_day`, contexto en % y costo. |
 | `reaccion`, `molesto`, `patio` | Emociones del robot y animaciones de entrada y salida del patio. |
 | `quieto` | Arte sin animaciones. |
+| `proyecto` | Skin «Terminal retro»: tareas de la sesión, tarjetas leídas de `tarjetas/*.md` y la carpeta de la sesión. |
 
 El estado **persistente** (`$.store`) tiene dos claves: `roles` (roles guardados por la usuaria) y `anteriores` (ruta del archivo → texto previo, para «Volver a la versión anterior»).
 
@@ -163,6 +165,8 @@ El estado **persistente** (`$.store`) tiene dos claves: `roles` (roles guardados
 | `emociones.ts` | 131 | Decide la emoción del robot (31 emociones). |
 | `arte-*.ts` (8 archivos) | ~3.600 | Arte SVG puro: robot, escena, escritorios, oficina, edificio, íconos, actividades, uso. |
 | `tema.ts` | 79 | Tema claro y colores legibles (`legibleSobre`, contraste ≥ 4,5). |
+| `arte-fosforo.ts`, `arte-robot-terminal.ts`, `arte-monitor.ts`, `arte-escritorio.ts`, `arte-insignias-terminal.ts` | — | Skin «Terminal retro» (rama `skin-nueva`): motor de fósforo, robot, monitor, teclado y escritorio, íconos. Plan: `docs/plan-skin-terminal.md`. |
+| `proyecto.ts`, `memes.ts` | — | Skin «Terminal retro»: estado del proyecto y reacciones de memes (puros). |
 
 Los módulos de arte son **puros** (sin imports, todo texto externo escapado) y se prueban solos.
 

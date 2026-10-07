@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { CLARO, FONDOS_CLARO, PASTILLAS_CLARO, colorUsoClaro, contrasteHex, legibleSobre } from '../hooks/tema'
 
-test('texto y textoSuave son legibles sobre todos los fondos claros', () => {
+test('texto y textoSuave son legibles sobre todos los fondos de la terminal', () => {
   for (const f of FONDOS_CLARO) {
     expect(contrasteHex(CLARO.texto, f)).toBeGreaterThanOrEqual(4.5)
     expect(contrasteHex(CLARO.textoSuave, f)).toBeGreaterThanOrEqual(4.5)
@@ -22,10 +22,13 @@ test('contrasteHex mide bien los extremos y no distingue mayusculas', () => {
   expect(contrasteHex('rojo', '#ffffff')).toBe(1)
 })
 
-test('legibleSobre oscurece solo cuando hace falta', () => {
-  const r = legibleSobre('#4fe08a', CLARO.panel)
-  expect(r).not.toBe('#4fe08a')
+test('legibleSobre ajusta solo cuando hace falta (aclara sobre la pantalla, oscurece sobre lo claro)', () => {
+  const r = legibleSobre('#2f4fbf', CLARO.panel)
+  expect(r).not.toBe('#2f4fbf')
   expect(contrasteHex(r, CLARO.panel)).toBeGreaterThanOrEqual(4.5)
+  const c = legibleSobre('#4fe08a', '#FBF6EA')
+  expect(c).not.toBe('#4fe08a')
+  expect(contrasteHex(c, '#FBF6EA')).toBeGreaterThanOrEqual(4.5)
   expect(legibleSobre(CLARO.texto, CLARO.panel)).toBe(CLARO.texto)
   expect(legibleSobre('rojo', CLARO.panel)).toBe(CLARO.texto)
 })

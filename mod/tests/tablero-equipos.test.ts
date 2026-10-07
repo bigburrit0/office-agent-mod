@@ -2,12 +2,12 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import { plantillaAgente, serializeAgente } from '../hooks/catalogo'
 import { EQUIPOS_EMBLEMA, emblemaSvg } from '../hooks/pixel'
-import { HOME_FALSO, RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, AGENTS, rotulo, abrirAgente, abrirTodo, PANES, montarAncho, todos, disposicion, montarEquipos, textosDe, DOS_EQUIPOS, agenteValido, textos, altsSvg, descendientes } from './ayuda-tablero'
+import { T0, HOME_FALSO, RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, AGENTS, rotulo, abrirAgente, abrirTodo, PANES, montarAncho, todos, disposicion, montarEquipos, textosDe, DOS_EQUIPOS, agenteValido, textos, altsSvg, descendientes } from './ayuda-tablero'
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`pestaña Roles y vuelta en ${surface}`, async ($, on) => {
     fsFalso(on)
-    const clock = mock.clock(on, { now: 5_000 })
+    const clock = mock.clock(on, { now: T0 })
     mock.store(on, {})
     on('agent.list', () => ({ value: AGENTS }))
     on('ui.panes', () => ({ value: [{ id: PANE.id, title: PANE.title, isShown: true, isFocused: true, isPlaced: true }] }))
@@ -40,7 +40,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
   test(`pestaña Roles sin avanzar el reloj en ${surface}`, async ($, on) => {
     fsFalso(on)
-    mock.clock(on, { now: 5_000 })
+    mock.clock(on, { now: T0 })
     mock.store(on, {})
     on('agent.list', () => ({ value: AGENTS }))
     on('ui.panes', () => ({ value: [{ id: PANE.id, title: PANE.title, isShown: true, isFocused: true, isPlaced: true }] }))
@@ -64,7 +64,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
   test(`pestaña Roles: arte según la superficie en ${surface}`, async ($, on) => {
     fsFalso(on)
-    const clock = mock.clock(on, { now: 5_000 })
+    const clock = mock.clock(on, { now: T0 })
     mock.store(on, {})
     on('agent.list', () => ({ value: [] }))
     on('ui.panes', () => ({ value: [{ id: PANE.id, title: PANE.title, isShown: true, isFocused: true, isPlaced: true }] }))
@@ -188,7 +188,7 @@ test('Equipos: un archivo roto aparece como error y el resto se lista', async ($
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`Equipos: grupos y agentes plegados por defecto, abrir y cerrar en ${surface}`, async ($, on) => {
     const disco = fsFalso(on, DOS_EQUIPOS)
-    const clock = mock.clock(on, { now: 1_000_000 })
+    const clock = mock.clock(on, { now: T0 })
     mock.store(on, {})
     on('agent.list', () => ({ value: [] }))
     on('ui.panes', () => ({ value: PANES }))
@@ -331,14 +331,14 @@ test('Equipos: nuevo agente crea el archivo con la plantilla, rechaza inválidos
   expect(disco.fuera.length).toBe(0)
 })
 
-test('Equipos: barra y escena con las placas antes de los dioses; un solo friso (el de cierre)', async ($, on) => {
+test('Equipos: el monitor con las carpetas antes de las placas; un solo borde de mesa (el de cierre)', async ($, on) => {
   const { ui } = await montarEquipos($, on, {})
   const alts = await altsSvg(ui)
-  expect(alts.some(a => a.startsWith('Oficina, robot ') && a.includes('Placas de los equipos'))).toBe(true)
+  expect(alts.some(a => a.startsWith('Terminal, robot ') && a.includes('Carpetas de los equipos'))).toBe(true)
   expect(alts.includes('Edificio de la oficina')).toBe(false)
-  expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
+  expect(alts.filter(a => a === 'Borde del escritorio').length).toBe(1)
   // Cambio T-97: la cara chica «pensando» ya no existe; la cara grande de la cabecera común sigue a la emoción (aburrido sin agentes).
-  const cara = alts.findIndex(a => /^Oficina, robot /.test(a))
+  const cara = alts.findIndex(a => /^Terminal, robot /.test(a))
   const primerDios = alts.findIndex(a => /^Placa /.test(a))
   expect(cara >= 0).toBe(true)
   expect(primerDios > cara).toBe(true)
@@ -399,7 +399,7 @@ const enVista = async (ui: any, vista: 'subagentes' | 'equipos' | 'editar') => {
 }
 
 for (const vista of ['subagentes', 'equipos', 'editar'] as const) {
-  test(`cabecera común (${vista}): barra con pestañas y día maya, un solo jaguar, friso y sin fondos viejos`, async ($, on) => {
+  test(`cabecera común (${vista}): barra con pestañas y fecha, un solo robot, borde de mesa y sin fondos viejos`, async ($, on) => {
     const { ui } = await montarEquipos($, on, DOS_EQUIPOS)
     await enVista(ui, vista)
     // (a) el primer Box hijo de la raíz es la barra.
@@ -412,14 +412,14 @@ for (const vista of ['subagentes', 'equipos', 'editar'] as const) {
     expect(altsBarra.some(a => a.startsWith('Fecha de hoy: '))).toBe(true)
     // (b) exactamente un jaguar.
     const alts = await altsSvg(ui)
-    expect(alts.filter(a => a.startsWith('Oficina, robot ')).length).toBe(1)
-    // (c) friso de cierre y escena propia.
-    // El motor de pruebas no expone la key de un Svg: el friso de cierre se reconoce por su alt y por ir al final.
-    expect(alts.filter(a => a === 'Cornisa del edificio').length).toBe(1)
-    expect(alts[alts.length - 1]).toBe('Cornisa del edificio')
-    const alt = alts.find(a => a.startsWith('Oficina, robot ')) ?? ''
-    expect(alt.includes('Placas de los equipos')).toBe(vista === 'equipos')
-    expect(alt.includes('Taller de ')).toBe(vista === 'editar')
+    expect(alts.filter(a => a.startsWith('Terminal, robot ')).length).toBe(1)
+    // (c) borde de la mesa al final y escena propia.
+    // El motor de pruebas no expone la key de un Svg: el borde de cierre se reconoce por su alt y por ir al final.
+    expect(alts.filter(a => a === 'Borde del escritorio').length).toBe(1)
+    expect(alts[alts.length - 1]).toBe('Borde del escritorio')
+    const alt = alts.find(a => a.startsWith('Terminal, robot ')) ?? ''
+    expect(alt.includes('Carpetas de los equipos')).toBe(vista === 'equipos')
+    expect(alt.includes('abierto en el editor')).toBe(vista === 'editar')
     expect(alts.includes('Edificio de la oficina')).toBe(false)
     expect(alts.includes('Pared del taller')).toBe(false)
     expect(alts.includes('Pizarra del taller')).toBe(false)
@@ -432,7 +432,7 @@ for (const vista of ['subagentes', 'equipos', 'editar'] as const) {
 
 test('cabecera común: la burbuja de Equipos con el jaguar aburrido cuenta equipos y agentes', async ($, on) => {
   const { ui } = await montarEquipos($, on, DOS_EQUIPOS)
-  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot tomando café'))).toBe(true)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Terminal, robot tomando café'))).toBe(true)
   expect((await textosDe(ui)).some(t => t.includes('equipos y'))).toBe(true)
 })
 
@@ -497,7 +497,7 @@ test('Equipos: un equipo sin actividad en el patio avisa que hay que pensarla; u
 
 test('Equipos: /oficina abre el panel con el robot saludando', async ($, on) => {
   fsFalso(on, { [`${RAIZ_FALSA}\\base\\alfa.md`]: archivoAgente('alfa', 'base', []) })
-  mock.clock(on, { now: 1_000_000 })
+  mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: PANES }))
@@ -511,13 +511,13 @@ test('Equipos: /oficina abre el panel con el robot saludando', async ($, on) => 
     requestId: PANE.id,
     viewport: { columns: 100, rows: 60 },
   })
-  expect((await altsSvg(ui)).includes('Oficina, robot saludando')).toBe(true)
+  expect((await altsSvg(ui)).includes('Terminal, robot saludando')).toBe(true)
   expect((await textosDe(ui)).some(x => /¡Hola!/.test(x))).toBe(true)
 })
 
 test('compu nueva: abrir /oficina y Equipos no escribe nada en la carpeta de agentes', async ($, on) => {
   const disco = fsFalso(on, {}, { vacio: true })
-  mock.clock(on, { now: 1_000_000 })
+  mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: PANES }))

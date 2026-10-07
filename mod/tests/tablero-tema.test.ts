@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { CLARO } from '../hooks/tema'
-import { PANE, PROPS, PANES, AGENTS, fsFalso, abrirTodo, abrirAgente, descendientes } from './ayuda-tablero'
+import { T0, PANE, PROPS, PANES, AGENTS, fsFalso, abrirTodo, abrirAgente, descendientes } from './ayuda-tablero'
 
 const OSCUROS = ['#141a12', '#2a2f24', '#20251b', '#1a1e16', '#10261a', '#0c1f15', '#0a2414', '#1F5FA8']
 const FONDOS_CLAROS = [
@@ -11,7 +11,7 @@ const FONDOS_CLAROS = [
 
 async function montarDesktop($: any, on: any, agentes: unknown[]) {
   fsFalso(on)
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: agentes }))
   on('ui.panes', () => ({ value: PANES }))

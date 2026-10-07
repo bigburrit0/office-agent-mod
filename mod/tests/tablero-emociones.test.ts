@@ -4,20 +4,23 @@ import { D, PANES, PROPS, PANE, burbuja, fsFalso, montar } from './ayuda-tablero
 
 const caraAlt = async (ui: any): Promise<string> => {
   const svgs: Array<{ props: Record<string, unknown> }> = await ui.findAll({ type: 'Svg' })
-  const svg = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
-  // La escena única suma los agentes al alt tras «Oficina, robot <emoción>»: acá va solo la emoción.
+  const svg = svgs.find(s => /^Terminal, robot/.test(String(s.props.alt ?? '')))
+  // La escena única suma los agentes al alt tras «Terminal, robot <emoción>»: acá va solo la emoción.
   return String(svg?.props.alt ?? '').split('. Agente ')[0].split('. Y ')[0]
 }
 // Escena única: su alt y su source (las celdas van anidadas como <svg> dentro de ella).
 const escena = async (ui: any): Promise<{ alt: string; source: string }> => {
   const svgs: Array<{ props: Record<string, unknown> }> = await ui.findAll({ type: 'Svg' })
-  const svg = svgs.find(s => /^Oficina, robot/.test(String(s.props.alt ?? '')))
+  const svg = svgs.find(s => /^Terminal, robot/.test(String(s.props.alt ?? '')))
   return { alt: String(svg?.props.alt ?? ''), source: String(svg?.props.source ?? '') }
 }
 const celdasEscena = async (ui: any): Promise<string[]> =>
   (await escena(ui)).alt.split('. ').slice(1).filter(a => /^Agente /.test(a))
 const anchosCeldas = async (ui: any): Promise<number[]> =>
-  [...(await escena(ui)).source.matchAll(/<svg x="[^"]*" y="[^"]*"[^>]*?\swidth="(\d+)"/g)].map(m => Number(m[1])).filter(w => w !== 126) // 126 = el robot
+  [...(await escena(ui)).source.matchAll(/<svg x="[^"]*" y="[^"]*"[^>]*?\swidth="(\d+)"/g)].map(m => Number(m[1])).filter(w => w !== 132) // 132 = el robot
+
+// Una fila sin tarjeta (no puede ser Success Kid).
+const SIN = (id: string, status: string) => ({ id, description: 'haiku · corrector · algo', type: 'general-purpose', status })
 
 // Una fila de otro equipo: el rol «equipo/agente» da el equipo.
 const DE = (id: string, status: string, rol: string) => ({
@@ -54,46 +57,67 @@ test('pánico si fallan dos a la vez', async ($, on) => {
   await paso(2000)
   list = [D('r1', 'failed'), D('r2', 'failed'), D('r3', 'running')]
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot en pánico')
-  expect(await burbuja(ui, /Fallaron varios a la vez/)).toBe(true)
+  // Fallaron dos y el tercero sigue: This is fine.
+  expect(await caraAlt(ui)).toBe('Terminal, robot This is fine: toma café entre las llamas')
+  expect(await burbuja(ui, /Todo bien\. Todo perfecto\./)).toBe(true)
+})
+
+test('PANIK si fallan dos a la vez y no queda nadie corriendo', async ($, on) => {
+  let list: unknown[] = [D('r1', 'running'), D('r2', 'running')]
+  const { ui, paso } = await montar($, on, () => list)
+  await paso(2000)
+  list = [D('r1', 'failed'), D('r2', 'failed')]
+  await paso(2000)
+  expect(await caraAlt(ui)).toBe('Terminal, robot PANIK: ojos en espiral y manos en la cabeza')
+  expect(await burbuja(ui, /PANIK! Fallaron varios a la vez/)).toBe(true)
 })
 
 test('frustrado si falla otro mientras seguía molesto; alivio cuando uno termina bien', async ($, on) => {
   let list: unknown[] = [D('r1', 'running')]
   const { ui, paso } = await montar($, on, () => list)
-  await paso(2000)
+  await paso(32000)
   list = [D('r1', 'failed')]
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot en alarma')
+  expect(await caraAlt(ui)).toBe('Terminal, robot en alarma, con ERR en el pecho')
   await paso(6000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot ofendido')
+  expect(await caraAlt(ui)).toBe('Terminal, robot ofendido, de brazos cruzados')
   list = [D('r1', 'failed'), D('r2', 'running')]
   await paso(2000)
   list = [D('r1', 'failed'), D('r2', 'failed')]
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot frustrado')
+  expect(await caraAlt(ui)).toBe('Terminal, robot llorando a mares')
   list = [D('r1', 'failed'), D('r2', 'failed'), D('r3', 'running')]
   await paso(6000)
   list = [D('r1', 'failed'), D('r2', 'failed'), D('r3', 'completed')]
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot aliviado')
-  expect(await burbuja(ui, /ya se me pasó el enojo/)).toBe(true)
+  expect(await caraAlt(ui)).toBe('Terminal, robot KALM: respira tranquilo')
+  expect(await burbuja(ui, /KALM\. T-9 salió bien\. Respiro\./)).toBe(true)
   // Se le pasó el enojo: después del alivio vuelve al ocio, no a molesto.
   await paso(4000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot tomando café')
+  expect(await caraAlt(ui)).toBe('Terminal, robot tomando café')
 })
 
 test('contento si termina uno y siguen otros; aplaude si terminan varios juntos', async ($, on) => {
-  let list: unknown[] = [D('r1', 'running'), D('r2', 'running'), D('r3', 'running'), D('r4', 'running')]
+  let list: unknown[] = [SIN('r1', 'running'), D('r2', 'running'), D('r3', 'running'), D('r4', 'running')]
   const { ui, paso } = await montar($, on, () => list)
   await paso(2000)
-  list = [D('r1', 'completed'), D('r2', 'running'), D('r3', 'running'), D('r4', 'running')]
+  list = [SIN('r1', 'completed'), D('r2', 'running'), D('r3', 'running'), D('r4', 'running')]
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot feliz')
+  expect(await caraAlt(ui)).toBe('Terminal, robot feliz, pulgar arriba')
   await paso(4000)
   list = [D('r1', 'completed'), D('r2', 'completed'), D('r3', 'completed'), D('r4', 'running')]
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot aplaudiendo')
+  expect(await caraAlt(ui)).toBe('Terminal, robot aplaudiendo')
+})
+
+test('Success Kid si termina una tarjeta que nunca falló', async ($, on) => {
+  let list: unknown[] = [D('r1', 'running'), D('r2', 'running')]
+  const { ui, paso } = await montar($, on, () => list)
+  await paso(2000)
+  list = [D('r1', 'completed'), D('r2', 'running')]
+  await paso(2000)
+  expect(await caraAlt(ui)).toBe('Terminal, robot Success Kid: puño cerrado')
+  expect(await burbuja(ui, /T-9 pasó al primer intento\./)).toBe(true)
 })
 
 test('sorpresa si entran tres o más juntos; multitarea con cuatro corriendo', async ($, on) => {
@@ -102,43 +126,43 @@ test('sorpresa si entran tres o más juntos; multitarea con cuatro corriendo', a
   await paso(2000)
   list = [D('r1', 'running'), D('r2', 'running'), D('r3', 'running'), D('r4', 'running')]
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot sorprendido')
+  expect(await caraAlt(ui)).toBe('Terminal, robot sorprendido como Pikachu')
   expect(await burbuja(ui, /Llegaron 4 agentes de golpe/)).toBe(true)
   await paso(4000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot haciendo mil cosas a la vez')
+  expect(await caraAlt(ui)).toBe('Terminal, robot con el cerebro galáctico: brilla cada vez más')
 })
 
 test('concentrado con un solo agente que corre hace más de 3 minutos', async ($, on) => {
   const { ui, paso } = await montar($, on, () => [D('r1', 'running')])
   await paso(2000)
   await paso(4000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot procesando')
+  expect(await caraAlt(ui)).toBe('Terminal, robot pensando con el dedo en la sien, hasta que se le prende la lamparita')
   for (let i = 0; i < 19; i++) await paso(10000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot concentrado con auriculares')
+  expect(await caraAlt(ui)).toBe('Terminal, robot en modo Hackerman: lentes negros y lluvia de código')
 })
 
 test('hora del día: al mediodía, sin agentes, le da hambre', async ($, on) => {
   const { ui, paso } = await montarALas($, on, new Date(2026, 9, 6, 12, 30).getTime(), () => [D('c1', 'completed')])
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot con hambre')
-  expect(await burbuja(ui, /Me está dando hambre/)).toBe(true)
+  expect(await caraAlt(ui)).toBe('Terminal, robot comiendo un chivito')
+  expect(await burbuja(ui, /Pausa para el chivito\./)).toBe(true)
 })
 
 test('hora del día: desde las 17:30 dice que dentro de poco se va a casa', async ($, on) => {
   const { ui, paso } = await montarALas($, on, new Date(2026, 9, 6, 17, 25).getTime(), () => [D('c1', 'completed')])
   await paso(2000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot tomando café')
+  expect(await caraAlt(ui)).toBe('Terminal, robot tomando café')
   for (let i = 0; i < 30; i++) await paso(10000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot pensando en irse a casa')
-  expect(await burbuja(ui, /dentro de poco me voy a casa/)).toBe(true)
+  expect(await caraAlt(ui)).toBe('Terminal, robot saludando y yéndose (Bueno, me voy)')
+  expect(await burbuja(ui, /Bueno, me voy\./)).toBe(true)
 })
 
 test('hora del día trabajando: la cara es de trabajo y la burbuja suma la frase de la hora', async ($, on) => {
   const { ui, paso } = await montarALas($, on, new Date(2026, 9, 6, 17, 45).getTime(), () => [D('r1', 'running')])
   await paso(2000)
   await paso(4000)
-  expect(await caraAlt(ui)).toBe('Oficina, robot procesando')
-  expect(await burbuja(ui, /Laburando con 1 agente.*Y en un rato me voy a casa\./)).toBe(true)
+  expect(await caraAlt(ui)).toBe('Terminal, robot pensando con el dedo en la sien, hasta que se le prende la lamparita')
+  expect(await burbuja(ui, /Laburando con 1 agente.*Y en un rato me voy\./)).toBe(true)
 })
 
 test('patio por color: la celda lleva el equipo en el título y la leyenda lo nombra', async ($, on) => {
@@ -148,7 +172,7 @@ test('patio por color: la celda lleva el equipo en el título y la leyenda lo no
   const fuentes = [(await escena(ui)).source]
   expect(fuentes.some(f => f.includes('equipo research'))).toBe(true)
   expect(fuentes.some(f => f.includes('equipo datos'))).toBe(true)
-  // Color de research en la camisa (#5aa9e6) y de datos (#2cc6d0).
+  // Color de research en su ícono (#5aa9e6) y de datos (#2cc6d0).
   expect(fuentes.some(f => f.includes('#5aa9e6'))).toBe(true)
   expect(fuentes.some(f => f.includes('#2cc6d0'))).toBe(true)
   expect((await ui.findAll({ type: 'Text', text: /■ research/ })).length).toBe(1)

@@ -1,11 +1,11 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, rotulo, abrirAgente, PANES, montarAncho, todos, FIN_PROMPT, montarEquipos, textosDe, DOS_EQUIPOS, textos, altsSvg } from './ayuda-tablero'
+import { T0, RAIZ_FALSA, fsFalso, archivoAgente, PANE, PROPS, rotulo, abrirAgente, PANES, montarAncho, todos, FIN_PROMPT, montarEquipos, textosDe, DOS_EQUIPOS, textos, altsSvg } from './ayuda-tablero'
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`Editar rol muestra descripción y prompt completos en ${surface}`, async ($, on) => {
     fsFalso(on)
-    const clock = mock.clock(on, { now: 5_000 })
+    const clock = mock.clock(on, { now: T0 })
     mock.store(on, {})
     on('agent.list', () => ({ value: [] }))
     on('ui.panes', () => ({ value: PANES }))
@@ -42,7 +42,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`El prompt de Editar es un desplegable cerrado al entrar en ${surface}`, async ($, on) => {
     fsFalso(on)
-    const clock = mock.clock(on, { now: 5_000 })
+    const clock = mock.clock(on, { now: T0 })
     mock.store(on, {})
     on('agent.list', () => ({ value: [] }))
     on('ui.panes', () => ({ value: PANES }))
@@ -161,7 +161,7 @@ test('Equipos: restaurar original solo en los 4 roles y escribe el valor por def
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`Equipos: la descripción en Editar está plegada por defecto en ${surface}`, async ($, on) => {
     fsFalso(on, DOS_EQUIPOS)
-    const clock = mock.clock(on, { now: 1_000_000 })
+    const clock = mock.clock(on, { now: T0 })
     mock.store(on, {})
     on('agent.list', () => ({ value: [] }))
     on('ui.panes', () => ({ value: PANES }))
@@ -190,9 +190,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-test('Editar: aparece la pizarra del taller', async ($, on) => {
+test('Editar: el monitor muestra el archivo del agente abierto en el editor', async ($, on) => {
   fsFalso(on)
-  const clock = mock.clock(on, { now: 5_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: PANES }))
@@ -208,7 +208,7 @@ test('Editar: aparece la pizarra del taller', async ($, on) => {
   await ui.press({ key: 'tab-roles' })
   await abrirAgente(ui, 'implementador')
   await ui.press({ key: 'editar-implementador' })
-  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot ') && a.includes('Taller de implementador'))).toBe(true)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Terminal, robot ') && a.includes('Archivo de implementador abierto en el editor'))).toBe(true)
 })
 
 
@@ -271,20 +271,20 @@ test('Editar: con la descripcion sin abrir, su texto aparece en un solo Text', a
   expect((await ui.find({ type: 'Input', key: 'rol-description' })) === undefined).toBe(true)
 })
 
-test('Editar: tras cambiar el modelo la cara tiene sospecha (d)', async ($, on) => {
+test('Editar: tras cambiar el modelo el robot hace «Dos botones» (d)', async ($, on) => {
   const { ui } = await montarEquipos($, on, {
     [`${RAIZ_FALSA}\base\implementador.md`]: archivoAgente('implementador', 'base', []),
   })
   await abrirAgente(ui, 'implementador')
   await ui.press({ key: 'editar-implementador' })
-  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot con una ceja levantada'))).toBe(false)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Terminal, robot Dos botones'))).toBe(false)
   await ui.select({ plugin: 'tablero-oficina', key: 'rol-model', value: 'haiku' })
-  expect((await altsSvg(ui)).some(a => a.startsWith('Oficina, robot con una ceja levantada'))).toBe(true)
+  expect((await altsSvg(ui)).some(a => a.startsWith('Terminal, robot Dos botones'))).toBe(true)
 })
 
 test('Editar: tras guardar la burbuja dice «¡Guardado!» y a los 3,5 s ya no (e)', async ($, on) => {
   fsFalso(on, { [`${RAIZ_FALSA}\base\implementador.md`]: archivoAgente('implementador', 'base', []) })
-  const clock = mock.clock(on, { now: 1_000_000 })
+  const clock = mock.clock(on, { now: T0 })
   mock.store(on, {})
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: PANES }))
@@ -303,7 +303,7 @@ test('Editar: tras guardar la burbuja dice «¡Guardado!» y a los 3,5 s ya no (
   await ui.select({ plugin: 'tablero-oficina', key: 'rol-model', value: 'haiku' })
   await ui.press({ key: 'rol-guardar' })
   await ui.redraw()
-  expect((await textosDe(ui)).some(t => t.includes('¡Guardado! implementador estrena rol en la próxima sesión. De nada.'))).toBe(true)
+  expect((await textosDe(ui)).some(t => t.includes('¡Guardado! implementador estrena rol en la próxima sesión. Lentes puestos.'))).toBe(true)
   await clock.advance(3500)
   await ui.redraw()
   expect((await textosDe(ui)).some(t => t.includes('¡Guardado!'))).toBe(false)
