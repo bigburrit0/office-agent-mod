@@ -34,7 +34,7 @@ import {
   PATIO_ALTO,
   PATIO_ANCHO,
   pisoPatioSvg,
-} from './arte-escritorios'
+} from './arte-mar'
 import { estanteSvg, pieOficinaSvg } from './arte-oficina'
 import { codiceSvg, frisoSvg, numeroMayaSvg, paredTallerSvg, temploSvg, tzolkin } from './arte-edificio'
 import { DIOSES_EQUIPO, diosSvg, EQUIPO_ACENTO, glifoSvg, TIPO_NOMBRE, tipoDeAgente } from './arte-iconos'
@@ -111,7 +111,7 @@ import {
   totalTokens,
 } from './tablero-nucleo'
 import { altUso, quedaPct, tableroUsoSvg } from './arte-uso'
-import { ESCENA_FONDO, escenaAlto, escenaOficinaSvg } from './arte-escena'
+import { ESCENA_FONDO, escenaAlto, escenaOficinaSvg, porFilaEscena } from './arte-barco'
 import { CLARO, colorUsoClaro, legibleSobre, PASTILLAS_CLARO } from './tema'
 import type { Ordered, PatioEntrada, UsoSesion } from './tablero-nucleo'
 
@@ -1141,7 +1141,7 @@ export const register: Register = on => {
         escenaOficinaSvg({
           ancho: W,
           cara: cachedSvg('cara-escena', `${estado.emocion}|${quieto}`, () =>
-            caraRobotSvg(estado.emocion, 3, { quieto, fondo: ESCENA_FONDO, marco: true }),
+            caraRobotSvg(estado.emocion, 3, { quieto, marco: true }),
           ),
           celdas: [],
           cuadros,
@@ -2152,10 +2152,10 @@ export const register: Register = on => {
       }).length
       escalaPatio = enPatio > 0 && enPatio <= Math.floor(disponible / (PATIO_ANCHO * 3)) ? 3 : 2
       celdasPorFila = Math.max(1, Math.floor(disponible / (PATIO_ANCHO * escalaPatio)))
-      // Escritorio: la escena única usa siempre escala 3 y mide sus celdas por fila (126 px del robot + 28 de márgenes).
+      // Escritorio: la escena única usa siempre escala 3; los peces nadan a lo ancho, debajo del barco.
       if (claro) {
         escalaPatio = 3
-        celdasPorFila = Math.max(0, Math.floor((W - 154) / (PATIO_ANCHO * 3)))
+        celdasPorFila = porFilaEscena(W)
       }
       const fondoCelda = claro ? ESCENA_FONDO : fondo
       podarCeldas(new Set(rows.map(row => row.id)))
@@ -2312,7 +2312,7 @@ export const register: Register = on => {
         escenaOficinaSvg({
           ancho: W,
           cara: cachedSvg('cara-escena', `${estado.emocion}|${quieto}`, () =>
-            caraRobotSvg(estado.emocion, 3, { quieto, fondo: ESCENA_FONDO, marco: true }),
+            caraRobotSvg(estado.emocion, 3, { quieto, marco: true }),
           ),
           celdas: celdas.map(c => ({ svg: c.svg })),
           vacia: true,
